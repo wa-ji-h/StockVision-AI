@@ -1,0 +1,48 @@
+# Environnement virtuel
+venv/
+env/
+ENV/
+
+# Variables d'environnement (mots de passe, clés API)
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.Python
+build/
+dist/
+
+# Bases de données locales / fichiers temporaires
+*.db
+*.sqlite3
+
+# Uploads utilisateurs (fichiers CSV/SQL importés par les entreprises)
+uploads/*
+!uploads/.gitkeep
+
+# Rapports générés
+reports/*
+!reports/.gitkeep
+
+# IDE / éditeurs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Cache de tests
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,42 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Demandes en attente — StockVision AI{% endblock %}
+{% block dash_content %}
+<h1 class="dash-page-title">Demandes en attente</h1>
+<p class="dash-page-subtitle">Approuvez ou refusez les demandes d'inscription des entreprises.</p>
+
+{% if not demandes %}
+<p class="text-muted">Aucune demande en attente pour le moment.</p>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Secteur</th>
+                <th>Email</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entreprise, utilisateur in demandes %}
+            <tr>
+                <td>{{ entreprise.nom }}</td>
+                <td>{{ entreprise.secteur_activite }}</td>
+                <td>{{ utilisateur.email }}</td>
+                <td>{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+                <td class="dash-table-actions">
+                    <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/approuver">
+                        <button type="submit" class="btn btn-gradient btn-sm">Approuver</button>
+                    </form>
+                    <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/refuser">
+                        <button type="submit" class="btn btn-outline-light btn-sm">Refuser</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tableau de bord — StockVision AI{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version }}">
+</head>
+<body class="dash-body">
+    <div class="dash-shell">
+        <aside class="dash-sidebar" id="dashSidebar">
+            <a href="/" class="dash-logo-link">
+                <img src="/static/images/logo StockVision.png" alt="StockVision AI" class="dash-logo">
+            </a>
+
+            <nav class="dash-nav">
+                {% if user.role.value == 'administrateur' %}
+                <a href="/dashboard/admin" class="dash-nav-link {{ 'active' if active_page == 'overview' }}">
+                    <span class="dash-nav-icon">📊</span> Tableau de bord
+                </a>
+                <a href="/dashboard/admin/demandes" class="dash-nav-link {{ 'active' if active_page == 'demandes' }}">
+                    <span class="dash-nav-icon">📥</span>
+                    <span>Demandes en attente</span>
+                    {% if pending_count %}<span class="dash-badge">{{ pending_count }}</span>{% endif %}
+                </a>
+                <a href="/dashboard/admin/entreprises" class="dash-nav-link {{ 'active' if active_page == 'entreprises' }}">
+                    <span class="dash-nav-icon">🏢</span> Entreprises actives
+                </a>
+                <a href="/dashboard/admin/imports" class="dash-nav-link {{ 'active' if active_page == 'imports' }}">
+                    <span class="dash-nav-icon">📁</span> Imports
+                </a>
+                <a href="/dashboard/admin/configurations" class="dash-nav-link {{ 'active' if active_page == 'configurations' }}">
+                    <span class="dash-nav-icon">⚙️</span> Configurations d'analyse
+                </a>
+                <a href="/dashboard/admin/alertes" class="dash-nav-link {{ 'active' if active_page == 'alertes' }}">
+                    <span class="dash-nav-icon">🔔</span> Alertes globales
+                </a>
+                <a href="/dashboard/admin/utilisateurs" class="dash-nav-link {{ 'active' if active_page == 'utilisateurs' }}">
+                    <span class="dash-nav-icon">👥</span> Utilisateurs
+                </a>
+                <a href="/dashboard/admin/parametres" class="dash-nav-link {{ 'active' if active_page == 'parametres' }}">
+                    <span class="dash-nav-icon">🛠️</span> Paramètres système
+                </a>
+                {% else %}
+                <a href="/dashboard/entreprise" class="dash-nav-link active">
+                    <span class="dash-nav-icon">📊</span> Tableau de bord
+                </a>
+                {% endif %}
+            </nav>
+        </aside>
+
+        <div class="dash-main">
+            <header class="dash-topbar">
+                <button class="dash-sidebar-toggle" id="dashSidebarToggle" aria-label="Menu" type="button">☰</button>
+                <div class="dash-topbar-spacer"></div>
+                <div class="dash-user">
+                    <div class="dash-user-info">
+                        <span class="dash-user-name">{{ user.email }}</span>
+                        <span class="dash-user-role">{{ 'Administrateur' if user.role.value == 'administrateur' else 'Entreprise' }}</span>
+                    </div>
+                    <a href="/deconnexion" class="btn btn-outline-light btn-sm dash-logout">Déconnexion</a>
+                </div>
+            </header>
+
+            <main class="dash-content">
+                {% block dash_content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('dashSidebarToggle')?.addEventListener('click', () => {
+            document.getElementById('dashSidebar')?.classList.toggle('is-open');
+        });
+    </script>
+</body>
+</html>

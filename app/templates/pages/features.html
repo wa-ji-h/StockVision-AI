@@ -1,0 +1,213 @@
+{% extends "pages/base.html" %}
+{% block title %}Fonctionnalités & Moteur IA — StockVision AI{% endblock %}
+{% block content %}
+<!-- HERO HEADER -->
+<section class="hero-section">
+    <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-text">Puissance Prédictive & Restitution Power BI</span>
+    </div>
+    <div class="hero-split align-items-center">
+        <div class="hero-text">
+            <h1>Une Suite d'Outils IA <span class="gradient-text">Pensée Pour les Décideurs</span></h1>
+            <p>Découvrez la puissance de nos algorithmes Python d'analyse de stock. Connectez vos données en toute sécurité, paramétrez vos objectifs et laissez l'IA générer des prévisions précises.</p>
+            <div class="hero-actions">
+                <a href="/inscription" class="btn btn-gradient btn-lg">Tester la Solution Client</a>
+                <a href="#simulator" class="btn btn-outline-light btn-lg">Voir le Simulateur Live</a>
+            </div>
+        </div>
+        <div class="hero-graphic text-center">
+            <img src="/static/images/stock_3d_ai_brain.png" alt="StockVision AI Brain Engine" class="img-fluid rounded-4 shadow-lg border border-secondary border-opacity-20 hero-3d-img">
+        </div>
+    </div>
+</section>
+
+<!-- SIMULATEUR FONCTIONNEL INTERACTIF (DEMO CLIENT) -->
+<section id="simulator" class="simulator-section my-5 py-4">
+    <div class="section-header text-center mb-5">
+        <h2 class="fw-bold">Explorez la Plateforme en Action</h2>
+        <p class="text-muted">Naviguez entre les composants clés de la solution StockVision AI</p>
+    </div>
+
+    <div class="simulator-box p-4 p-md-5 rounded-4 border border-secondary border-opacity-20 bg-card">
+        <!-- TABS NAV -->
+        <ul class="nav nav-pills justify-content-center gap-2 mb-4" id="simTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active px-4 py-2 rounded-3" id="tab-ingest-tab" data-bs-toggle="pill" data-bs-target="#tab-ingest" type="button">
+                    📥 1. Ingestion & Connecteurs
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link px-4 py-2 rounded-3" id="tab-config-tab" data-bs-toggle="pill" data-bs-target="#tab-config" type="button">
+                    ⚙️ 2. Configuration IA
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link px-4 py-2 rounded-3" id="tab-alerts-tab" data-bs-toggle="pill" data-bs-target="#tab-alerts" type="button">
+                    🔔 3. Détection & Alertes
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link px-4 py-2 rounded-3" id="tab-bi-tab" data-bs-toggle="pill" data-bs-target="#tab-bi" type="button">
+                    📊 4. Visualisation Power BI
+                </button>
+            </li>
+        </ul>
+
+        <!-- TAB CONTENT -->
+        <div class="tab-content pt-3" id="simTabContent">
+            <!-- TAB 1: INGESTION -->
+            <div class="tab-pane fade show active" id="tab-ingest">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="badge bg-cyan bg-opacity-10 text-cyan mb-2">Import & Connecteurs SGBD</span>
+                        <h3 class="h4 fw-bold text-white mb-3">Connectez vos Fichiers CSV/SQL ou vos Bases Clients</h3>
+                        <p class="text-muted small leading-relaxed mb-3">
+                            Importez facilement des historiques de ventes ou des dumps SQL. Vous pouvez également fournir un accès en <strong>lecture seule</strong> à votre propre base de données. Nos algorithmes nettoient et valident la structure des données automatiquement.
+                        </p>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-dark border border-secondary text-muted">Format CSV</span>
+                            <span class="badge bg-dark border border-secondary text-muted">Dump SQL</span>
+                            <span class="badge bg-dark border border-secondary text-cyan">Lecture Seule MySQL/PostgreSQL</span>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="p-4 rounded-3 border border-dashed border-info border-opacity-30 bg-dark text-center">
+                            <div class="fs-1 text-cyan mb-2">📂</div>
+                            <span class="d-block text-white fw-bold small mb-1">Zone de Glisser-Déposer de Fichiers Métier</span>
+                            <span class="text-muted extra-small d-block mb-3">Glissez vos fichiers CSV / SQL (max 100 Mo) ou configurez l'URL SGBD</span>
+                            <span class="btn btn-outline-light btn-sm px-3">Parcourir les fichiers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: CONFIGURATION IA -->
+            <div class="tab-pane fade" id="tab-config">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="badge bg-blue bg-opacity-10 text-blue mb-2">Paramétrage d'Analyse sur Mesure</span>
+                        <h3 class="h4 fw-bold text-white mb-3">Ciblez les Références & Ajustez la Fréquence</h3>
+                        <p class="text-muted small leading-relaxed mb-3">
+                            Sélectionnez une catégorie de produits, un magasin spécifique ou l'ensemble de votre base de données. Définissez votre objectif métier et choisissez la fréquence de récurrence (quotidienne, hebdomadaire, mensuelle).
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li>✓ Objectifs prédéfinis (Prévision Ventes, Risque Rupture, Optimisation Stock)</li>
+                            <li>✓ Exécution manuelle ou planification automatique</li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="p-4 rounded-3 border border-secondary border-opacity-20 bg-dark">
+                            <div class="mb-3">
+                                <label class="text-white extra-small fw-bold d-block mb-1">Données Cibles :</label>
+                                <select class="form-select form-select-sm bg-card text-white border-secondary">
+                                    <option>Toute la Base de Données Entreprise</option>
+                                    <option>Catégorie Produits Électronique & Tech</option>
+                                    <option>Magasin Principal Paris Ouest</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-white extra-small fw-bold d-block mb-1">Fréquence d'Exécution IA :</label>
+                                <div class="btn-group w-100 btn-group-sm">
+                                    <button class="btn btn-outline-info active">Hebdomadaire</button>
+                                    <button class="btn btn-outline-info">Quotidienne</button>
+                                    <button class="btn btn-outline-info">Mensuelle</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-gradient btn-sm w-100">Lancer l'Analyse IA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: ALERTES -->
+            <div class="tab-pane fade" id="tab-alerts">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="badge bg-warning bg-opacity-10 text-warning mb-2">Supervision Proactive</span>
+                        <h3 class="h4 fw-bold text-white mb-3">Déclenchement Automatique d'Alertes Critiques</h3>
+                        <p class="text-muted small leading-relaxed mb-3">
+                            Dès qu'une configuration d'analyse détecte une anomalie ou un niveau critique de stock, une alerte est instantanément générée avec un niveau de priorité et un message explicatif pour vos responsables.
+                        </p>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded-3 border border-danger border-opacity-40 bg-danger bg-opacity-10">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="badge bg-danger text-white">ALERTE CRITIQUE</span>
+                                <span class="extra-small text-muted">Aujourd'hui, 10:45</span>
+                            </div>
+                            <span class="d-block text-white fw-bold small">Risque de Rupture sous 72h — Produit Ref #SKU-8492</span>
+                            <span class="text-white-50 extra-small d-block">Le niveau de stock actuel (12 unités) est inférieur au seuil recommandé par l'IA (45 unités).</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: POWER BI -->
+            <div class="tab-pane fade" id="tab-bi">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="badge bg-indigo bg-opacity-10 text-indigo mb-2">Business Intelligence</span>
+                        <h3 class="h4 fw-bold text-white mb-3">Restitution Visuelle dans Power BI</h3>
+                        <p class="text-muted small leading-relaxed mb-3">
+                            Les prévisions et indicateurs générés par l'IA sont automatiquement réinjectés dans des tableaux de bord Power BI dynamiques, permettant à vos dirigeants de filtrer par date, produit ou région.
+                        </p>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded-3 border border-secondary border-opacity-20 bg-dark text-center">
+                            <img src="/static/images/stock_3d_powerbi.png" alt="Power BI Preview" class="img-fluid rounded-3 mb-2" style="max-height: 180px; object-fit: cover;">
+                            <span class="extra-small text-cyan d-block">Tableau de bord Power BI synchronisé en temps réel</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- AVANTAGES AVANT INSCRIPTION -->
+<section class="benefits-section my-5 py-4">
+    <div class="section-header text-center mb-5">
+        <h2 class="fw-bold">Pourquoi les Entreprises Choisissent StockVision AI</h2>
+        <p class="text-muted">Des avantages concrets dès votre première connexion</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
+                <div class="text-cyan mb-3 fs-3">🚀</div>
+                <h3 class="h5 fw-bold mb-2">Déploiement en Quelques Minutes</h3>
+                <p class="text-muted small mb-0">Pas de projet complexe d'intégration. Inscrivez votre entreprise, fournissez vos fichiers et obtenez vos premiers résultats immédiats.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
+                <div class="text-blue mb-3 fs-3">🛡️</div>
+                <h3 class="h5 fw-bold mb-2">Sécurité & Confidentialité Strictes</h3>
+                <p class="text-muted small mb-0">Chaque demande d'entreprise est vérifiée par un Administrateur. Vos données d'entreprise ne sont jamais réutilisées ni altérées.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
+                <div class="text-indigo mb-3 fs-3">📈</div>
+                <h3 class="h5 fw-bold mb-2">Retour sur Investissement Mesurable</h3>
+                <p class="text-muted small mb-0">Réduisez la valeur moyenne de surstock de 35% tout en éliminant les ventes perdues dues aux ruptures imprévues.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CALL TO ACTION BANNER -->
+<section class="cta-banner text-center py-5 my-4">
+    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden">
+        <h2 class="fw-bold mb-3">Prêt à Passer au Pilotage Intelligent ?</h2>
+        <p class="text-muted mx-auto mb-4" style="max-width: 540px;">
+            Inscrivez votre entreprise en moins de 2 minutes et découvrez la puissance de nos prévisions IA.
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="/inscription" class="btn btn-gradient btn-lg">Soumettre une Demande Client</a>
+            <a href="/contact" class="btn btn-outline-light btn-lg">Demander un Démo Personnalisée</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
