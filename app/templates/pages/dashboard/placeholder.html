@@ -1,6 +1,15 @@
 {% extends "pages/dashboard/base.html" %}
 {% block title %}{{ title }} — StockVision AI{% endblock %}
 {% block dash_content %}
-<h1 class="dash-page-title">{{ title }}</h1>
-<p class="dash-page-subtitle">Cette section arrive bientôt.</p>
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">{{ title }}</h1>
+    <p class="dash-page-guide">{{ guide if guide else "Cette section arrive bientôt." }}</p>
+</div>
+
+<div class="dash-placeholder-soon">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);margin-bottom:1rem;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <p class="dash-placeholder-text">Cette section est en cours de développement et sera disponible prochainement.</p>
+</div>
+
 {% endblock %}

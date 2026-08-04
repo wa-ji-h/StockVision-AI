@@ -1,0 +1,446 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Paramètres — StockVision AI{% endblock %}
+{% block dash_content %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Configuration de la plateforme</h1>
+    <p class="dash-page-guide">Ajustez les réglages globaux d'analyse, de sécurité et de notifications de StockVision AI.</p>
+</div>
+
+    <!-- Alertes globales -->
+    <div id="paramAlerte"   class="param-alert param-alert--err" style="display:none;"></div>
+    <div id="paramSuccess"  class="param-alert param-alert--ok"  style="display:none;"></div>
+
+    <!-- ═══ ONGLETS ═══ -->
+    <div class="param-tabs">
+        <button class="param-tab {{ 'param-tab--active' if active_tab == 'general' }}"
+                data-tab="general">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Général
+        </button>
+        <button class="param-tab {{ 'param-tab--active' if active_tab == 'notifications' }}"
+                data-tab="notifications">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notifications
+        </button>
+        <button class="param-tab {{ 'param-tab--active' if active_tab == 'apparence' }}"
+                data-tab="apparence">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            Apparence
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         ONGLET : GÉNÉRAL
+    ═══════════════════════════════════════ -->
+    <div class="param-panel" id="panel-general" {% if active_tab != 'general' %}style="display:none;"{% endif %}>
+        <form method="post" action="/dashboard/admin/parametres?tab=general" id="formGeneral">
+            <input type="hidden" name="tab" value="general">
+
+            <!-- Bloc : Analyse -->
+            <div class="param-card">
+                <div class="param-card-header">
+                    <h3 class="param-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        Analyse & Alertes
+                    </h3>
+                </div>
+
+                <div class="param-row">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Fréquence d'analyse par défaut</span>
+                        <span class="param-row-desc">Cadence d'exécution appliquée aux nouvelles configurations d'analyse</span>
+                    </div>
+                    <div class="param-row-control">
+                        <select name="frequence_analyse_defaut" class="param-select">
+                            <option value="horaire"    {% if params.frequence_analyse_defaut == 'horaire' %}selected{% endif %}>Toutes les heures</option>
+                            <option value="quotidien"  {% if params.frequence_analyse_defaut == 'quotidien' or not params.frequence_analyse_defaut %}selected{% endif %}>Quotidien</option>
+                            <option value="hebdomadaire" {% if params.frequence_analyse_defaut == 'hebdomadaire' %}selected{% endif %}>Hebdomadaire</option>
+                            <option value="mensuel"    {% if params.frequence_analyse_defaut == 'mensuel' %}selected{% endif %}>Mensuel</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="param-sep"></div>
+
+                <div class="param-row">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Seuil de criticité des alertes</span>
+                        <span class="param-row-desc">Score minimal (0 – 100) pour qu'une anomalie déclenche une alerte</span>
+                    </div>
+                    <div class="param-row-control">
+                        <div class="param-input-wrap">
+                            <input type="number" name="seuil_criticite_defaut" class="param-input"
+                                   min="0" max="100" step="1"
+                                   value="{{ params.seuil_criticite_defaut or '50' }}">
+                            <span class="param-input-unit">/ 100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloc : Sécurité -->
+            <div class="param-card">
+                <div class="param-card-header">
+                    <h3 class="param-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Sécurité & Sessions
+                    </h3>
+                </div>
+
+                <div class="param-row">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Validité des liens de réinitialisation</span>
+                        <span class="param-row-desc">Durée en heures avant expiration du lien "Mot de passe oublié"</span>
+                    </div>
+                    <div class="param-row-control">
+                        <div class="param-input-wrap">
+                            <input type="number" name="duree_reset_mdp_heures" class="param-input"
+                                   min="1" max="72" step="1"
+                                   value="{{ params.duree_reset_mdp_heures or '24' }}">
+                            <span class="param-input-unit">h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="param-sep"></div>
+
+                <div class="param-row">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Expiration de session (JWT)</span>
+                        <span class="param-row-desc">Durée de validité du token de session en minutes</span>
+                    </div>
+                    <div class="param-row-control">
+                        <div class="param-input-wrap">
+                            <input type="number" name="duree_session_minutes" class="param-input"
+                                   min="5" max="1440" step="5"
+                                   value="{{ params.duree_session_minutes or '60' }}">
+                            <span class="param-input-unit">min</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloc : SMTP (lecture seule) -->
+            <div class="param-card">
+                <div class="param-card-header">
+                    <h3 class="param-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Configuration SMTP
+                        <span class="param-badge-readonly">Lecture seule</span>
+                    </h3>
+                </div>
+
+                <div class="param-row">
+                    <span class="param-row-label">Serveur SMTP</span>
+                    <span class="param-readonly-val">{{ smtp.host or '—' }}</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <span class="param-row-label">Port</span>
+                    <span class="param-readonly-val">{{ smtp.port }}</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <span class="param-row-label">Expéditeur (From)</span>
+                    <span class="param-readonly-val">{{ smtp.from_addr or '—' }}</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Test de connexion</span>
+                        <span class="param-row-desc">Envoie un email de test à l'adresse SMTP configurée</span>
+                    </div>
+                    <div class="param-row-control">
+                        <button type="button" class="param-btn-secondary" id="btnSmtpTest">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            Envoyer un email de test
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloc : Plateforme (lecture seule) -->
+            <div class="param-card">
+                <div class="param-card-header">
+                    <h3 class="param-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Informations Plateforme
+                        <span class="param-badge-readonly">Lecture seule</span>
+                    </h3>
+                </div>
+                <div class="param-row">
+                    <span class="param-row-label">Nom de l'application</span>
+                    <span class="param-readonly-val">StockVision AI</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <span class="param-row-label">Version</span>
+                    <span class="param-readonly-val">1.0.0-beta</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <span class="param-row-label">Entreprises actives</span>
+                    <span class="param-readonly-val param-readonly-val--accent">{{ platform.entreprises_actives }}</span>
+                </div>
+                <div class="param-sep"></div>
+                <div class="param-row">
+                    <span class="param-row-label">Analyses exécutées</span>
+                    <span class="param-readonly-val param-readonly-val--accent">{{ platform.analyses_total }}</span>
+                </div>
+            </div>
+
+            <div class="param-actions">
+                <button type="submit" class="param-btn-primary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         ONGLET : NOTIFICATIONS
+    ═══════════════════════════════════════ -->
+    <div class="param-panel" id="panel-notifications" {% if active_tab != 'notifications' %}style="display:none;"{% endif %}>
+        <form method="post" action="/dashboard/admin/parametres?tab=notifications" id="formNotifs">
+            <input type="hidden" name="tab" value="notifications">
+
+            <div class="param-card">
+                <div class="param-card-header">
+                    <h3 class="param-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        Notifications par email
+                    </h3>
+                    <p class="param-card-desc">Les notifications sont envoyées à l'adresse SMTP configurée dans l'onglet Général.</p>
+                </div>
+
+                <div class="param-row param-row--toggle">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Nouvelles demandes d'inscription</span>
+                        <span class="param-row-desc">Recevoir un email dès qu'une entreprise soumet une demande d'accès à la plateforme</span>
+                    </div>
+                    <label class="param-switch">
+                        <input type="checkbox" name="notif_nouvelle_demande" value="1"
+                               {% if params.notif_nouvelle_demande == '1' %}checked{% endif %}>
+                        <span class="param-switch-track">
+                            <span class="param-switch-thumb"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="param-sep"></div>
+
+                <div class="param-row param-row--toggle">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Alertes de sécurité</span>
+                        <span class="param-row-desc">Recevoir un email en cas de tentatives de connexion échouées répétées sur le compte administrateur</span>
+                    </div>
+                    <label class="param-switch">
+                        <input type="checkbox" name="notif_securite" value="1"
+                               {% if params.notif_securite == '1' %}checked{% endif %}>
+                        <span class="param-switch-track">
+                            <span class="param-switch-thumb"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="param-sep"></div>
+
+                <div class="param-row param-row--toggle">
+                    <div class="param-row-info">
+                        <span class="param-row-label">Résumé hebdomadaire</span>
+                        <span class="param-row-desc">Récapitulatif chaque lundi des alertes générées et analyses exécutées sur l'ensemble des entreprises</span>
+                    </div>
+                    <label class="param-switch">
+                        <input type="checkbox" name="notif_resume_hebdo" value="1"
+                               {% if params.notif_resume_hebdo == '1' %}checked{% endif %}>
+                        <span class="param-switch-track">
+                            <span class="param-switch-thumb"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="param-actions">
+                <button type="submit" class="param-btn-primary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Enregistrer les préférences
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         ONGLET : APPARENCE
+    ═══════════════════════════════════════ -->
+    <div class="param-panel" id="panel-apparence" {% if active_tab != 'apparence' %}style="display:none;"{% endif %}>
+
+        <!-- Thème -->
+        <div class="param-card">
+            <div class="param-card-header">
+                <h3 class="param-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    Thème de l'interface
+                </h3>
+                <p class="param-card-desc">Choisissez l'apparence visuelle du tableau de bord.</p>
+            </div>
+
+            <div class="param-theme-grid">
+                <!-- Sombre — actif -->
+                <button type="button" class="param-theme-card param-theme-card--active" id="themeCardDark" data-theme="dark">
+                    <div class="param-theme-preview param-theme-preview--dark">
+                        <div class="ptpd-topbar"></div>
+                        <div class="ptpd-body">
+                            <div class="ptpd-sidebar"></div>
+                            <div class="ptpd-content">
+                                <div class="ptpd-block"></div>
+                                <div class="ptpd-block ptpd-block--sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="param-theme-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        Sombre
+                        <span class="param-theme-check" id="themeCheckDark">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                    </div>
+                </button>
+
+                <!-- Clair — bientôt -->
+                <button type="button" class="param-theme-card param-theme-card--soon" id="themeCardLight" data-theme="light">
+                    <div class="param-theme-preview param-theme-preview--light">
+                        <div class="ptpl-topbar"></div>
+                        <div class="ptpl-body">
+                            <div class="ptpl-sidebar"></div>
+                            <div class="ptpl-content">
+                                <div class="ptpl-block"></div>
+                                <div class="ptpl-block ptpl-block--sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="param-theme-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        Clair
+                        <span class="param-soon-tag">Bientôt</span>
+                    </div>
+                </button>
+
+                <!-- Système — bientôt -->
+                <button type="button" class="param-theme-card param-theme-card--soon" id="themeCardSystem" data-theme="system">
+                    <div class="param-theme-preview param-theme-preview--system">
+                        <div class="ptps-half ptps-dark"></div>
+                        <div class="ptps-half ptps-light"></div>
+                    </div>
+                    <div class="param-theme-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Système
+                        <span class="param-soon-tag">Bientôt</span>
+                    </div>
+                </button>
+            </div>
+
+            <div id="paramThemeSoon" class="param-theme-soon-msg" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Ce thème sera disponible dans une prochaine version.
+            </div>
+        </div>
+
+        <!-- Langue -->
+        <div class="param-card">
+            <div class="param-card-header">
+                <h3 class="param-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                    Langue de l'interface
+                </h3>
+            </div>
+
+            <div class="param-lang-grid">
+                <button type="button" class="param-lang-card param-lang-card--active">
+                    <span class="param-lang-flag">🇫🇷</span>
+                    <span class="param-lang-name">Français</span>
+                    <span class="param-lang-check">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                </button>
+                <button type="button" class="param-lang-card param-lang-card--soon" disabled>
+                    <span class="param-lang-flag">🇬🇧</span>
+                    <span class="param-lang-name">English</span>
+                    <span class="param-soon-tag">Bientôt</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function () {
+    // ── Navigation onglets ──
+    const tabs   = document.querySelectorAll('.param-tab');
+    const panels = document.querySelectorAll('.param-panel');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            tabs.forEach(t => t.classList.remove('param-tab--active'));
+            tab.classList.add('param-tab--active');
+            panels.forEach(p => {
+                p.style.display = p.id === 'panel-' + target ? '' : 'none';
+            });
+            history.replaceState(null, '', `/dashboard/admin/parametres?tab=${target}`);
+        });
+    });
+
+    // ── Alertes ──
+    function showAlert(msg, ok) {
+        const el    = document.getElementById(ok ? 'paramSuccess' : 'paramAlerte');
+        const other = document.getElementById(ok ? 'paramAlerte' : 'paramSuccess');
+        other.style.display = 'none';
+        el.textContent = msg;
+        el.style.display = '';
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    {% if flash_ok %}  showAlert("{{ flash_ok }}",  true);  {% endif %}
+    {% if flash_err %} showAlert("{{ flash_err }}", false); {% endif %}
+
+    // ── Bouton test SMTP ──
+    const btnSmtp = document.getElementById('btnSmtpTest');
+    if (btnSmtp) {
+        btnSmtp.addEventListener('click', async () => {
+            btnSmtp.disabled = true;
+            btnSmtp.textContent = 'Envoi en cours…';
+            try {
+                const res = await fetch('/dashboard/admin/parametres/test-smtp', { method: 'POST' });
+                const d = await res.json().catch(() => ({}));
+                if (res.ok) showAlert(d.message || 'Email de test envoyé.', true);
+                else        showAlert(d.detail  || 'Échec de l\'envoi.', false);
+            } catch {
+                showAlert('Erreur réseau.', false);
+            } finally {
+                btnSmtp.disabled = false;
+                btnSmtp.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer un email de test`;
+            }
+        });
+    }
+
+    // ── Thème ──
+    const themeCards = document.querySelectorAll('.param-theme-card');
+    const soonMsg    = document.getElementById('paramThemeSoon');
+
+    themeCards.forEach(card => {
+        card.addEventListener('click', () => {
+            if (card.classList.contains('param-theme-card--soon')) {
+                soonMsg.style.display = '';
+                return;
+            }
+            soonMsg.style.display = 'none';
+            themeCards.forEach(c => c.classList.remove('param-theme-card--active'));
+            card.classList.add('param-theme-card--active');
+        });
+    });
+})();
+</script>
+
+{% endblock %}

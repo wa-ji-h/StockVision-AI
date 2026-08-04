@@ -16,8 +16,8 @@
             <p class="auth-subtitle">Accédez à votre espace StockVision AI</p>
         </div>
 
-        <div class="auth-alert auth-alert-error" id="signinError" hidden></div>
-        <div class="auth-alert auth-alert-success" id="signinSuccess" hidden></div>
+        <div class="auth-alert auth-alert-error" id="signinError"{% if not oauth_error %} hidden{% endif %}>{{ oauth_error }}</div>
+        <div class="auth-alert auth-alert-success" id="signinSuccess"{% if not oauth_pending %} hidden{% endif %}>{{ oauth_pending }}</div>
 
         <form class="auth-form" id="signinForm" novalidate>
             <div class="auth-field">

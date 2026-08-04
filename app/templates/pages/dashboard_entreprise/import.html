@@ -1,0 +1,1066 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Importer des données — StockVision AI{% endblock %}
+{% block dash_content %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Ajouter vos données</h1>
+    <p class="dash-page-guide">Déposez vos fichiers CSV ou SQL, ou connectez votre base de données pour commencer une nouvelle analyse.</p>
+</div>
+
+<!-- ── Layout 2 colonnes ── -->
+<div class="imp-layout">
+
+    <!-- ══════════════════ COLONNE PRINCIPALE ══════════════════ -->
+    <div class="imp-col-main">
+
+        <!-- Onglets source -->
+        <div class="imp-source-tabs">
+            <button class="imp-source-tab imp-source-tab--active" id="tabFile" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Importer un fichier
+            </button>
+            <button class="imp-source-tab" id="tabDb" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                Connecter une base
+            </button>
+        </div>
+
+        <!-- Panneau BD -->
+        <div id="panelDb" style="display:none;">
+
+            <!-- DB ÉTAT 1 : formulaire -->
+            <div id="dbStateForm" class="db-state">
+                <div class="db-form-card">
+                    <div class="db-form-top">
+                        <h3 class="db-form-title" id="dbFormTitle">Connexion à une base de données</h3>
+                        <p class="db-form-desc" id="dbFormDesc">Connectez votre base en lecture seule. Vos identifiants sont chiffrés avant stockage.</p>
+                    </div>
+
+                    <div class="db-field-row">
+                        <div class="db-field-group db-field-group--wide">
+                            <label class="imp-label" for="dbType">Type de base de données</label>
+                            <div class="db-sgbd-picker" id="dbSgbdPicker">
+                                <button type="button" class="db-sgbd-btn db-sgbd-btn--active" data-val="mysql">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                    MySQL
+                                </button>
+                                <button type="button" class="db-sgbd-btn" data-val="postgresql">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                    PostgreSQL
+                                </button>
+                                <button type="button" class="db-sgbd-btn" data-val="mssql">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                    SQL Server
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="db-field-row">
+                        <div class="db-field-group">
+                            <label class="imp-label" for="dbHost">Hôte / IP</label>
+                            <input type="text" id="dbHost" class="imp-input" placeholder="Ex : 192.168.1.10 ou db.monserveur.com">
+                            <span class="db-field-err" id="errDbHost"></span>
+                        </div>
+                        <div class="db-field-group db-field-group--sm">
+                            <label class="imp-label" for="dbPort">Port</label>
+                            <input type="number" id="dbPort" class="imp-input" placeholder="3306" min="1" max="65535">
+                            <span class="db-field-err" id="errDbPort"></span>
+                        </div>
+                    </div>
+
+                    <div class="db-field-row">
+                        <div class="db-field-group">
+                            <label class="imp-label" for="dbName">Nom de la base</label>
+                            <input type="text" id="dbName" class="imp-input" placeholder="Ex : ma_base_production">
+                            <span class="db-field-err" id="errDbName"></span>
+                        </div>
+                    </div>
+
+                    <div class="db-field-row">
+                        <div class="db-field-group">
+                            <label class="imp-label" for="dbUser">Utilisateur</label>
+                            <input type="text" id="dbUser" class="imp-input" placeholder="Ex : readonly_user">
+                            <span class="db-field-err" id="errDbUser"></span>
+                        </div>
+                        <div class="db-field-group">
+                            <label class="imp-label" for="dbPass">Mot de passe</label>
+                            <div class="db-pass-wrap">
+                                <input type="password" id="dbPass" class="imp-input" placeholder="••••••••">
+                                <button type="button" class="db-pass-eye" id="dbPassEye" aria-label="Afficher/masquer">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="db-field-row">
+                        <div class="db-field-group db-field-group--wide">
+                            <label class="imp-label" for="dbNomSource">Nom de la source <span class="imp-optional">(optionnel)</span></label>
+                            <input type="text" id="dbNomSource" class="imp-input" placeholder="Ex : Base ventes production" maxlength="150">
+                        </div>
+                    </div>
+
+                    <div class="db-readonly-note">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        L'utilisateur n'a besoin que des droits <code>SELECT</code> — aucune écriture n'est effectuée sur votre base.
+                    </div>
+
+                    <!-- Erreur serveur (connexion refusée etc.) -->
+                    <div class="db-error-msg" id="dbErrorMsg" style="display:none;"></div>
+
+                    <div class="imp-actions">
+                        <button type="button" class="imp-btn-ghost" id="dbBtnReset">Réinitialiser</button>
+                        <button type="button" class="imp-btn-primary" id="dbBtnTest">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                            <span id="dbBtnTestLabel">Tester la connexion</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DB ÉTAT 2 : test en cours -->
+            <div id="dbStateTesting" class="db-state" style="display:none;">
+                <div class="imp-progress-card">
+                    <p class="imp-progress-label">Test de connexion en cours…</p>
+                    <div class="imp-progress-track"><div class="imp-progress-bar db-test-bar"></div></div>
+                    <p class="imp-progress-pct" style="color:var(--text-muted);font-size:0.8rem;margin-top:0.5rem;">Connexion à votre serveur…</p>
+                </div>
+            </div>
+
+            <!-- DB ÉTAT 3 : résultat test (tables listées) -->
+            <div id="dbStateResult" class="db-state" style="display:none;">
+                <div class="db-result-card">
+                    <div class="db-result-header">
+                        <div class="imp-result-icon imp-result-icon--ok" style="width:38px;height:38px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="imp-success-title" style="font-size:1rem;">Connexion réussie</h3>
+                            <p class="imp-success-sub" id="dbResultMeta">0 tables détectées</p>
+                        </div>
+                    </div>
+
+                    <div class="db-tables-wrap">
+                        <h4 class="db-tables-title">Tables disponibles</h4>
+                        <div class="db-tables-list" id="dbTablesList"></div>
+                    </div>
+
+                    <div class="imp-actions">
+                        <button type="button" class="imp-btn-ghost" id="dbBtnBackForm">Modifier la connexion</button>
+                        <button type="button" class="imp-btn-primary" id="dbBtnSave">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Enregistrer cette connexion
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DB ÉTAT 4 : enregistrement -->
+            <div id="dbStateSaving" class="db-state" style="display:none;">
+                <div class="imp-progress-card">
+                    <p class="imp-progress-label">Chiffrement et enregistrement…</p>
+                    <div class="imp-progress-track"><div class="imp-progress-bar db-save-bar"></div></div>
+                    <p class="imp-progress-pct" style="color:var(--text-muted);font-size:0.8rem;margin-top:0.5rem;">Vos identifiants sont chiffrés avant stockage.</p>
+                </div>
+            </div>
+
+            <!-- DB ÉTAT 5 : succès enregistrement -->
+            <div id="dbStateSuccess" class="db-state" style="display:none;">
+                <div class="imp-success-header">
+                    <div class="imp-result-icon imp-result-icon--ok">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="imp-success-title">Connexion enregistrée !</h3>
+                        <p class="imp-success-sub" id="dbSuccessMsg">Votre base de données a été connectée avec succès.</p>
+                    </div>
+                </div>
+
+                <div class="imp-recap-card">
+                    <h4 class="imp-recap-title">Récapitulatif</h4>
+                    <div class="imp-recap-grid">
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Type de base</span>
+                            <span class="imp-recap-val" id="dbRecapType">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Hôte</span>
+                            <span class="imp-recap-val" id="dbRecapHost">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Base</span>
+                            <span class="imp-recap-val" id="dbRecapName">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Tables détectées</span>
+                            <span class="imp-recap-val" id="dbRecapTables">—</span>
+                        </div>
+                        <div class="imp-recap-item imp-recap-item--full">
+                            <span class="imp-recap-label">Nom de la source</span>
+                            <span class="imp-recap-val" id="dbRecapSource">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="imp-next-step">
+                    <div class="imp-next-step-inner">
+                        <div class="imp-next-step-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                        </div>
+                        <div class="imp-next-step-text">
+                            <span class="imp-next-step-label">Et maintenant ?</span>
+                            <span class="imp-next-step-desc">Votre source est prête. Configurez une analyse pour que l'IA génère vos prévisions.</span>
+                        </div>
+                        <a href="/dashboard/entreprise/configurations" class="imp-btn-primary imp-next-step-btn">
+                            Créer une analyse
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="imp-actions" style="margin-top:1rem;">
+                    <button type="button" class="imp-btn-ghost" id="dbBtnNewConn">Connecter une autre base</button>
+                </div>
+            </div>
+
+        </div><!-- /panelDb -->
+
+        <!-- Panneau fichier -->
+        <div id="panelFile">
+
+            <!-- ÉTAT 1 : dropzone -->
+            <div id="stateDropzone" class="imp-state">
+                <div class="imp-dropzone" id="dropzone" tabindex="0" role="button" aria-label="Zone de dépôt de fichier">
+                    <input type="file" id="fileInput" accept=".csv,.sql" hidden>
+                    <div class="imp-dropzone-inner">
+                        <div class="imp-drop-icon" id="dropIcon">
+                            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        </div>
+                        <p class="imp-drop-title">Glissez votre fichier ici ou <span class="imp-drop-link">cliquez pour parcourir</span></p>
+                        <p class="imp-drop-hint">CSV · SQL — 50 Mo maximum</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÉTAT 2 : fichier sélectionné -->
+            <div id="stateSelected" class="imp-state" style="display:none;">
+                <div class="imp-file-card" id="fileCard">
+                    <div class="imp-file-icon" id="fileIcon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div class="imp-file-info">
+                        <span class="imp-file-name" id="fileName">—</span>
+                        <span class="imp-file-meta" id="fileMeta">—</span>
+                    </div>
+                    <button type="button" class="imp-file-remove" id="btnRemove" aria-label="Retirer">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div class="imp-field-group">
+                    <label class="imp-label" for="sourceName">Nom de la source <span class="imp-optional">(optionnel)</span></label>
+                    <input type="text" id="sourceName" class="imp-input" placeholder="Ex : Ventes Q1 2025, Stock Mars…" maxlength="150">
+                </div>
+                <div class="imp-actions">
+                    <button type="button" class="imp-btn-ghost" id="btnCancel">Annuler</button>
+                    <button type="button" class="imp-btn-primary" id="btnUpload">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        Vérifier et importer
+                    </button>
+                </div>
+            </div>
+
+            <!-- ÉTAT 3 : progression -->
+            <div id="stateProgress" class="imp-state" style="display:none;">
+                <div class="imp-progress-card">
+                    <p class="imp-progress-label" id="progressLabel">Envoi du fichier…</p>
+                    <div class="imp-progress-track">
+                        <div class="imp-progress-bar" id="progressBar"></div>
+                    </div>
+                    <p class="imp-progress-pct" id="progressPct">0%</p>
+                </div>
+            </div>
+
+            <!-- ÉTAT 4 : aperçu -->
+            <div id="statePreview" class="imp-state" style="display:none;">
+                <div class="imp-preview-card">
+                    <div class="imp-preview-header">
+                        <div>
+                            <h3 class="imp-preview-title">Aperçu du fichier</h3>
+                            <p class="imp-preview-meta" id="previewMeta">—</p>
+                        </div>
+                        <span class="imp-preview-badge">Prêt à importer</span>
+                    </div>
+                    <div class="imp-table-wrap">
+                        <table class="imp-table"><thead id="previewHead"></thead><tbody id="previewBody"></tbody></table>
+                    </div>
+                    <div class="imp-preview-actions">
+                        <button type="button" class="imp-btn-ghost" id="btnPreviewCancel">Annuler</button>
+                        <button type="button" class="imp-btn-primary" id="btnConfirm">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Confirmer l'import
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÉTAT 5 : succès -->
+            <div id="stateSuccess" class="imp-state" style="display:none;">
+                <!-- En-tête succès -->
+                <div class="imp-success-header">
+                    <div class="imp-result-icon imp-result-icon--ok">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="imp-success-title">Import réussi !</h3>
+                        <p class="imp-success-sub" id="successMsg">Votre fichier a été importé avec succès.</p>
+                    </div>
+                </div>
+
+                <!-- Récapitulatif fichier -->
+                <div class="imp-recap-card">
+                    <h4 class="imp-recap-title">Récapitulatif</h4>
+                    <div class="imp-recap-grid">
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Fichier</span>
+                            <span class="imp-recap-val" id="recapNom">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Format</span>
+                            <span class="imp-recap-val" id="recapFormat">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Taille</span>
+                            <span class="imp-recap-val" id="recapTaille">—</span>
+                        </div>
+                        <div class="imp-recap-item">
+                            <span class="imp-recap-label">Nom de la source</span>
+                            <span class="imp-recap-val" id="recapSource">—</span>
+                        </div>
+                        <div class="imp-recap-item imp-recap-item--full">
+                            <span class="imp-recap-label">Date d'import</span>
+                            <span class="imp-recap-val" id="recapDate">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="imp-actions">
+                    <a href="/dashboard/entreprise/imports" class="imp-btn-secondary">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        Voir l'historique
+                    </a>
+                    <button type="button" class="imp-btn-ghost" id="btnNewImport">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Importer un autre fichier
+                    </button>
+                </div>
+
+                <!-- Étape suivante -->
+                <div class="imp-next-step">
+                    <div class="imp-next-step-inner">
+                        <div class="imp-next-step-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                        </div>
+                        <div class="imp-next-step-text">
+                            <span class="imp-next-step-label">Et maintenant ?</span>
+                            <span class="imp-next-step-desc">Vos données sont prêtes. Configurez une analyse pour que l'IA génère vos prévisions.</span>
+                        </div>
+                        <a href="/dashboard/entreprise/configurations" class="imp-btn-primary imp-next-step-btn">
+                            Créer une analyse
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mini-liste derniers imports -->
+                <div class="imp-recent-mini" id="recentMiniWrap" style="display:none;">
+                    <h4 class="imp-recent-mini-title">Derniers imports</h4>
+                    <table class="imp-table">
+                        <thead>
+                            <tr>
+                                <th>Fichier</th>
+                                <th>Format</th>
+                                <th>Date</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentMiniBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ÉTAT 6 : erreur -->
+            <div id="stateError" class="imp-state" style="display:none;">
+                <div class="imp-result-card imp-result-card--err">
+                    <div class="imp-result-icon imp-result-icon--err">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h3 class="imp-result-title">Import échoué</h3>
+                    <p class="imp-result-msg" id="errorMsg">Une erreur est survenue.</p>
+                    <div class="imp-result-actions">
+                        <button type="button" class="imp-btn-primary" id="btnRetry">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.08"/></svg>
+                            Réessayer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /panelFile -->
+    </div><!-- /col-main -->
+
+    <!-- ══════════════════ COLONNE LATÉRALE ══════════════════ -->
+    <div class="imp-col-side">
+        <div class="imp-side-card">
+            <div class="imp-side-header">
+                <h3 class="imp-side-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                    Imports récents
+                </h3>
+                <a href="/dashboard/entreprise/imports" class="imp-side-link">Tout voir</a>
+            </div>
+
+            {% if recent_imports %}
+            <ul class="imp-recent-list">
+                {% for imp in recent_imports %}
+                <li class="imp-recent-item">
+                    <div class="imp-recent-ext imp-recent-ext--{{ imp.type_format | lower }}">{{ imp.type_format }}</div>
+                    <div class="imp-recent-info">
+                        <span class="imp-recent-name">{{ imp.nom_fichier }}</span>
+                        <span class="imp-recent-date">{{ imp.date_import }}</span>
+                    </div>
+                    <span class="imp-recent-status imp-recent-status--{{ imp.statut }}">
+                        {% if imp.statut == 'valide' %}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        {% elif imp.statut == 'en_attente' %}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {% else %}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        {% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="imp-side-empty">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-dim);"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                <p>Aucun import<br>pour le moment</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Encart formats -->
+        <div class="imp-side-card imp-side-card--sm">
+            <h4 class="imp-side-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Formats acceptés
+            </h4>
+            <ul class="imp-format-list">
+                <li><span class="imp-fmt-badge imp-fmt-badge--csv">CSV</span> Données tabulaires séparées par virgule ou point-virgule</li>
+                <li><span class="imp-fmt-badge imp-fmt-badge--sql">SQL</span> Scripts d'export de base de données</li>
+            </ul>
+            <p class="imp-side-note">Taille max : 50 Mo par fichier</p>
+        </div>
+
+        <!-- Encart prochaine étape -->
+        <div class="imp-side-card imp-side-card--sm imp-side-card--next">
+            <div class="imp-side-next-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </div>
+            <h4 class="imp-side-title" style="margin-bottom:0.55rem;">Prochaine étape</h4>
+            <p class="imp-side-next-text">
+                L'import enregistre et valide vos données — aucune analyse n'est lancée à ce stade. Pour obtenir des résultats et prévisions, créez ensuite une <strong>Configuration d'analyse</strong> qui indique à l'IA quoi analyser et à quelle fréquence.
+            </p>
+            <a href="/dashboard/entreprise/configurations" class="imp-side-next-link">
+                En savoir plus sur les analyses
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+        </div>
+    </div><!-- /col-side -->
+
+</div><!-- /imp-layout -->
+
+<script>
+(function () {
+    'use strict';
+
+    const MAX_SIZE   = 50 * 1024 * 1024;
+    const ALLOWED    = ['csv', 'sql'];
+    const EXT_LABELS = { csv: 'CSV', sql: 'SQL' };
+    const EXT_COLORS = { csv: '#22d3ee', sql: '#6366f1' };
+
+    const tabFile   = document.getElementById('tabFile');
+    const tabDb     = document.getElementById('tabDb');
+    const panelFile = document.getElementById('panelFile');
+    const panelDb   = document.getElementById('panelDb');
+    const dropzone  = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const dropIcon  = document.getElementById('dropIcon');
+
+    const states = {
+        dropzone : document.getElementById('stateDropzone'),
+        selected : document.getElementById('stateSelected'),
+        progress : document.getElementById('stateProgress'),
+        preview  : document.getElementById('statePreview'),
+        success  : document.getElementById('stateSuccess'),
+        error    : document.getElementById('stateError'),
+    };
+
+    /* ── Transition entre états ── */
+    function showState(name) {
+        Object.values(states).forEach(el => {
+            el.style.transition = 'opacity 0.22s ease';
+            el.style.opacity = '0';
+            setTimeout(() => { el.style.display = 'none'; }, 220);
+        });
+        const target = states[name];
+        if (!target) return;
+        setTimeout(() => {
+            target.style.display = '';
+            requestAnimationFrame(() => { target.style.opacity = '1'; });
+        }, 230);
+    }
+
+    /* ── Helpers ── */
+    function fmtSize(b) {
+        if (b < 1024) return b + ' o';
+        if (b < 1048576) return (b/1024).toFixed(1) + ' Ko';
+        return (b/1048576).toFixed(1) + ' Mo';
+    }
+    function getExt(f) { return f.name.split('.').pop().toLowerCase(); }
+    function validate(f) {
+        const e = getExt(f);
+        if (!ALLOWED.includes(e)) return `Format non supporté. Seuls ${ALLOWED.map(x=>x.toUpperCase()).join(', ')} sont acceptés.`;
+        if (!f.size) return 'Le fichier est vide ou illisible.';
+        if (f.size > MAX_SIZE) return 'Fichier trop volumineux — 50 Mo maximum.';
+        return null;
+    }
+
+    /* ── Onglets source ── */
+    tabFile.addEventListener('click', () => {
+        tabFile.classList.add('imp-source-tab--active');
+        tabDb.classList.remove('imp-source-tab--active');
+        panelFile.style.display = '';
+        panelDb.style.display = 'none';
+    });
+    tabDb.addEventListener('click', () => {
+        tabDb.classList.add('imp-source-tab--active');
+        tabFile.classList.remove('imp-source-tab--active');
+        panelDb.style.display = '';
+        panelFile.style.display = 'none';
+    });
+
+    /* ── Drag & drop ── */
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') fileInput.click(); });
+    ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault();
+        dropzone.classList.add('imp-dropzone--over');
+        dropIcon.style.transform = 'scale(1.18) translateY(-3px)';
+    }));
+    ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault();
+        dropzone.classList.remove('imp-dropzone--over');
+        dropIcon.style.transform = '';
+    }));
+    dropzone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+    /* ── Fichier sélectionné ── */
+    let currentFile = null;
+    let lastImportData = null;
+
+    function handleFile(file) {
+        const err = validate(file);
+        if (err) { showErrorState(err); return; }
+        currentFile = file;
+        const e = getExt(file);
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileMeta').textContent = (EXT_LABELS[e]||e.toUpperCase()) + ' · ' + fmtSize(file.size);
+        const icon = document.getElementById('fileIcon');
+        icon.style.background = (EXT_COLORS[e]||'var(--accent)') + '20';
+        icon.style.color = EXT_COLORS[e]||'var(--accent)';
+        showState('selected');
+    }
+
+    document.getElementById('btnRemove').addEventListener('click', reset);
+    document.getElementById('btnCancel').addEventListener('click', reset);
+    document.getElementById('btnPreviewCancel').addEventListener('click', reset);
+    document.getElementById('btnNewImport').addEventListener('click', reset);
+    document.getElementById('btnRetry').addEventListener('click', reset);
+
+    function reset() {
+        currentFile = null;
+        lastImportData = null;
+        fileInput.value = '';
+        document.getElementById('sourceName').value = '';
+        progressBar.style.width = '0%';
+        showState('dropzone');
+    }
+
+    /* ── Upload ── */
+    document.getElementById('btnUpload').addEventListener('click', doUpload);
+    document.getElementById('btnConfirm').addEventListener('click', doConfirm);
+
+    async function doUpload() {
+        if (!currentFile) return;
+        showState('progress');
+        await animateProgress(['Envoi du fichier…', 'Vérification du format…', 'Vérification du fichier…'], async () => {
+            const fd = new FormData();
+            fd.append('file', currentFile);
+            fd.append('nom_source', document.getElementById('sourceName').value.trim());
+            const res = await fetch('/dashboard/entreprise/import', { method: 'POST', body: fd });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showErrorState(data.detail || "Erreur lors de l'import."); return; }
+            lastImportData = data;
+            if (data.preview && data.preview.length > 0) {
+                renderPreview(data.preview, data.row_count, data.col_count);
+                showState('preview');
+            } else {
+                showSuccessState(data);
+            }
+        });
+    }
+
+    async function doConfirm() {
+        if (!lastImportData?.import_id) return;
+        showState('progress');
+        await animateProgress(['Finalisation…', 'Enregistrement…'], async () => {
+            const res = await fetch('/dashboard/entreprise/import/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ import_id: lastImportData.import_id }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) showSuccessState({ ...lastImportData, ...data });
+            else showErrorState(data.detail || 'Erreur lors de la confirmation.');
+        });
+    }
+
+    /* ── Progression ── */
+    const progressBar   = document.getElementById('progressBar');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressPct   = document.getElementById('progressPct');
+
+    function animateProgress(steps, onDone) {
+        return new Promise(resolve => {
+            let pct = 0;
+            progressBar.style.width = '0%';
+            progressLabel.textContent = steps[0];
+
+            const iv = setInterval(() => {
+                pct = Math.min(pct + (pct < 70 ? 3 : 1), 90);
+                progressBar.style.width = pct + '%';
+                progressPct.textContent = pct + '%';
+                const si = Math.floor(pct / (90 / steps.length));
+                if (si < steps.length) progressLabel.textContent = steps[si];
+
+                if (pct >= 90) {
+                    clearInterval(iv);
+                    onDone().then(() => {
+                        progressBar.style.width = '100%';
+                        progressPct.textContent = '100%';
+                        progressLabel.textContent = 'Terminé';
+                        resolve();
+                    }).catch(err => {
+                        showErrorState('Erreur réseau — vérifiez votre connexion.');
+                        resolve();
+                    });
+                }
+            }, 40);
+        });
+    }
+
+    /* ── Aperçu ── */
+    function renderPreview(rows, rowCount, colCount) {
+        document.getElementById('previewMeta').textContent =
+            `${rowCount} ligne${rowCount>1?'s':''} détectée${rowCount>1?'s':''}, ${colCount} colonne${colCount>1?'s':''}`;
+        const head = document.getElementById('previewHead');
+        const body = document.getElementById('previewBody');
+        head.innerHTML = '';
+        body.innerHTML = '';
+        if (!rows?.length) return;
+        const headers = Object.keys(rows[0]);
+        const tr = document.createElement('tr');
+        headers.forEach(h => { const th=document.createElement('th'); th.textContent=h; tr.appendChild(th); });
+        head.appendChild(tr);
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            headers.forEach(h => { const td=document.createElement('td'); td.textContent=row[h]??''; tr.appendChild(td); });
+            body.appendChild(tr);
+        });
+    }
+
+    /* ── Succès ── */
+    function showSuccessState(data) {
+        const f = currentFile;
+        const ext = f ? getExt(f) : '—';
+        // Message
+        const lines = data.row_count ? `${data.row_count} ligne${data.row_count>1?'s':''} enregistrée${data.row_count>1?'s':''}.` : '';
+        document.getElementById('successMsg').textContent =
+            `${f?.name || 'Fichier'} importé avec succès.${lines?' '+lines:''}`;
+        // Récap
+        document.getElementById('recapNom').textContent    = f?.name || '—';
+        document.getElementById('recapFormat').textContent = (EXT_LABELS[ext]||ext.toUpperCase()) || '—';
+        document.getElementById('recapTaille').textContent = f ? fmtSize(f.size) : (data.file_size ? fmtSize(data.file_size) : '—');
+        document.getElementById('recapSource').textContent = data.nom_source || document.getElementById('sourceName').value || '—';
+        document.getElementById('recapDate').textContent   = data.import_date || new Date().toLocaleString('fr-FR');
+        // Recharger imports récents depuis le serveur
+        fetchRecentMini();
+        showState('success');
+    }
+
+    function showErrorState(msg) {
+        document.getElementById('errorMsg').textContent = msg;
+        showState('error');
+    }
+
+    /* ── Mini-liste succès ── */
+    async function fetchRecentMini() {
+        try {
+            const res = await fetch('/dashboard/entreprise/import/recent');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.imports?.length) return;
+            const wrap = document.getElementById('recentMiniWrap');
+            const tbody = document.getElementById('recentMiniBody');
+            tbody.innerHTML = '';
+            data.imports.forEach(imp => {
+                const tr = document.createElement('tr');
+                const statusIcon = imp.statut === 'valide'
+                    ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+                    : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+                tr.innerHTML = `
+                    <td>${imp.nom_fichier}</td>
+                    <td><span class="imp-fmt-badge imp-fmt-badge--${imp.type_format.toLowerCase()}">${imp.type_format}</span></td>
+                    <td style="color:var(--text-dim);font-size:0.78rem;">${imp.date_import}</td>
+                    <td>${statusIcon}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            wrap.style.display = '';
+        } catch { /* silencieux */ }
+    }
+
+    /* Init */
+    showState('dropzone');
+    if (window.location.hash === '#db') tabDb.click();
+})();
+
+/* ══════════════════ Panneau BD ══════════════════ */
+(function () {
+    'use strict';
+
+    const DB_DEFAULTS = { mysql: 3306, postgresql: 5432, mssql: 1433 };
+    let selectedSgbd = 'mysql';
+    let detectedTables = [];
+    let lastSaveData = null;
+    let editSourceId = null;
+
+    const dbStates = {
+        form:    document.getElementById('dbStateForm'),
+        testing: document.getElementById('dbStateTesting'),
+        result:  document.getElementById('dbStateResult'),
+        saving:  document.getElementById('dbStateSaving'),
+        success: document.getElementById('dbStateSuccess'),
+    };
+
+    function showDbState(name) {
+        Object.values(dbStates).forEach(el => {
+            if (!el) return;
+            el.style.transition = 'opacity 0.22s ease';
+            el.style.opacity = '0';
+            setTimeout(() => { el.style.display = 'none'; }, 220);
+        });
+        const target = dbStates[name];
+        if (!target) return;
+        setTimeout(() => {
+            target.style.display = '';
+            requestAnimationFrame(() => { target.style.opacity = '1'; });
+        }, 230);
+    }
+
+    /* ── SGBD picker ── */
+    document.querySelectorAll('.db-sgbd-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.db-sgbd-btn').forEach(b => b.classList.remove('db-sgbd-btn--active'));
+            btn.classList.add('db-sgbd-btn--active');
+            selectedSgbd = btn.dataset.val;
+            const portField = document.getElementById('dbPort');
+            if (!portField.value || Object.values(DB_DEFAULTS).includes(parseInt(portField.value))) {
+                portField.value = DB_DEFAULTS[selectedSgbd] || '';
+            }
+        });
+    });
+
+    /* ── Afficher/masquer mdp ── */
+    document.getElementById('dbPassEye').addEventListener('click', () => {
+        const inp = document.getElementById('dbPass');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
+    /* ── Helpers validation inline ── */
+    const FIELD_ERRS = { dbHost: 'errDbHost', dbPort: 'errDbPort', dbName: 'errDbName', dbUser: 'errDbUser' };
+
+    function setFieldErr(inputId, msg) {
+        const errEl = document.getElementById(FIELD_ERRS[inputId]);
+        const inp   = document.getElementById(inputId);
+        if (!errEl) return;
+        errEl.textContent = msg || '';
+        if (msg) {
+            inp?.classList.add('imp-input--err');
+        } else {
+            inp?.classList.remove('imp-input--err');
+        }
+    }
+
+    function clearAllFieldErrs() {
+        Object.keys(FIELD_ERRS).forEach(id => setFieldErr(id, ''));
+        document.getElementById('dbErrorMsg').style.display = 'none';
+    }
+
+    /* Effacer l'erreur d'un champ dès que l'utilisateur commence à modifier */
+    Object.keys(FIELD_ERRS).forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => setFieldErr(id, ''));
+    });
+
+    function validateDbForm() {
+        const host   = document.getElementById('dbHost').value.trim();
+        const port   = parseInt(document.getElementById('dbPort').value);
+        const dbName = document.getElementById('dbName').value.trim();
+        const user   = document.getElementById('dbUser').value.trim();
+        let valid = true;
+        if (!host) { setFieldErr('dbHost', 'L\'hôte est requis.'); valid = false; }
+        if (document.getElementById('dbPort').value && (isNaN(port) || port < 1 || port > 65535)) {
+            setFieldErr('dbPort', 'Port invalide (1–65535).'); valid = false;
+        }
+        if (!dbName) { setFieldErr('dbName', 'Le nom de la base est requis.'); valid = false; }
+        if (!user)   { setFieldErr('dbUser', 'L\'utilisateur est requis.'); valid = false; }
+        return valid;
+    }
+
+    /* ── Réinitialiser ── */
+    document.getElementById('dbBtnReset').addEventListener('click', () => {
+        ['dbHost','dbPort','dbName','dbUser','dbPass','dbNomSource'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        clearAllFieldErrs();
+    });
+
+    /* ── Retour au formulaire ── */
+    document.getElementById('dbBtnBackForm').addEventListener('click', () => showDbState('form'));
+    document.getElementById('dbBtnNewConn').addEventListener('click', () => {
+        detectedTables = [];
+        lastSaveData = null;
+        showDbState('form');
+    });
+
+    /* ── Animer barre de progression factice ── */
+    function animateBar(barClass, duration) {
+        const bar = document.querySelector('.' + barClass);
+        if (!bar) return;
+        bar.style.width = '0%';
+        let pct = 0;
+        const iv = setInterval(() => {
+            pct = Math.min(pct + 2, 90);
+            bar.style.width = pct + '%';
+            if (pct >= 90) clearInterval(iv);
+        }, duration / 45);
+    }
+
+    function finishBar(barClass) {
+        const bar = document.querySelector('.' + barClass);
+        if (bar) bar.style.width = '100%';
+    }
+
+    /* ── Tester la connexion (ou mettre à jour si en mode édition) ── */
+    document.getElementById('dbBtnTest').addEventListener('click', async () => {
+        clearAllFieldErrs();
+        if (!validateDbForm()) return;
+
+        const host   = document.getElementById('dbHost').value.trim();
+        const port   = parseInt(document.getElementById('dbPort').value) || DB_DEFAULTS[selectedSgbd];
+        const dbName = document.getElementById('dbName').value.trim();
+        const user   = document.getElementById('dbUser').value.trim();
+        const pass   = document.getElementById('dbPass').value;
+        const nomSrc = document.getElementById('dbNomSource').value.trim() || dbName;
+
+        if (editSourceId) {
+            showDbState('testing');
+            animateBar('db-test-bar', 4000);
+            try {
+                const res = await fetch(`/dashboard/entreprise/import/connexion-db/${editSourceId}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type_sgbd: selectedSgbd, host, port, db_name: dbName, username: user, password: pass, nom_source: nomSrc }),
+                });
+                const data = await res.json().catch(() => ({}));
+                finishBar('db-test-bar');
+
+                if (!data.ok) {
+                    showDbState('form');
+                    const errEl = document.getElementById('dbErrorMsg');
+                    errEl.textContent = 'Échec de la mise à jour : ' + (data.error || 'Erreur inconnue');
+                    errEl.style.display = '';
+                    return;
+                }
+
+                detectedTables = data.tables || [];
+                const sgbdLabel = { mysql: 'MySQL', postgresql: 'PostgreSQL', mssql: 'SQL Server' };
+                document.getElementById('dbSuccessMsg').textContent =
+                    `${data.nom_source} mis à jour avec succès (${data.table_count} table${data.table_count > 1 ? 's' : ''}).`;
+                document.getElementById('dbRecapType').textContent   = sgbdLabel[selectedSgbd] || selectedSgbd;
+                document.getElementById('dbRecapHost').textContent   = host;
+                document.getElementById('dbRecapName').textContent   = dbName;
+                document.getElementById('dbRecapTables').textContent = `${detectedTables.length} table${detectedTables.length > 1 ? 's' : ''}`;
+                document.getElementById('dbRecapSource').textContent = data.nom_source || nomSrc;
+
+                showDbState('success');
+            } catch {
+                finishBar('db-test-bar');
+                showDbState('form');
+                const errEl = document.getElementById('dbErrorMsg');
+                errEl.textContent = 'Erreur réseau — vérifiez votre connexion.';
+                errEl.style.display = '';
+            }
+            return;
+        }
+
+        showDbState('testing');
+        animateBar('db-test-bar', 4000);
+
+        try {
+            const res = await fetch('/dashboard/entreprise/import/connexion-db/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type_sgbd: selectedSgbd, host, port, db_name: dbName, username: user, password: pass }),
+            });
+            const data = await res.json().catch(() => ({}));
+            finishBar('db-test-bar');
+
+            if (!data.ok) {
+                showDbState('form');
+                const errEl = document.getElementById('dbErrorMsg');
+                errEl.textContent = 'Échec de la connexion : ' + (data.error || 'Erreur inconnue');
+                errEl.style.display = '';
+                return;
+            }
+
+            detectedTables = data.tables || [];
+            document.getElementById('dbResultMeta').textContent =
+                `${detectedTables.length} table${detectedTables.length > 1 ? 's' : ''} détectée${detectedTables.length > 1 ? 's' : ''}`;
+
+            const list = document.getElementById('dbTablesList');
+            list.innerHTML = '';
+            if (detectedTables.length === 0) {
+                list.innerHTML = '<span style="color:var(--text-dim);font-size:0.85rem;">Aucune table trouvée dans cette base.</span>';
+            } else {
+                detectedTables.forEach(t => {
+                    const span = document.createElement('span');
+                    span.className = 'db-table-pill';
+                    span.textContent = t;
+                    list.appendChild(span);
+                });
+            }
+
+            showDbState('result');
+        } catch (err) {
+            finishBar('db-test-bar');
+            showDbState('form');
+            const errEl = document.getElementById('dbErrorMsg');
+            errEl.textContent = 'Erreur réseau — vérifiez votre connexion.';
+            errEl.style.display = '';
+        }
+    });
+
+    /* ── Enregistrer la connexion ── */
+    document.getElementById('dbBtnSave').addEventListener('click', async () => {
+        const host    = document.getElementById('dbHost').value.trim();
+        const port    = parseInt(document.getElementById('dbPort').value) || DB_DEFAULTS[selectedSgbd];
+        const dbName  = document.getElementById('dbName').value.trim();
+        const user    = document.getElementById('dbUser').value.trim();
+        const pass    = document.getElementById('dbPass').value;
+        const nomSrc  = document.getElementById('dbNomSource').value.trim() || dbName;
+
+        showDbState('saving');
+        animateBar('db-save-bar', 2000);
+
+        try {
+            const res = await fetch('/dashboard/entreprise/import/connexion-db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type_sgbd: selectedSgbd,
+                    host, port,
+                    db_name: dbName,
+                    username: user,
+                    password: pass,
+                    tables: detectedTables,
+                    nom_source: nomSrc,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            finishBar('db-save-bar');
+
+            if (!res.ok || !data.ok) {
+                showDbState('result');
+                return;
+            }
+
+            lastSaveData = data;
+            const sgbdLabel = { mysql: 'MySQL', postgresql: 'PostgreSQL', mssql: 'SQL Server' };
+            document.getElementById('dbSuccessMsg').textContent =
+                `${data.nom_source} connecté avec succès (${data.table_count} table${data.table_count > 1 ? 's' : ''}).`;
+            document.getElementById('dbRecapType').textContent   = sgbdLabel[selectedSgbd] || selectedSgbd;
+            document.getElementById('dbRecapHost').textContent   = host;
+            document.getElementById('dbRecapName').textContent   = dbName;
+            document.getElementById('dbRecapTables').textContent = `${detectedTables.length} table${detectedTables.length > 1 ? 's' : ''}`;
+            document.getElementById('dbRecapSource').textContent = data.nom_source || nomSrc;
+
+            showDbState('success');
+        } catch {
+            finishBar('db-save-bar');
+            showDbState('result');
+        }
+    });
+
+    showDbState('form');
+
+    /* ── Mode édition : préremplissage depuis ?edit=<id_source> ── */
+    async function initEditMode() {
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('edit');
+        if (!editId) return;
+
+        try {
+            const res = await fetch(`/dashboard/entreprise/import/connexion-db/${editId}/edit`);
+            if (!res.ok) return;
+            const info = await res.json();
+
+            editSourceId = info.source_id;
+
+            const sgbdBtn = document.querySelector(`.db-sgbd-btn[data-val="${info.type_sgbd}"]`);
+            if (sgbdBtn) sgbdBtn.click();
+
+            document.getElementById('dbHost').value = info.host || '';
+            document.getElementById('dbPort').value = info.port || '';
+            document.getElementById('dbName').value = info.db_name || '';
+            document.getElementById('dbUser').value = info.username || '';
+            document.getElementById('dbNomSource').value = info.nom_source || '';
+
+            const passField = document.getElementById('dbPass');
+            passField.value = '';
+            passField.placeholder = 'Laisser vide pour conserver le mot de passe actuel';
+
+            document.getElementById('dbFormTitle').textContent = 'Modifier la connexion';
+            document.getElementById('dbFormDesc').textContent = 'Mettez à jour les paramètres de connexion. Le mot de passe reste inchangé si vous le laissez vide.';
+            document.getElementById('dbBtnTestLabel').textContent = 'Mettre à jour la connexion';
+        } catch { /* silencieux */ }
+    }
+    initEditMode();
+})();
+</script>
+
+{% endblock %}

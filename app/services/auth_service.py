@@ -114,7 +114,12 @@ def login_user(db: Session, data: LoginRequest) -> dict:
         )
 
     token = create_access_token(
-        {"sub": str(user.idUtilisateur), "email": user.email, "role": user.role.value}
+        {
+            "sub": str(user.idUtilisateur),
+            "email": user.email,
+            "role": user.role.value,
+            "doit_changer_mdp": bool(user.doit_changer_mdp),
+        }
     )
 
     return {

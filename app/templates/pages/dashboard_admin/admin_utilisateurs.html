@@ -1,0 +1,125 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Utilisateurs — StockVision AI{% endblock %}
+
+{% block dash_content %}
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Gestion des comptes</h1>
+    <p class="dash-page-guide">Gérez les accès et le statut de tous les utilisateurs de la plateforme, entreprises et administrateurs.</p>
+</div>
+
+<div class="dash-stats-grid">
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Total utilisateurs</span>
+            <span class="dash-stat-icon icon-violet"><i class="bi bi-people"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ compteurs.total }}</span>
+        <span class="dash-stat-trend">Tous rôles confondus</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Entreprises</span>
+            <span class="dash-stat-icon icon-blue"><i class="bi bi-buildings"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ compteurs.entreprises }}</span>
+        <span class="dash-stat-trend">Comptes entreprise</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Administrateurs</span>
+            <span class="dash-stat-icon icon-cyan"><i class="bi bi-shield-check"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ compteurs.administrateurs }}</span>
+        <span class="dash-stat-trend">Accès complet</span>
+    </div>
+</div>
+
+<div class="dash-tabs" style="margin-top: 2rem;">
+    <a href="/dashboard/admin/utilisateurs?role=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if role_filtre == 'tous' }}">Tous</a>
+    <a href="/dashboard/admin/utilisateurs?role=entreprise{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if role_filtre == 'entreprise' }}">Entreprises</a>
+    <a href="/dashboard/admin/utilisateurs?role=administrateur{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if role_filtre == 'administrateur' }}">Administrateurs</a>
+</div>
+
+<div class="dash-toolbar">
+    <form class="dash-search" method="get" action="/dashboard/admin/utilisateurs">
+        <input type="hidden" name="role" value="{{ role_filtre }}">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher un utilisateur..." value="{{ q }}">
+    </form>
+    <div class="dash-toolbar-spacer"></div>
+    <form method="get" action="/dashboard/admin/utilisateurs" class="dash-select-wrap">
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        <select name="role" class="dash-select" onchange="this.form.submit()">
+            <option value="tous" {{ 'selected' if role_filtre == 'tous' }}>Tous les rôles</option>
+            <option value="entreprise" {{ 'selected' if role_filtre == 'entreprise' }}>Entreprises</option>
+            <option value="administrateur" {{ 'selected' if role_filtre == 'administrateur' }}>Administrateurs</option>
+        </select>
+    </form>
+</div>
+
+{% if not utilisateurs %}
+<p class="text-muted">Aucun utilisateur ne correspond à cette recherche.</p>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Créé le</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in utilisateurs %}
+            <tr>
+                <td>
+                    <div class="dash-table-entity">
+                        <span class="dash-table-avatar">{{ u.nom[0]|upper if u.nom != '—' else u.email[0]|upper }}</span>
+                        <span>{{ u.nom if u.nom != '—' else 'Administrateur' }}</span>
+                    </div>
+                </td>
+                <td>{{ u.email }}</td>
+                <td>
+                    {% if u.role == 'administrateur' %}
+                    <span class="dash-pill">Administrateur</span>
+                    {% else %}
+                    <span class="dash-pill">Entreprise</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.statut == 'actif' %}
+                    <span class="dash-status dash-status-ok">Actif</span>
+                    {% elif u.statut == 'en_attente' %}
+                    <span class="dash-status dash-status-pending">En attente</span>
+                    {% else %}
+                    <span class="dash-status dash-status-ko">Inactif</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.date_creation.strftime('%d/%m/%Y') if u.date_creation else '—' }}</td>
+                <td class="dash-table-actions">
+                    {% if u.id == user.idUtilisateur %}
+                    <span class="text-muted extra-small">Vous</span>
+                    {% else %}
+                    <form method="post" action="/dashboard/admin/utilisateurs/{{ u.id }}/statut">
+                        <input type="hidden" name="role" value="{{ role_filtre }}">
+                        <input type="hidden" name="q" value="{{ q }}">
+                        {% if u.statut == 'actif' %}
+                        <button type="submit" class="dash-btn-soft dash-btn-danger">Désactiver</button>
+                        {% else %}
+                        <button type="submit" class="dash-btn-soft">Réactiver</button>
+                        {% endif %}
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

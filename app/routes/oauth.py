@@ -34,19 +34,19 @@ oauth.register(
 )
 
 
-def _redirect_home(request: Request, **params: str) -> RedirectResponse:
+def _redirect_connexion(request: Request, **params: str) -> RedirectResponse:
     base = str(request.base_url).rstrip("/")
-    return RedirectResponse(f"{base}/?{urlencode(params)}")
+    return RedirectResponse(f"{base}/connexion?{urlencode(params)}")
 
 
 @router.get("/{provider}/login")
 async def oauth_login(provider: str, request: Request):
     if provider not in PROVIDERS:
-        return _redirect_home(request, oauth_error="Fournisseur inconnu.")
+        return _redirect_connexion(request, oauth_error="Fournisseur inconnu.")
 
     client = oauth.create_client(provider)
     if not client.client_id or not client.client_secret:
-        return _redirect_home(
+        return _redirect_connexion(
             request,
             oauth_error=(
                 f"Connexion {provider.capitalize()} pas encore configurée côté serveur "
@@ -61,14 +61,14 @@ async def oauth_login(provider: str, request: Request):
 @router.get("/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, db: Session = Depends(get_db)):
     if provider not in PROVIDERS:
-        return _redirect_home(request, oauth_error="Fournisseur inconnu.")
+        return _redirect_connexion(request, oauth_error="Fournisseur inconnu.")
 
     client = oauth.create_client(provider)
 
     try:
         token = await client.authorize_access_token(request)
     except Exception:
-        return _redirect_home(request, oauth_error="Échec de l'authentification OAuth.")
+        return _redirect_connexion(request, oauth_error="Échec de l'authentification OAuth.")
 
     email = None
     name = None
@@ -94,7 +94,7 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
             email = primary["email"] if primary else None
 
     if not email:
-        return _redirect_home(
+        return _redirect_connexion(
             request,
             oauth_error="Impossible de récupérer votre email depuis ce fournisseur.",
         )
@@ -104,7 +104,12 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
             db, provider=provider, provider_id=provider_id or email, email=email, name=name
         )
     except HTTPException as exc:
-        return _redirect_home(request, oauth_error=str(exc.detail))
+        if str(exc.detail) == "__pending__":
+            return _redirect_connexion(
+                request,
+                oauth_pending="Votre demande est en cours de validation. Vous recevrez un email dès qu'un administrateur approuve votre compte."
+            )
+        return _redirect_connexion(request, oauth_error=str(exc.detail))
 
     # Same session mechanism as the password login: httponly cookie, then
     # straight to the right dashboard (no token ever touches localStorage).

@@ -48,7 +48,7 @@ def login_or_create_oauth_user(
     if user.statut_compte == StatutCompteEnum.en_attente:
         raise HTTPException(
             status_code=403,
-            detail="Votre demande d'inscription est en attente de validation par un administrateur.",
+            detail="__pending__",
         )
 
     token = create_access_token(

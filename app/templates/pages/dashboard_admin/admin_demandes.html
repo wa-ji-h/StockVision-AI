@@ -1,0 +1,86 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Demandes en attente — StockVision AI{% endblock %}
+{% block dash_content %}
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Gestion des inscriptions</h1>
+    <p class="dash-page-guide">Examinez les demandes d'accès soumises par les entreprises et décidez de les approuver ou de les refuser.</p>
+</div>
+
+<div class="dash-tabs">
+    <a href="/dashboard/admin/demandes?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'en_attente' }}">En attente</a>
+    <a href="/dashboard/admin/demandes?statut=validee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'validee' }}">Validées</a>
+    <a href="/dashboard/admin/demandes?statut=refusee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'refusee' }}">Refusées</a>
+    <a href="/dashboard/admin/demandes?statut=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'tous' }}">Toutes</a>
+</div>
+
+<div class="dash-toolbar">
+    <form class="dash-search" method="get" action="/dashboard/admin/demandes">
+        <input type="hidden" name="statut" value="{{ statut_filtre }}">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une demande..." value="{{ q }}">
+    </form>
+</div>
+
+{% if not demandes %}
+<p class="text-muted">Aucune entreprise dans cette catégorie pour le moment.</p>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Secteur</th>
+                <th>Email</th>
+                <th>Date</th>
+                <th>Statut</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entreprise, utilisateur in demandes %}
+            <tr>
+                <td>
+                    <div class="dash-table-entity">
+                        <span class="dash-table-avatar">{{ entreprise.nom[0]|upper }}</span>
+                        <span>{{ entreprise.nom }}</span>
+                    </div>
+                </td>
+                <td><span class="dash-pill">{{ entreprise.secteur_activite }}</span></td>
+                <td>{{ utilisateur.email }}</td>
+                <td>{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+                <td>
+                    {% if entreprise.statut_demande.value == 'en_attente' %}
+                    <span class="dash-status dash-status-pending">En attente</span>
+                    {% elif entreprise.statut_demande.value == 'validee' %}
+                    <span class="dash-status dash-status-ok">Validée</span>
+                    {% else %}
+                    <span class="dash-status dash-status-ko">Refusée</span>
+                    {% endif %}
+                </td>
+                <td class="dash-table-actions">
+                    {% if entreprise.statut_demande.value == 'en_attente' %}
+                    <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/approuver">
+                        <button type="submit" class="btn btn-gradient btn-sm">Approuver</button>
+                    </form>
+                    <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/refuser">
+                        <button type="submit" class="btn btn-outline-light btn-sm">Refuser</button>
+                    </form>
+                    {% elif entreprise.statut_demande.value == 'validee' %}
+                    <span class="dash-action-done dash-action-done--ok">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                        Validée
+                    </span>
+                    {% else %}
+                    <span class="dash-action-done dash-action-done--ko">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        Refusée
+                    </span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
