@@ -2,6 +2,7 @@ import secrets
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -14,15 +15,40 @@ from app.utils.email import send_email
 RESET_TOKEN_VALIDITY_HOURS = 48
 
 
-def list_pending_entreprises(db: Session):
-    """Retourne les demandes en attente sous forme de tuples (Entreprise, Utilisateur)."""
-    return (
-        db.query(Entreprise, Utilisateur)
-        .join(Utilisateur, Entreprise.idEntreprise == Utilisateur.idUtilisateur)
-        .filter(Entreprise.statut_demande == StatutDemandeEnum.en_attente)
-        .order_by(Entreprise.date_inscription.asc())
-        .all()
+STATUT_MAP = {
+    "en_attente": StatutDemandeEnum.en_attente,
+    "validee": StatutDemandeEnum.validee,
+    "refusee": StatutDemandeEnum.refusee,
+}
+
+
+def list_entreprises(db: Session, statut: str = "en_attente", q: str | None = None):
+    """Retourne les entreprises (Entreprise, Utilisateur), filtrées par statut
+    de demande ("en_attente", "validee", "refusee", ou "tous") et par une
+    recherche libre sur le nom, le secteur ou l'email."""
+    query = db.query(Entreprise, Utilisateur).join(
+        Utilisateur, Entreprise.idEntreprise == Utilisateur.idUtilisateur
     )
+    enum_value = STATUT_MAP.get(statut)
+    if enum_value is not None:
+        query = query.filter(Entreprise.statut_demande == enum_value)
+
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Entreprise.nom.ilike(like),
+                Entreprise.secteur_activite.ilike(like),
+                Utilisateur.email.ilike(like),
+            )
+        )
+
+    return query.order_by(Entreprise.date_inscription.desc()).all()
+
+
+def list_pending_entreprises(db: Session):
+    """Compat: demandes en attente uniquement."""
+    return list_entreprises(db, statut="en_attente")
 
 
 def approve_entreprise(db: Session, id_entreprise: int, admin_id: int) -> None:
@@ -36,36 +62,31 @@ def approve_entreprise(db: Session, id_entreprise: int, admin_id: int) -> None:
     if not utilisateur:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
-    # Mot de passe temporaire aléatoire et haché — jamais communiqué tel
-    # quel : seul le lien de réinitialisation ci-dessous permet à
-    # l'entreprise de définir son mot de passe définitif.
+    # Génère un mot de passe temporaire sécurisé, envoyé en clair par email.
+    # L'entreprise devra le changer dès la première connexion (doit_changer_mdp=True).
     temp_password = secrets.token_urlsafe(12)
     utilisateur.mot_de_passe = hash_password(temp_password)
     utilisateur.statut_compte = StatutCompteEnum.actif
+    utilisateur.doit_changer_mdp = True
 
     entreprise.statut_demande = StatutDemandeEnum.validee
     entreprise.id_admin_validateur = admin_id
 
-    reset_token = PasswordResetToken(
-        token=secrets.token_urlsafe(32),
-        id_utilisateur=utilisateur.idUtilisateur,
-        expires_at=datetime.utcnow() + timedelta(hours=RESET_TOKEN_VALIDITY_HOURS),
-        used=False,
-    )
-    db.add(reset_token)
     db.commit()
 
-    reset_link = (
-        f"{settings.OAUTH_REDIRECT_BASE_URL}/reinitialiser-mot-de-passe?token={reset_token.token}"
-    )
+    login_url = f"{settings.OAUTH_REDIRECT_BASE_URL}/connexion"
     send_email(
         to=utilisateur.email,
         subject="Votre compte StockVision AI a été approuvé",
         body=(
             f"Bonjour {entreprise.nom},\n\n"
             "Bonne nouvelle : votre demande d'inscription a été approuvée par un administrateur.\n\n"
-            f"Définissez votre mot de passe pour activer votre compte :\n{reset_link}\n\n"
-            f"Ce lien est valable {RESET_TOKEN_VALIDITY_HOURS} heures et à usage unique.\n\n"
+            "Voici vos identifiants de connexion :\n"
+            f"  Email              : {utilisateur.email}\n"
+            f"  Mot de passe temporaire : {temp_password}\n\n"
+            f"Connectez-vous sur : {login_url}\n\n"
+            "Pour des raisons de sécurité, vous devrez définir un nouveau mot de passe "
+            "dès votre première connexion.\n\n"
             "L'équipe StockVision AI"
         ),
     )

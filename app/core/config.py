@@ -19,6 +19,9 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES = 60
     ADMIN_REGISTRATION_CODE = os.getenv("ADMIN_REGISTRATION_CODE", "")
 
+    # Chiffrement des identifiants de connexion BD tierces
+    DB_ENCRYPTION_KEY = os.getenv("DB_ENCRYPTION_KEY", "")
+
     # OAuth (Google / GitHub)
     OAUTH_REDIRECT_BASE_URL = os.getenv("OAUTH_REDIRECT_BASE_URL", "http://127.0.0.1:8000")
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

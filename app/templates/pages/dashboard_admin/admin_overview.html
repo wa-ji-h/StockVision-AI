@@ -1,0 +1,44 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Tableau de bord — StockVision AI{% endblock %}
+
+{% block dash_content %}
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Vue d'ensemble</h1>
+    <p class="dash-page-guide">Suivez en un coup d'œil l'activité globale de la plateforme : demandes en attente, entreprises actives et utilisateurs enregistrés.</p>
+</div>
+
+<div class="dash-stats-grid">
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Demandes en attente</span>
+            <span class="dash-stat-icon icon-amber"><i class="bi bi-inbox-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ pending_count }}</span>
+        <span class="dash-stat-trend">À traiter dès que possible</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Entreprises actives</span>
+            <span class="dash-stat-icon icon-blue"><i class="bi bi-building-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ entreprises_count }}</span>
+        <span class="dash-stat-trend">Comptes validés</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Utilisateurs</span>
+            <span class="dash-stat-icon icon-violet"><i class="bi bi-people-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ utilisateurs_count }}</span>
+        <span class="dash-stat-trend">Tous rôles confondus</span>
+    </div>
+</div>
+
+{% if pending_count %}
+<a href="/dashboard/admin/demandes" class="btn btn-gradient mt-4">
+    Voir les {{ pending_count }} demande(s) en attente
+</a>
+{% endif %}
+{% endblock %}

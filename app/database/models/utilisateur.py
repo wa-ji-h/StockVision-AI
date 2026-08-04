@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Boolean, Column, Enum, Integer, String
+
 from app.database.connection import Base
 import enum
 
@@ -22,3 +23,4 @@ class Utilisateur(Base):
     statut_compte = Column(Enum(StatutCompteEnum), default=StatutCompteEnum.en_attente)
     oauth_provider = Column(String(20), nullable=True)
     oauth_id = Column(String(255), nullable=True)
+    doit_changer_mdp = Column(Boolean, default=False, nullable=False, server_default="0")

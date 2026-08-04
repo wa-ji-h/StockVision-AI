@@ -18,5 +18,5 @@ router = APIRouter(tags=["password-reset"])
 def reset_password_page(request: Request, token: str, db: Session = Depends(get_db)):
     valid = entreprise_service.is_reset_token_valid(db, token)
     return templates.TemplateResponse(
-        request, "pages/reset_password.html", {"token": token, "valid": valid}
+        request, "pages/home/reset_password.html", {"token": token, "valid": valid}
     )

@@ -15,28 +15,33 @@ router = APIRouter()
 
 @router.get("/")
 def home(request: Request):
-    return templates.TemplateResponse(request, "pages/home.html")
+    return templates.TemplateResponse(request, "pages/home/home.html")
 
 @router.get("/fonctionnalites")
 def features(request: Request):
-    return templates.TemplateResponse(request, "pages/features.html")
+    return templates.TemplateResponse(request, "pages/home/features.html")
 
 @router.get("/services")
 def services(request: Request):
-    return templates.TemplateResponse(request, "pages/services.html")
+    return templates.TemplateResponse(request, "pages/home/services.html")
 
 @router.get("/a-propos")
 def about(request: Request):
-    return templates.TemplateResponse(request, "pages/about.html")
+    return templates.TemplateResponse(request, "pages/home/about.html")
 
 @router.get("/contact")
 def contact(request: Request):
-    return templates.TemplateResponse(request, "pages/contact.html")
+    return templates.TemplateResponse(request, "pages/home/contact.html")
 
 @router.get("/connexion")
 def signin(request: Request):
-    return templates.TemplateResponse(request, "pages/signin.html")
+    oauth_error = request.query_params.get("oauth_error", "")
+    oauth_pending = request.query_params.get("oauth_pending", "")
+    return templates.TemplateResponse(request, "pages/home/signin.html", {
+        "oauth_error": oauth_error,
+        "oauth_pending": oauth_pending,
+    })
 
 @router.get("/inscription")
 def signup(request: Request):
-    return templates.TemplateResponse(request, "pages/signup.html")
+    return templates.TemplateResponse(request, "pages/home/signup.html")

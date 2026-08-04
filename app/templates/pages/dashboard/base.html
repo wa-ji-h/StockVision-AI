@@ -8,75 +8,431 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version }}">
 </head>
 <body class="dash-body">
-    <div class="dash-shell">
-        <aside class="dash-sidebar" id="dashSidebar">
+
+    <!-- ═══ TOPBAR UNIFIÉE (logo + recherche + actions) ═══ -->
+    <header class="dash-topbar" id="dashTopbar">
+        <div class="dash-topbar-left">
             <a href="/" class="dash-logo-link">
                 <img src="/static/images/logo StockVision.png" alt="StockVision AI" class="dash-logo">
             </a>
+        </div>
 
+        <div class="dash-search">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="dash-search-input" placeholder="Rechercher...">
+        </div>
+
+        <div class="dash-topbar-spacer"></div>
+
+        <button class="dash-sidebar-toggle" id="dashSidebarToggle" aria-label="Menu" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <button class="dash-icon-btn" id="dashThemeBtn" type="button" aria-label="Changer de thème" title="Changer de thème">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="dashThemeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+
+        <button class="dash-icon-btn" type="button" aria-label="Notifications" style="position:relative;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            {% if notifications_count %}<span class="dash-dot"></span>{% endif %}
+        </button>
+
+        <div class="dash-profile" id="dashProfile">
+            <button class="dash-avatar-btn" id="dashProfileBtn" type="button">
+                <span class="dash-avatar">{{ user.email[0]|upper }}</span>
+            </button>
+            <div class="dash-profile-dropdown" id="dashProfileDropdown">
+                <div class="dash-profile-info">
+                    <span class="dash-user-name">{{ user.email }}</span>
+                    <span class="dash-user-role">{{ 'Administrateur' if user.role.value == 'administrateur' else 'Entreprise' }}</span>
+                </div>
+                <a href="/dashboard/profil" class="dash-dropdown-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Mon profil
+                </a>
+                <hr class="dash-dropdown-sep">
+                <a href="/deconnexion" class="dash-dropdown-link dash-logout-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Déconnexion
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══ CORPS : sidebar + contenu ═══ -->
+    <div class="dash-shell">
+        <aside class="dash-sidebar" id="dashSidebar">
             <nav class="dash-nav">
+                <!-- Bouton collapse en haut de la nav -->
+                <div class="dash-collapse-row">
+                    <button class="dash-collapse-btn" id="dashCollapseBtn" type="button" aria-label="Réduire le menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="dashCollapseIcon"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                </div>
                 {% if user.role.value == 'administrateur' %}
-                <a href="/dashboard/admin" class="dash-nav-link {{ 'active' if active_page == 'overview' }}">
-                    <span class="dash-nav-icon">📊</span> Tableau de bord
-                </a>
-                <a href="/dashboard/admin/demandes" class="dash-nav-link {{ 'active' if active_page == 'demandes' }}">
-                    <span class="dash-nav-icon">📥</span>
-                    <span>Demandes en attente</span>
-                    {% if pending_count %}<span class="dash-badge">{{ pending_count }}</span>{% endif %}
-                </a>
-                <a href="/dashboard/admin/entreprises" class="dash-nav-link {{ 'active' if active_page == 'entreprises' }}">
-                    <span class="dash-nav-icon">🏢</span> Entreprises actives
-                </a>
-                <a href="/dashboard/admin/imports" class="dash-nav-link {{ 'active' if active_page == 'imports' }}">
-                    <span class="dash-nav-icon">📁</span> Imports
-                </a>
-                <a href="/dashboard/admin/configurations" class="dash-nav-link {{ 'active' if active_page == 'configurations' }}">
-                    <span class="dash-nav-icon">⚙️</span> Configurations d'analyse
-                </a>
-                <a href="/dashboard/admin/alertes" class="dash-nav-link {{ 'active' if active_page == 'alertes' }}">
-                    <span class="dash-nav-icon">🔔</span> Alertes globales
-                </a>
-                <a href="/dashboard/admin/utilisateurs" class="dash-nav-link {{ 'active' if active_page == 'utilisateurs' }}">
-                    <span class="dash-nav-icon">👥</span> Utilisateurs
-                </a>
-                <a href="/dashboard/admin/parametres" class="dash-nav-link {{ 'active' if active_page == 'parametres' }}">
-                    <span class="dash-nav-icon">🛠️</span> Paramètres système
-                </a>
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Aperçu</span>
+                    <a href="/dashboard/admin" class="dash-nav-link {{ 'active' if active_page == 'overview' }}" title="Tableau de bord">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        <span class="dash-nav-text">Tableau de bord</span>
+                    </a>
+                    <a href="/dashboard/admin/statistiques" class="dash-nav-link {{ 'active' if active_page == 'statistiques' }}" title="Statistiques globales">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        <span class="dash-nav-text">Statistiques</span>
+                    </a>
+                </div>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Gestion</span>
+                    <a href="/dashboard/admin/demandes" class="dash-nav-link {{ 'active' if active_page == 'demandes' }}" title="Demandes">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                        <span class="dash-nav-text">Demandes</span>
+                        {% if pending_count %}<span class="dash-badge">{{ pending_count }}</span>{% endif %}
+                    </a>
+                    <a href="/dashboard/admin/entreprises" class="dash-nav-link {{ 'active' if active_page == 'entreprises' }}" title="Entreprises">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <span class="dash-nav-text">Entreprises</span>
+                    </a>
+                    <a href="/dashboard/admin/imports" class="dash-nav-link {{ 'active' if active_page == 'imports' }}" title="Imports">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        <span class="dash-nav-text">Imports</span>
+                    </a>
+                    <a href="/dashboard/admin/configurations" class="dash-nav-link {{ 'active' if active_page == 'configurations' }}" title="Analyses">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                        <span class="dash-nav-text">Analyses</span>
+                    </a>
+                    <a href="/dashboard/admin/alertes" class="dash-nav-link {{ 'active' if active_page == 'alertes' }}" title="Alertes">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="dash-nav-text">Alertes</span>
+                    </a>
+                </div>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Système</span>
+                    <a href="/dashboard/admin/utilisateurs" class="dash-nav-link {{ 'active' if active_page == 'utilisateurs' }}" title="Utilisateurs">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span class="dash-nav-text">Utilisateurs</span>
+                    </a>
+                    <a href="/dashboard/admin/parametres" class="dash-nav-link {{ 'active' if active_page == 'parametres' }}" title="Paramètres">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span class="dash-nav-text">Paramètres</span>
+                    </a>
+                </div>
+
                 {% else %}
-                <a href="/dashboard/entreprise" class="dash-nav-link active">
-                    <span class="dash-nav-icon">📊</span> Tableau de bord
-                </a>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Aperçu</span>
+                    <a href="/dashboard/entreprise" class="dash-nav-link {{ 'active' if active_page == 'overview' }}" title="Tableau de bord">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        <span class="dash-nav-text">Tableau de bord</span>
+                    </a>
+                </div>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Mes données</span>
+                    <a href="/dashboard/entreprise/import" class="dash-nav-link {{ 'active' if active_page == 'import' }}" title="Importer des données">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        <span class="dash-nav-text">Importer des données</span>
+                    </a>
+                    <a href="/dashboard/entreprise/imports" class="dash-nav-link {{ 'active' if active_page == 'imports' }}" title="Historique des imports">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span class="dash-nav-text">Historique des imports</span>
+                    </a>
+                </div>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Analyse</span>
+                    <a href="/dashboard/entreprise/configurations" class="dash-nav-link {{ 'active' if active_page == 'configurations' }}" title="Configurations d'analyse">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                        <span class="dash-nav-text">Configurations d'analyse</span>
+                    </a>
+                    <a href="/dashboard/entreprise/resultats" class="dash-nav-link {{ 'active' if active_page == 'resultats' }}" title="Résultats & prévisions">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span class="dash-nav-text">Résultats &amp; prévisions</span>
+                    </a>
+                </div>
+
+                <div class="dash-nav-group">
+                    <span class="dash-nav-title">Suivi</span>
+                    <a href="/dashboard/entreprise/alertes" class="dash-nav-link {{ 'active' if active_page == 'alertes' }}" title="Mes alertes">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="dash-nav-text">Mes alertes</span>
+                        {% if notifications_count %}<span class="dash-badge">{{ notifications_count }}</span>{% endif %}
+                    </a>
+                    <a href="/dashboard/entreprise/powerbi" class="dash-nav-link {{ 'active' if active_page == 'powerbi' }}" title="Tableaux de bord">
+                        <svg class="dash-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <span class="dash-nav-text">Visualisation</span>
+                    </a>
+                </div>
+
                 {% endif %}
             </nav>
-        </aside>
 
-        <div class="dash-main">
-            <header class="dash-topbar">
-                <button class="dash-sidebar-toggle" id="dashSidebarToggle" aria-label="Menu" type="button">☰</button>
-                <div class="dash-topbar-spacer"></div>
-                <div class="dash-user">
-                    <div class="dash-user-info">
+            <div class="dash-sidebar-footer">
+                <a href="/dashboard/profil" class="dash-sidebar-user dash-sidebar-user--link" title="Mon profil">
+                    <span class="dash-avatar">{{ user.email[0]|upper }}</span>
+                    <div class="dash-sidebar-user-info">
                         <span class="dash-user-name">{{ user.email }}</span>
                         <span class="dash-user-role">{{ 'Administrateur' if user.role.value == 'administrateur' else 'Entreprise' }}</span>
                     </div>
-                    <a href="/deconnexion" class="btn btn-outline-light btn-sm dash-logout">Déconnexion</a>
-                </div>
-            </header>
+                </a>
+                <a href="/deconnexion" class="dash-sidebar-logout" aria-label="Déconnexion" title="Déconnexion">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
+        </aside>
 
+        <div class="dash-main">
             <main class="dash-content">
                 {% block dash_content %}{% endblock %}
             </main>
         </div>
     </div>
 
+    {% if user.doit_changer_mdp %}
+    <!-- Overlay obligatoire : changement de mot de passe au premier accès -->
+    <div class="sv-pwd-overlay" id="svPwdOverlay" role="dialog" aria-modal="true" aria-labelledby="svPwdTitle">
+        <div class="auth-card sv-pwd-card">
+            <!-- Titre -->
+            <div class="auth-modal-header" style="margin-bottom:1.25rem;">
+                <span style="font-size:2rem; display:block; margin-bottom:.5rem;">🔐</span>
+                <h2 class="auth-title" id="svPwdTitle" style="font-size:1.35rem;">Définissez votre mot de passe</h2>
+                <p class="auth-subtitle">Vous utilisez un mot de passe temporaire. Choisissez-en un personnel pour sécuriser votre compte.</p>
+            </div>
+
+            <!-- Alerte erreur -->
+            <div id="mdpAlerte" class="auth-alert auth-alert-error" style="display:none;" role="alert"></div>
+
+            <!-- Formulaire -->
+            <form id="formChangerMdp" class="auth-form" novalidate>
+                <div class="auth-field">
+                    <label for="nouveauMdp">Nouveau mot de passe</label>
+                    <div class="auth-password-wrap">
+                        <input type="password" id="nouveauMdp" name="nouveau_mdp"
+                               placeholder="Minimum 8 caractères" autocomplete="new-password" required>
+                        <button type="button" class="auth-toggle-pwd" id="toggleNouveauMdp" aria-label="Afficher/masquer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="eyeIconNv"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <!-- Barre de force -->
+                    <div style="margin-top:.55rem;">
+                        <div style="height:4px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden;">
+                            <div id="mdpForceBar" style="height:100%; width:0%; border-radius:99px; transition:width .25s ease, background .25s ease;"></div>
+                        </div>
+                        <small id="mdpForceLabel" style="font-size:.75rem; color:var(--text-muted); margin-top:.25rem; display:block;"></small>
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="confirmationMdp">Confirmer le mot de passe</label>
+                    <div class="auth-password-wrap">
+                        <input type="password" id="confirmationMdp" name="confirmation_mdp"
+                               placeholder="Répétez le mot de passe" autocomplete="new-password" required>
+                        <button type="button" class="auth-toggle-pwd" id="toggleConfirmMdp" aria-label="Afficher/masquer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="eyeIconCf"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Critères de validation -->
+                <ul class="sv-pwd-criteres" id="mdpCriteres">
+                    <li id="crit-len">
+                        <span class="sv-crit-icon" id="icon-len">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+                        </span>
+                        Au moins 8 caractères
+                    </li>
+                    <li id="crit-upper">
+                        <span class="sv-crit-icon" id="icon-upper">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+                        </span>
+                        Au moins une majuscule
+                    </li>
+                    <li id="crit-digit">
+                        <span class="sv-crit-icon" id="icon-digit">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+                        </span>
+                        Au moins un chiffre
+                    </li>
+                </ul>
+
+                <button type="button" class="btn-gradient auth-submit" id="btnSauvegarderMdp">
+                    <span id="btnMdpText">Enregistrer mon mot de passe</span>
+                    <svg id="btnMdpSpinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none; animation:auth-spin .7s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.getElementById('dashSidebarToggle')?.addEventListener('click', () => {
             document.getElementById('dashSidebar')?.classList.toggle('is-open');
         });
+
+        // Sidebar collapse — la flèche SVG pivote via transform
+        const sidebar      = document.getElementById('dashSidebar');
+        const collapseIcon = document.getElementById('dashCollapseIcon');
+
+        function applyCollapsed(collapsed) {
+            sidebar?.classList.toggle('collapsed', collapsed);
+            if (collapseIcon) {
+                collapseIcon.style.transform = collapsed ? 'rotate(180deg)' : '';
+            }
+            localStorage.setItem('sv_sidebar_collapsed', collapsed ? '1' : '0');
+        }
+
+        applyCollapsed(localStorage.getItem('sv_sidebar_collapsed') === '1');
+
+        document.getElementById('dashCollapseBtn')?.addEventListener('click', () => {
+            applyCollapsed(!sidebar?.classList.contains('collapsed'));
+        });
+
+        // Thème clair / sombre — icône lune/soleil en SVG
+        const themeIcon = document.getElementById('dashThemeIcon');
+        const MOON_PATH = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        const SUN_PATH  = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            if (themeIcon) themeIcon.innerHTML = theme === 'dark' ? MOON_PATH : SUN_PATH;
+            localStorage.setItem('sv_theme', theme);
+        }
+
+        applyTheme(localStorage.getItem('sv_theme') || 'dark');
+
+        document.getElementById('dashThemeBtn')?.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        const profileBtn = document.getElementById('dashProfileBtn');
+        const profileDropdown = document.getElementById('dashProfileDropdown');
+        profileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown?.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (profileDropdown && !profileDropdown.contains(e.target) && e.target !== profileBtn) {
+                profileDropdown.classList.remove('open');
+            }
+        });
     </script>
+
+    {% if user.doit_changer_mdp %}
+    <script>
+    (function () {
+        const nouveauMdp     = document.getElementById('nouveauMdp');
+        const confirmMdp     = document.getElementById('confirmationMdp');
+        const alerte         = document.getElementById('mdpAlerte');
+        const forceBar       = document.getElementById('mdpForceBar');
+        const forceLabel     = document.getElementById('mdpForceLabel');
+        const btnSauvegarder = document.getElementById('btnSauvegarderMdp');
+        const btnText        = document.getElementById('btnMdpText');
+        const btnSpinner     = document.getElementById('btnMdpSpinner');
+
+        const SVG_CIRCLE = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>`;
+        const SVG_CHECK  = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+        // Bascule affichage/masquage du mot de passe
+        function togglePwd(inputId, iconEl) {
+            const inp  = document.getElementById(inputId);
+            if (!inp) return;
+            const shown = inp.type === 'text';
+            inp.type = shown ? 'password' : 'text';
+            iconEl.innerHTML = shown
+                ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+                : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+        }
+        document.getElementById('toggleNouveauMdp')?.addEventListener('click', function () {
+            togglePwd('nouveauMdp', this.querySelector('svg'));
+        });
+        document.getElementById('toggleConfirmMdp')?.addEventListener('click', function () {
+            togglePwd('confirmationMdp', this.querySelector('svg'));
+        });
+
+        function evaluerForce(mdp) {
+            const ok = { len: mdp.length >= 8, upper: /[A-Z]/.test(mdp), digit: /\d/.test(mdp) };
+            let score = [ok.len, ok.upper, ok.digit].filter(Boolean).length;
+            if (mdp.length >= 12 && /[^A-Za-z0-9]/.test(mdp)) score = Math.min(4, score + 1);
+            return { score, ok };
+        }
+
+        function setCritere(iconId, liId, valid) {
+            const icon = document.getElementById(iconId);
+            const li   = document.getElementById(liId);
+            if (!icon || !li) return;
+            icon.innerHTML   = valid ? SVG_CHECK : SVG_CIRCLE;
+            icon.style.color = valid ? '#34d399' : 'rgba(148,163,184,.5)';
+            li.style.color   = valid ? '#34d399' : '';
+        }
+
+        nouveauMdp?.addEventListener('input', function () {
+            const { score, ok } = evaluerForce(this.value);
+
+            const pctMap  = [0, 25, 50, 75, 100];
+            const colMap  = ['', '#f87171', '#fb923c', '#fbbf24', '#34d399'];
+            const lblMap  = ['', 'Très faible', 'Faible', 'Moyen', 'Fort'];
+            forceBar.style.width      = pctMap[score] + '%';
+            forceBar.style.background = colMap[score] || '';
+            forceLabel.textContent    = this.value.length ? (lblMap[score] || '') : '';
+            forceLabel.style.color    = colMap[score] || 'var(--text-muted)';
+
+            setCritere('icon-len',   'crit-len',   ok.len);
+            setCritere('icon-upper', 'crit-upper', ok.upper);
+            setCritere('icon-digit', 'crit-digit', ok.digit);
+        });
+
+        function showAlerte(msg) { alerte.textContent = msg; alerte.style.display = ''; }
+        function hideAlerte()    { alerte.style.display = 'none'; alerte.textContent = ''; }
+
+        btnSauvegarder?.addEventListener('click', async function () {
+            hideAlerte();
+            const mdp     = nouveauMdp.value;
+            const confirm = confirmMdp.value;
+
+            if (!mdp || !confirm) { showAlerte('Veuillez remplir les deux champs.'); return; }
+            if (mdp !== confirm)  { showAlerte('Les mots de passe ne correspondent pas.'); return; }
+            const { ok } = evaluerForce(mdp);
+            if (!ok.len || !ok.upper || !ok.digit) {
+                showAlerte('Le mot de passe ne respecte pas les critères requis.'); return;
+            }
+
+            btnText.textContent      = 'Enregistrement\u2026';
+            btnSpinner.style.display = 'inline';
+            btnSauvegarder.disabled  = true;
+
+            const body = new URLSearchParams({ nouveau_mdp: mdp, confirmation_mdp: confirm });
+            try {
+                const res = await fetch('/dashboard/changer-mot-de-passe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString(),
+                });
+                if (res.ok) {
+                    document.getElementById('svPwdOverlay').style.display = 'none';
+                    window.location.reload();
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    showAlerte(data.detail || 'Une erreur est survenue.');
+                }
+            } catch (_) {
+                showAlerte('Erreur r\u00e9seau, veuillez r\u00e9essayer.');
+            } finally {
+                btnText.textContent      = 'Enregistrer mon mot de passe';
+                btnSpinner.style.display = 'none';
+                btnSauvegarder.disabled  = false;
+            }
+        });
+    })();
+    </script>
+    {% endif %}
 </body>
 </html>

@@ -1,0 +1,70 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Liste d'entreprises — StockVision AI{% endblock %}
+
+{% block dash_content %}
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">Entreprises partenaires</h1>
+    <p class="dash-page-guide">Consultez la liste des entreprises validées et leur activité sur la plateforme.</p>
+</div>
+
+<div class="dash-tabs">
+    <a href="/dashboard/admin/entreprises?statut=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'tous' }}">Toutes</a>
+    <a href="/dashboard/admin/entreprises?statut=validee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'validee' }}">Actives</a>
+    <a href="/dashboard/admin/entreprises?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'en_attente' }}">En attente</a>
+    <a href="/dashboard/admin/entreprises?statut=refusee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'refusee' }}">Refusées</a>
+</div>
+
+<div class="dash-toolbar">
+    <form class="dash-search" method="get" action="/dashboard/admin/entreprises">
+        <input type="hidden" name="statut" value="{{ statut_filtre }}">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une entreprise..." value="{{ q }}">
+    </form>
+    <div class="dash-toolbar-spacer"></div>
+    <a href="/dashboard/admin/entreprises/export?statut={{ statut_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-btn-soft">
+        <i class="bi bi-download"></i> Exporter
+    </a>
+</div>
+
+{% if not entreprises %}
+<p class="text-muted">Aucune entreprise ne correspond à cette recherche.</p>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Secteur</th>
+                <th>Email</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entreprise, utilisateur in entreprises %}
+            <tr>
+                <td>
+                    <div class="dash-table-entity">
+                        <span class="dash-table-avatar">{{ entreprise.nom[0]|upper }}</span>
+                        <span>{{ entreprise.nom }}</span>
+                    </div>
+                </td>
+                <td><span class="dash-pill">{{ entreprise.secteur_activite or 'Non renseigné' }}</span></td>
+                <td>{{ utilisateur.email }}</td>
+                <td>
+                    {% if entreprise.statut_demande.value == 'en_attente' %}
+                    <span class="dash-status dash-status-pending">En attente</span>
+                    {% elif entreprise.statut_demande.value == 'validee' %}
+                    <span class="dash-status dash-status-ok">Active</span>
+                    {% else %}
+                    <span class="dash-status dash-status-ko">Refusée</span>
+                    {% endif %}
+                </td>
+                <td>{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

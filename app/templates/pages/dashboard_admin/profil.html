@@ -1,0 +1,235 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Mon profil — StockVision AI{% endblock %}
+{% block dash_content %}
+
+<div class="profil-wrap">
+
+    <!-- Bannière + avatar -->
+    <div class="profil-banner">
+        <div class="profil-banner-bg"></div>
+        <div class="profil-header">
+            <div class="profil-avatar-wrap">
+                <span class="profil-avatar">{{ user.email[0]|upper }}</span>
+            </div>
+            <div class="profil-header-info">
+                <h1 class="profil-name">{{ admin.nom if admin else user.email }}</h1>
+                <span class="profil-badge profil-badge--admin">
+                    <i class="bi bi-shield-check"></i> Administrateur
+                </span>
+            </div>
+            <div class="profil-header-actions">
+                <button class="btn-gradient profil-btn" id="btnOuvrirInfos">
+                    <i class="bi bi-pencil"></i> Modifier mes informations
+                </button>
+                <button class="btn profil-btn profil-btn--outline" id="btnOuvrirMdp">
+                    <i class="bi bi-lock"></i> Changer mon mot de passe
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ligne d'infos -->
+    <div class="profil-meta-bar">
+        <span class="profil-meta-item">
+            <i class="bi bi-envelope"></i> {{ user.email }}
+        </span>
+        <span class="profil-meta-sep"></span>
+        <span class="profil-meta-item">
+            <i class="bi bi-calendar3"></i>
+            Membre depuis
+            {% if user.idUtilisateur %}—{% endif %}
+        </span>
+    </div>
+
+    <!-- Alertes -->
+    <div id="profilAlerte" class="profil-alerte" style="display:none;"></div>
+    <div id="profilSuccess" class="profil-alerte profil-alerte--ok" style="display:none;"></div>
+
+    <!-- Cartes de stats -->
+    <div class="profil-stats-grid">
+        <div class="profil-stat-card">
+            <span class="profil-stat-icon icon-blue"><i class="bi bi-buildings"></i></span>
+            <div class="profil-stat-body">
+                <span class="profil-stat-value">{{ stats.total }}</span>
+                <span class="profil-stat-label">Entreprises gérées</span>
+            </div>
+        </div>
+        <div class="profil-stat-card">
+            <span class="profil-stat-icon icon-amber"><i class="bi bi-hourglass-split"></i></span>
+            <div class="profil-stat-body">
+                <span class="profil-stat-value">{{ stats.en_attente }}</span>
+                <span class="profil-stat-label">Demandes en attente</span>
+            </div>
+        </div>
+        <div class="profil-stat-card">
+            <span class="profil-stat-icon icon-emerald"><i class="bi bi-check-circle"></i></span>
+            <div class="profil-stat-body">
+                <span class="profil-stat-value">{{ stats.approuvees }}</span>
+                <span class="profil-stat-label">Demandes approuvées</span>
+            </div>
+        </div>
+        <div class="profil-stat-card">
+            <span class="profil-stat-icon icon-red"><i class="bi bi-x-circle"></i></span>
+            <div class="profil-stat-body">
+                <span class="profil-stat-value">{{ stats.refusees }}</span>
+                <span class="profil-stat-label">Demandes refusées</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire : modifier informations -->
+    <div class="profil-form-card" id="cardModifierInfos" style="display:none;">
+        <h3 class="profil-form-title"><i class="bi bi-person-gear"></i> Modifier mes informations</h3>
+        <form id="formModifierInfos" class="profil-form" novalidate>
+            <div class="profil-form-field">
+                <label for="nomAdmin">Nom complet</label>
+                <input type="text" id="nomAdmin" name="nom" class="profil-input"
+                       value="{{ admin.nom if admin else '' }}" placeholder="Votre nom" required>
+            </div>
+            <div class="profil-form-actions">
+                <button type="button" class="btn-gradient profil-btn" id="btnSauvegarderInfos">Enregistrer</button>
+                <button type="button" class="profil-btn profil-btn--ghost" id="btnAnnulerInfos">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Formulaire : changer mot de passe -->
+    <div class="profil-form-card" id="cardChangerMdp" style="display:none;">
+        <h3 class="profil-form-title"><i class="bi bi-lock-fill"></i> Changer mon mot de passe</h3>
+        <form id="formChangerMdp" class="profil-form" novalidate>
+            <div class="profil-form-field">
+                <label for="ancienMdp">Mot de passe actuel</label>
+                <input type="password" id="ancienMdp" name="ancien_mdp" class="profil-input"
+                       placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <div class="profil-form-field">
+                <label for="nouveauMdp">Nouveau mot de passe</label>
+                <input type="password" id="nouveauMdp" name="nouveau_mdp" class="profil-input"
+                       placeholder="Min. 8 car., 1 majuscule, 1 chiffre" autocomplete="new-password" required>
+                <div class="profil-force-wrap">
+                    <div class="profil-force-track">
+                        <div id="profilForceBar" class="profil-force-bar"></div>
+                    </div>
+                    <small id="profilForceLabel"></small>
+                </div>
+            </div>
+            <div class="profil-form-field">
+                <label for="confirmationMdp">Confirmer le nouveau mot de passe</label>
+                <input type="password" id="confirmationMdp" name="confirmation_mdp" class="profil-input"
+                       placeholder="••••••••" autocomplete="new-password" required>
+            </div>
+            <div class="profil-form-actions">
+                <button type="button" class="btn-gradient profil-btn" id="btnSauvegarderMdp">Enregistrer</button>
+                <button type="button" class="profil-btn profil-btn--ghost" id="btnAnnulerMdp">Annuler</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    // --- Utilitaires ---
+    function show(el) { el.style.display = ''; }
+    function hide(el) { el.style.display = 'none'; }
+    function showAlerte(msg, ok) {
+        const el = document.getElementById(ok ? 'profilSuccess' : 'profilAlerte');
+        const other = document.getElementById(ok ? 'profilAlerte' : 'profilSuccess');
+        hide(other);
+        el.textContent = msg;
+        show(el);
+        setTimeout(() => hide(el), 5000);
+    }
+
+    // --- Bascule formulaires ---
+    const cardInfos = document.getElementById('cardModifierInfos');
+    const cardMdp   = document.getElementById('cardChangerMdp');
+
+    document.getElementById('btnOuvrirInfos').addEventListener('click', () => {
+        const open = cardInfos.style.display !== 'none';
+        hide(cardMdp);
+        open ? hide(cardInfos) : show(cardInfos);
+        if (!open) cardInfos.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    document.getElementById('btnAnnulerInfos').addEventListener('click', () => hide(cardInfos));
+
+    document.getElementById('btnOuvrirMdp').addEventListener('click', () => {
+        const open = cardMdp.style.display !== 'none';
+        hide(cardInfos);
+        open ? hide(cardMdp) : show(cardMdp);
+        if (!open) cardMdp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    document.getElementById('btnAnnulerMdp').addEventListener('click', () => hide(cardMdp));
+
+    // --- Modifier infos ---
+    document.getElementById('btnSauvegarderInfos').addEventListener('click', async () => {
+        const nom = document.getElementById('nomAdmin').value.trim();
+        if (!nom) { showAlerte('Le nom ne peut pas être vide.'); return; }
+        const body = new URLSearchParams({ nom });
+        const res = await fetch('/dashboard/profil/modifier-infos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        });
+        if (res.ok) {
+            showAlerte('Informations mises à jour avec succès.', true);
+            hide(cardInfos);
+        } else {
+            const d = await res.json().catch(() => ({}));
+            showAlerte(d.detail || 'Une erreur est survenue.');
+        }
+    });
+
+    // --- Force mot de passe ---
+    const forceBar   = document.getElementById('profilForceBar');
+    const forceLabel = document.getElementById('profilForceLabel');
+
+    function evalForce(mdp) {
+        const ok = { len: mdp.length >= 8, upper: /[A-Z]/.test(mdp), digit: /\d/.test(mdp) };
+        let score = [ok.len, ok.upper, ok.digit].filter(Boolean).length;
+        if (mdp.length >= 12 && /[^A-Za-z0-9]/.test(mdp)) score = Math.min(4, score + 1);
+        return { score, ok };
+    }
+
+    document.getElementById('nouveauMdp').addEventListener('input', function () {
+        const { score } = evalForce(this.value);
+        const pct  = [0, 25, 50, 75, 100][score];
+        const col  = ['', '#f87171', '#fb923c', '#fbbf24', '#34d399'][score];
+        const lbl  = ['', 'Très faible', 'Faible', 'Moyen', 'Fort'][score];
+        forceBar.style.width      = pct + '%';
+        forceBar.style.background = col;
+        forceLabel.textContent    = this.value.length ? lbl : '';
+        forceLabel.style.color    = col;
+    });
+
+    // --- Changer mot de passe ---
+    document.getElementById('btnSauvegarderMdp').addEventListener('click', async () => {
+        const ancien      = document.getElementById('ancienMdp').value;
+        const nouveau     = document.getElementById('nouveauMdp').value;
+        const confirmation = document.getElementById('confirmationMdp').value;
+        if (!ancien || !nouveau || !confirmation) { showAlerte('Veuillez remplir tous les champs.'); return; }
+        if (nouveau !== confirmation) { showAlerte('Les mots de passe ne correspondent pas.'); return; }
+        const { ok } = evalForce(nouveau);
+        if (!ok.len || !ok.upper || !ok.digit) { showAlerte('Le mot de passe ne respecte pas les critères.'); return; }
+
+        const body = new URLSearchParams({ ancien_mdp: ancien, nouveau_mdp: nouveau, confirmation_mdp: confirmation });
+        const res = await fetch('/dashboard/profil/changer-mot-de-passe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        });
+        if (res.ok) {
+            showAlerte('Mot de passe changé avec succès.', true);
+            hide(cardMdp);
+            document.getElementById('formChangerMdp').reset();
+            forceBar.style.width = '0%';
+            forceLabel.textContent = '';
+        } else {
+            const d = await res.json().catch(() => ({}));
+            showAlerte(d.detail || 'Une erreur est survenue.');
+        }
+    });
+})();
+</script>
+
+{% endblock %}
