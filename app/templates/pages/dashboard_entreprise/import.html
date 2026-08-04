@@ -1034,10 +1034,22 @@
         const editId = params.get('edit');
         if (!editId) return;
 
+        const errEl = document.getElementById('dbErrorMsg');
+
         try {
-            const res = await fetch(`/dashboard/entreprise/import/connexion-db/${editId}/edit`);
-            if (!res.ok) return;
+            const res = await fetch(`/dashboard/entreprise/import/connexion-db/${editId}/edit`, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                console.error('[imports] échec du chargement de la connexion à éditer', res.status, body);
+                errEl.textContent = `Impossible de charger la connexion à modifier (${res.status}) : ${body.detail || 'erreur inconnue'}.`;
+                errEl.style.display = '';
+                return;
+            }
             const info = await res.json();
+            console.log('[imports] connexion chargée pour édition', info);
 
             editSourceId = info.source_id;
 
@@ -1057,7 +1069,11 @@
             document.getElementById('dbFormTitle').textContent = 'Modifier la connexion';
             document.getElementById('dbFormDesc').textContent = 'Mettez à jour les paramètres de connexion. Le mot de passe reste inchangé si vous le laissez vide.';
             document.getElementById('dbBtnTestLabel').textContent = 'Mettre à jour la connexion';
-        } catch { /* silencieux */ }
+        } catch (err) {
+            console.error('[imports] erreur réseau lors du chargement de la connexion à éditer', err);
+            errEl.textContent = 'Erreur réseau — impossible de charger les informations de la connexion.';
+            errEl.style.display = '';
+        }
     }
     initEditMode();
 })();
