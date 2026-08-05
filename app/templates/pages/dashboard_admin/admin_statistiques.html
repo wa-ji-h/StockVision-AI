@@ -54,7 +54,7 @@
         <thead>
             <tr>
                 <th>Secteur d'activité</th>
-                <th>Entreprises</th>
+                <th class="text-center">Entreprises</th>
                 <th>Répartition</th>
             </tr>
         </thead>
@@ -63,7 +63,7 @@
             {% for secteur, nombre in par_secteur %}
             <tr>
                 <td>{{ secteur or 'Non renseigné' }}</td>
-                <td>{{ nombre }}</td>
+                <td class="text-center">{{ nombre }}</td>
                 <td>
                     <div class="dash-bar-track">
                         <div class="dash-bar-fill" style="width: {{ (nombre / total * 100) | round(0, 'floor') }}%"></div>

@@ -6,7 +6,7 @@
     <title>{% block title %}Tableau de bord — StockVision AI{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version }}">
@@ -270,8 +270,46 @@
     </div>
     {% endif %}
 
+    {# Notification partagée par tout le dashboard — remplace les alert() du navigateur.
+       Même famille visuelle que .dash-status et .imh-modal-note (teinte + liseré). #}
+    <div class="imh-toast" id="svToast" role="status" aria-live="polite">
+        <span class="imh-toast-icon" id="svToastIcon"></span>
+        <span id="svToastMsg"></span>
+        <button type="button" class="imh-toast-close" id="svToastClose" aria-label="Fermer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        /* ── Notification intégrée : svNotify(message, 'ok'|'ko'|'info') ──
+           Les messages d'erreur sont longs et doivent rester lisibles : ils tiennent 9 s
+           et sont refermables à la main, contrairement aux confirmations (3 s). */
+        (function () {
+            const ICONES = {
+                ok:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+                ko:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+                info: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+            };
+            const toast = document.getElementById('svToast');
+            if (!toast) return;
+            const msgEl = document.getElementById('svToastMsg');
+            const iconEl = document.getElementById('svToastIcon');
+            let timer = null;
+
+            function fermer() { toast.classList.remove('show'); clearTimeout(timer); }
+            document.getElementById('svToastClose').addEventListener('click', fermer);
+
+            window.svNotify = function (message, variant) {
+                variant = variant || 'ok';
+                toast.className = `imh-toast imh-toast--${variant} show`;
+                iconEl.innerHTML = ICONES[variant] || ICONES.info;
+                msgEl.textContent = message;
+                clearTimeout(timer);
+                timer = setTimeout(fermer, variant === 'ko' ? 9000 : 3000);
+            };
+        })();
+
         document.getElementById('dashSidebarToggle')?.addEventListener('click', () => {
             document.getElementById('dashSidebar')?.classList.toggle('is-open');
         });

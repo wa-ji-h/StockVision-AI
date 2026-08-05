@@ -68,10 +68,10 @@
             <tr>
                 <th>Nom</th>
                 <th>Email</th>
-                <th>Rôle</th>
-                <th>Statut</th>
+                <th class="text-center">Rôle</th>
+                <th class="text-center">Statut</th>
                 <th>Créé le</th>
-                <th></th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -84,14 +84,14 @@
                     </div>
                 </td>
                 <td>{{ u.email }}</td>
-                <td>
+                <td class="text-center">
                     {% if u.role == 'administrateur' %}
                     <span class="dash-pill">Administrateur</span>
                     {% else %}
                     <span class="dash-pill">Entreprise</span>
                     {% endif %}
                 </td>
-                <td>
+                <td class="text-center">
                     {% if u.statut == 'actif' %}
                     <span class="dash-status dash-status-ok">Actif</span>
                     {% elif u.statut == 'en_attente' %}
@@ -100,7 +100,7 @@
                     <span class="dash-status dash-status-ko">Inactif</span>
                     {% endif %}
                 </td>
-                <td>{{ u.date_creation.strftime('%d/%m/%Y') if u.date_creation else '—' }}</td>
+                <td class="dash-cell-muted">{{ u.date_creation.strftime('%d/%m/%Y') if u.date_creation else '—' }}</td>
                 <td class="dash-table-actions">
                     {% if u.id == user.idUtilisateur %}
                     <span class="text-muted extra-small">Vous</span>
@@ -109,9 +109,13 @@
                         <input type="hidden" name="role" value="{{ role_filtre }}">
                         <input type="hidden" name="q" value="{{ q }}">
                         {% if u.statut == 'actif' %}
-                        <button type="submit" class="dash-btn-soft dash-btn-danger">Désactiver</button>
+                        <button type="submit" class="dash-icon-btn dash-icon-btn--danger" title="Désactiver" aria-label="Désactiver">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        </button>
                         {% else %}
-                        <button type="submit" class="dash-btn-soft">Réactiver</button>
+                        <button type="submit" class="dash-icon-btn dash-icon-btn--success" title="Réactiver" aria-label="Réactiver">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </button>
                         {% endif %}
                     </form>
                     {% endif %}

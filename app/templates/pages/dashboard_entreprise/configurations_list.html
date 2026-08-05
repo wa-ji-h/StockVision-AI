@@ -1,0 +1,491 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Vos configurations d'analyse — StockVision AI{% endblock %}
+
+{% macro obj_icon(icon, size=15) %}
+{% if icon == 'trending-up' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+{% elif icon == 'chart-line' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+{% elif icon == 'alert-triangle' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+{% else %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+{% endif %}
+{% endmacro %}
+
+{% block dash_content %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">{{ title }}</h1>
+    <p class="dash-page-guide">{{ guide }}</p>
+</div>
+
+{% if has_any_configs %}
+<div class="cfg-filters">
+    <div class="cfg-filter-row">
+        <a href="?frequence=toutes&objectif={{ objectif_filtre }}"
+           class="cfg-filter-chip {{ 'active' if frequence_filtre == 'toutes' }}"
+           style="border-color: rgba(148,163,184,0.3); color: {{ '#fff' if frequence_filtre == 'toutes' else 'var(--text-muted)' }};">
+            Toutes
+        </a>
+        {% for val, label in frequences %}
+        {% set color = frequence_colors.get(val, '#64748b') %}
+        <a href="?frequence={{ 'toutes' if frequence_filtre == val else val }}&objectif={{ objectif_filtre }}"
+           class="cfg-filter-chip {{ 'active' if frequence_filtre == val }}"
+           style="border-color: {{ color }}59; color: {{ color }};">
+            {{ label }}
+        </a>
+        {% endfor %}
+    </div>
+    <div class="cfg-filter-row">
+        <a href="?frequence={{ frequence_filtre }}&objectif=tous"
+           class="cfg-filter-chip {{ 'active' if objectif_filtre == 'tous' }}"
+           style="border-color: rgba(148,163,184,0.3); color: {{ '#fff' if objectif_filtre == 'tous' else 'var(--text-muted)' }};">
+            Tous
+        </a>
+        {% for obj in objectifs %}
+        <a href="?frequence={{ frequence_filtre }}&objectif={{ 'tous' if objectif_filtre == obj.val else obj.val }}"
+           class="cfg-filter-chip {{ 'active' if objectif_filtre == obj.val }}"
+           style="border-color: {{ obj.color }}59; color: {{ obj.color }};">
+            {{ obj_icon(obj.icon, 16) }}
+            {{ obj.label }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="dash-toolbar">
+    <div class="dash-toolbar-spacer"></div>
+    <a href="/dashboard/entreprise/configurations/new" class="imp-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nouvelle configuration
+    </a>
+</div>
+{% endif %}
+
+{% if not configs %}
+<div class="imh-empty">
+    <div class="imh-empty-icon">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+    {% if has_any_configs %}
+    <p class="imh-empty-text">Aucune configuration ne correspond à ces filtres.</p>
+    <a href="?frequence=toutes&objectif=tous" class="imp-btn-ghost">Réinitialiser les filtres</a>
+    {% else %}
+    <p class="imh-empty-text">Vous n'avez encore créé aucune configuration d'analyse.</p>
+    <a href="/dashboard/entreprise/configurations/new" class="imp-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Créer ma première configuration
+    </a>
+    {% endif %}
+</div>
+{% else %}
+<div class="dash-table-wrap cfg-table-wrap">
+    <table class="dash-table cfg-table">
+        <thead>
+            <tr>
+                <th>Objectif</th>
+                <th class="text-center">Fréquence</th>
+                <th class="text-center">Facteurs sélectionnés</th>
+                <th class="text-center">Exécution</th>
+                <th>Créée le</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in configs %}
+            <tr id="cfgRow-{{ c.id_configuration }}">
+                <td>
+                    <div class="cfg-obj-cell">
+                        <span class="cfg-obj-badge" style="background:{{ c.objectif_color }}26; color:{{ c.objectif_color }};">
+                            {{ obj_icon(c.objectif_icon) }}
+                        </span>
+                        <span class="cfg-obj-name">{{ c.objectif }}</span>
+                    </div>
+                </td>
+                <td class="text-center">
+                    <span class="cfg-freq-badge" style="background:{{ c.frequence_color }}1F; color:{{ c.frequence_color }};">{{ c.frequence }}</span>
+                </td>
+                <td class="text-center">
+                    <div class="cfg-count-cell">
+                        <span class="cfg-count-badge">{{ c.nb_facteurs }}</span>
+                        <span class="cfg-count-label">facteur{{ 's' if c.nb_facteurs != 1 else '' }}</span>
+                    </div>
+                </td>
+                <td class="text-center" id="cfgExecStatus-{{ c.id_configuration }}">
+                    {% if c.statut_execution == 'extraction_en_cours' %}
+                    <span class="dash-status dash-status-info">Extraction en cours</span>
+                    {% elif c.statut_execution == 'erreur_donnees' %}
+                    <span class="dash-status dash-status-ko" title="{{ c.message_execution }}">Erreur — données indisponibles</span>
+                    {% elif c.statut_execution == 'en_attente' %}
+                    <span class="dash-status dash-status-pending">En attente d'exécution</span>
+                    {% elif c.statut_execution == 'en_cours' %}
+                    <span class="dash-status dash-status-pending">En cours</span>
+                    {% else %}
+                    <span class="dash-status" style="background:rgba(148,163,184,0.12); color:var(--text-muted-subtle);">Non lancée</span>
+                    {% endif %}
+                </td>
+                <td class="dash-cell-muted">{{ c.date_creation }}</td>
+                <td class="dash-table-actions">
+                    <button type="button" class="dash-icon-btn dash-icon-btn--success cfg-btn-lancer" title="Lancer l'analyse" aria-label="Lancer l'analyse" data-config-id="{{ c.id_configuration }}">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </button>
+                    <button type="button" class="dash-icon-btn cfg-btn-detail" title="Voir le détail" aria-label="Voir le détail"
+                        data-detail='{{ c.detail | tojson }}'>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <a href="/dashboard/entreprise/configurations/{{ c.id_configuration }}/edit" class="dash-icon-btn" title="Modifier" aria-label="Modifier">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+                    </a>
+                    <button type="button" class="dash-icon-btn cfg-btn-duplicate" title="Dupliquer" aria-label="Dupliquer" data-config-id="{{ c.id_configuration }}">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button type="button" class="dash-icon-btn dash-icon-btn--danger cfg-btn-delete" title="Supprimer" aria-label="Supprimer"
+                        data-config-id="{{ c.id_configuration }}" data-label="{{ c.objectif }} ({{ c.frequence }})">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Modal détail -->
+<div class="imh-modal-overlay" id="cfgDetailModal" style="display:none;">
+    <div class="imh-modal-card imh-modal-card--lg">
+        <button type="button" class="imh-modal-close" id="cfgDetailModalClose" aria-label="Fermer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="imh-modal-head">
+            <h3 class="imh-modal-title">Détail de la configuration</h3>
+            <span class="dash-status" id="cfgDetailExecBadge" style="display:none;">—</span>
+        </div>
+        <p class="imh-modal-subtitle">Source, données sélectionnées et réglages de cette analyse.</p>
+
+        <div class="imp-recap-grid">
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Source</span>
+                <span class="imp-recap-val" id="cfgDetailSource">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Statut</span>
+                <span class="imp-recap-val" id="cfgDetailStatut">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Objectif</span>
+                <span class="imp-recap-val" id="cfgDetailObjectif">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Fréquence</span>
+                <span class="imp-recap-val" id="cfgDetailFrequence">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Créée le</span>
+                <span class="imp-recap-val" id="cfgDetailDate">—</span>
+            </div>
+            <div class="imp-recap-item" id="cfgDetailDerniereWrap" style="display:none;">
+                <span class="imp-recap-label">Dernier lancement</span>
+                <span class="imp-recap-val" id="cfgDetailDerniere">—</span>
+            </div>
+            <div class="imp-recap-item" id="cfgDetailProchaineWrap" style="display:none;">
+                <span class="imp-recap-label">Prochaine exécution</span>
+                <span class="imp-recap-val" id="cfgDetailProchaine">—</span>
+            </div>
+            <div class="imp-recap-item" id="cfgDetailFiabiliteWrap" style="display:none;">
+                <span class="imp-recap-label">Fiabilité de l'analyse</span>
+                <span class="imp-recap-val" id="cfgDetailFiabilite">—</span>
+            </div>
+        </div>
+
+        <div class="imh-modal-note" id="cfgDetailMessageWrap" style="display:none;">
+            <span class="imh-modal-note-title" id="cfgDetailMessageLabel">Résultat</span>
+            <span id="cfgDetailMessage">—</span>
+        </div>
+
+        <div class="imh-modal-detail">
+            <h4 class="imh-modal-detail-title">Données sélectionnées</h4>
+            <div id="cfgDetailTables"></div>
+        </div>
+
+        <div class="imh-modal-detail" id="cfgDetailPrecisionBlock" style="display:none;">
+            <h4 class="imh-modal-detail-title">Précision complémentaire</h4>
+            <p class="wiz-panel-sub" id="cfgDetailPrecision" style="margin:0;"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal confirmation suppression -->
+<div class="imh-modal-overlay" id="cfgDeleteModal" style="display:none;">
+    <div class="imh-modal-card">
+        <button type="button" class="imh-modal-close" id="cfgDeleteModalClose" aria-label="Fermer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <h3 class="imh-modal-title">Supprimer cette configuration ?</h3>
+        <p class="imh-modal-subtitle" id="cfgDeleteText">Cette action est irréversible.</p>
+        <div class="imh-modal-actions">
+            <button type="button" class="imh-btn" id="cfgDeleteCancel">Annuler</button>
+            <button type="button" class="imh-btn imh-btn--danger-solid" id="cfgDeleteConfirm">Supprimer définitivement</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    if (!document.querySelector('.cfg-btn-detail') && !document.querySelector('.cfg-btn-delete')) return;
+
+    /* ── Statuts d'exécution (mêmes libellés/classes que le rendu Jinja de la colonne) ── */
+    const EXEC_LABELS = {
+        extraction_en_cours: 'Extraction en cours',
+        erreur_donnees: 'Erreur — données indisponibles',
+        en_attente: "En attente d'exécution",
+        en_cours: 'En cours',
+    };
+    const EXEC_CLASSES = {
+        extraction_en_cours: 'dash-status-info',
+        erreur_donnees: 'dash-status-ko',
+        en_attente: 'dash-status-pending',
+        en_cours: 'dash-status-pending',
+    };
+
+    function rendreBadgeExec(configId, statut, message) {
+        const cell = document.getElementById(`cfgExecStatus-${configId}`);
+        if (!cell) return;
+        const badge = document.createElement('span');
+        badge.className = `dash-status ${EXEC_CLASSES[statut] || 'dash-status-pending'}`;
+        badge.textContent = EXEC_LABELS[statut] || statut;
+        if (message) badge.title = message;
+        cell.replaceChildren(badge);
+    }
+
+    /* Affiche une ligne de la grille de méta seulement si la valeur existe */
+    function afficherChamp(idWrap, idVal, valeur) {
+        const wrap = document.getElementById(idWrap);
+        if (!wrap) return;
+        if (valeur) {
+            document.getElementById(idVal).textContent = valeur;
+            wrap.style.display = '';
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
+
+    /* data-detail est rendu par le serveur au chargement : sans cette mise à jour, le popup
+       rouvrirait l'état d'avant le lancement (message manquant jusqu'au rechargement). */
+    function majDetail(configId, patch) {
+        const btn = document.querySelector(`#cfgRow-${configId} .cfg-btn-detail`);
+        if (!btn) return;
+        let d = {};
+        try { d = JSON.parse(btn.dataset.detail || '{}'); } catch {}
+        btn.dataset.detail = JSON.stringify(Object.assign(d, patch));
+    }
+
+    /* ── Notifications : composant partagé défini dans dashboard/base.html ── */
+    const showToast = (msg) => svNotify(msg, 'ok');
+
+    /* ── Modal détail ── */
+    const detailModal = document.getElementById('cfgDetailModal');
+    document.querySelectorAll('.cfg-btn-detail').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let d = {};
+            try { d = JSON.parse(btn.dataset.detail || '{}'); } catch {}
+
+            document.getElementById('cfgDetailSource').textContent = d.source_nom || '—';
+            document.getElementById('cfgDetailStatut').textContent = d.statut || '—';
+            document.getElementById('cfgDetailObjectif').textContent = d.objectif || '—';
+            document.getElementById('cfgDetailFrequence').textContent = d.frequence || '—';
+            document.getElementById('cfgDetailDate').textContent = d.date_creation || '—';
+
+            /* Statut d'exécution : badge d'en-tête, mêmes classes que la colonne de la liste */
+            const execBadge = document.getElementById('cfgDetailExecBadge');
+            if (d.statut_execution) {
+                execBadge.className = `dash-status ${EXEC_CLASSES[d.statut_execution] || 'dash-status-pending'}`;
+                execBadge.textContent = EXEC_LABELS[d.statut_execution] || d.statut_execution;
+                execBadge.style.display = '';
+            } else {
+                execBadge.style.display = 'none';
+            }
+
+            afficherChamp('cfgDetailDerniereWrap', 'cfgDetailDerniere', d.derniere_execution);
+            afficherChamp('cfgDetailProchaineWrap', 'cfgDetailProchaine', d.prochaine_execution);
+
+            /* Fiabilité de la dernière analyse — persistée en base, donc consultable
+               longtemps après le lancement. */
+            const fiab = d.fiabilite
+                ? `${d.fiabilite}${d.points_execution != null ? ` · ${d.points_execution} point${d.points_execution > 1 ? 's' : ''}` : ''}`
+                : null;
+            afficherChamp('cfgDetailFiabiliteWrap', 'cfgDetailFiabilite', fiab);
+            const fiabEl = document.getElementById('cfgDetailFiabilite');
+            fiabEl.className = `imp-recap-val${d.fiabilite_code ? ` cfg-fiab--${d.fiabilite_code}` : ''}`;
+
+            /* Message de la dernière exécution (erreur d'extraction, ou récapitulatif de succès) */
+            const msgWrap = document.getElementById('cfgDetailMessageWrap');
+            if (d.message_execution) {
+                const enErreur = d.statut_execution === 'erreur_donnees';
+                msgWrap.className = `imh-modal-note ${enErreur ? 'imh-modal-note--ko' : 'imh-modal-note--ok'}`;
+                document.getElementById('cfgDetailMessageLabel').textContent =
+                    enErreur ? 'Erreur — données indisponibles' : 'Données extraites';
+                document.getElementById('cfgDetailMessage').textContent = d.message_execution;
+                msgWrap.style.display = '';
+            } else {
+                msgWrap.style.display = 'none';
+            }
+
+            const tablesWrap = document.getElementById('cfgDetailTables');
+            tablesWrap.innerHTML = '';
+            const tables = d.tables || {};
+            const tableNames = Object.keys(tables);
+            if (!tableNames.length) {
+                tablesWrap.innerHTML = '<span class="wiz-columns-error">Aucune donnée enregistrée.</span>';
+            } else {
+                tableNames.forEach(table => {
+                    const cols = tables[table];
+                    const block = document.createElement('div');
+                    block.style.marginBottom = '0.75rem';
+                    block.innerHTML = `<span class="wiz-item-desc" style="display:block;margin-bottom:0.35rem;font-weight:600;color:var(--text);">${table}</span>`;
+                    const list = document.createElement('div');
+                    list.className = 'wiz-columns-panel';
+                    list.style.border = 'none';
+                    list.style.paddingTop = '0';
+                    list.style.marginTop = '0';
+                    if (cols === '*' || !Array.isArray(cols)) {
+                        const chip = document.createElement('span');
+                        chip.className = 'wiz-col-chip selected';
+                        chip.textContent = 'Toutes les colonnes';
+                        list.appendChild(chip);
+                    } else {
+                        cols.forEach(c => {
+                            const chip = document.createElement('span');
+                            chip.className = 'wiz-col-chip selected';
+                            chip.textContent = c;
+                            list.appendChild(chip);
+                        });
+                    }
+                    block.appendChild(list);
+                    tablesWrap.appendChild(block);
+                });
+            }
+
+            const precisionBlock = document.getElementById('cfgDetailPrecisionBlock');
+            if (d.precision) {
+                document.getElementById('cfgDetailPrecision').textContent = d.precision;
+                precisionBlock.style.display = '';
+            } else {
+                precisionBlock.style.display = 'none';
+            }
+
+            detailModal.style.display = 'flex';
+        });
+    });
+    document.getElementById('cfgDetailModalClose').addEventListener('click', () => detailModal.style.display = 'none');
+    detailModal.addEventListener('click', e => { if (e.target === detailModal) detailModal.style.display = 'none'; });
+
+    /* ── Lancer l'analyse ── */
+    document.querySelectorAll('.cfg-btn-lancer').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const configId = btn.dataset.configId;
+            btn.disabled = true;
+            /* L'extraction est synchrone : on affiche l'état pendant l'attente de la réponse. */
+            rendreBadgeExec(configId, 'extraction_en_cours');
+            try {
+                const res = await fetch(`/dashboard/entreprise/configurations/${configId}/lancer`, { method: 'POST' });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.ok) {
+                    const statut = data.statut_execution || 'en_attente';
+                    rendreBadgeExec(configId, statut, data.message);
+                    const fiab = data.preparation?.fiabilite;
+                    majDetail(configId, {
+                        statut_execution: statut,
+                        message_execution: data.message || null,
+                        derniere_execution: data.derniere_execution || null,
+                        prochaine_execution: data.prochaine_execution || null,
+                        fiabilite: fiab ? fiab.label : null,
+                        fiabilite_code: fiab ? fiab.code : null,
+                        points_execution: fiab ? fiab.points : null,
+                    });
+                    showToast('Données extraites — analyse en attente du moteur');
+                } else {
+                    const erreur = data.error || data.detail || "Impossible de lancer l'analyse : données indisponibles.";
+                    rendreBadgeExec(configId, 'erreur_donnees', erreur);
+                    majDetail(configId, { statut_execution: 'erreur_donnees', message_execution: erreur });
+                    svNotify(erreur, 'ko');
+                }
+            } catch {
+                const erreur = 'Erreur réseau — vérifiez votre connexion.';
+                rendreBadgeExec(configId, 'erreur_donnees', erreur);
+                majDetail(configId, { statut_execution: 'erreur_donnees', message_execution: erreur });
+                svNotify(erreur, 'ko');
+            }
+            btn.disabled = false;
+        });
+    });
+
+    /* ── Duplication ── */
+    document.querySelectorAll('.cfg-btn-duplicate').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/dashboard/entreprise/configurations/${btn.dataset.configId}/duplicate`, { method: 'POST' });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.ok) {
+                    showToast('Configuration dupliquée');
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    svNotify(data.detail || 'Erreur lors de la duplication.', 'ko');
+                    btn.disabled = false;
+                }
+            } catch {
+                svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+                btn.disabled = false;
+            }
+        });
+    });
+
+    /* ── Suppression (avec confirmation) ── */
+    const deleteModal = document.getElementById('cfgDeleteModal');
+    const deleteText = document.getElementById('cfgDeleteText');
+    const deleteConfirmBtn = document.getElementById('cfgDeleteConfirm');
+    let pendingDeleteBtn = null;
+
+    document.querySelectorAll('.cfg-btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            pendingDeleteBtn = btn;
+            deleteText.textContent = `Voulez-vous vraiment supprimer « ${btn.dataset.label} » ? Cette action est irréversible.`;
+            deleteModal.style.display = 'flex';
+        });
+    });
+
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+        pendingDeleteBtn = null;
+    }
+    document.getElementById('cfgDeleteCancel').addEventListener('click', closeDeleteModal);
+    document.getElementById('cfgDeleteModalClose').addEventListener('click', closeDeleteModal);
+    deleteModal.addEventListener('click', e => { if (e.target === deleteModal) closeDeleteModal(); });
+
+    deleteConfirmBtn.addEventListener('click', async () => {
+        if (!pendingDeleteBtn) return;
+        const btn = pendingDeleteBtn;
+        const configId = btn.dataset.configId;
+        deleteConfirmBtn.disabled = true;
+        try {
+            const res = await fetch(`/dashboard/entreprise/configurations/${configId}/delete`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+                const row = document.getElementById(`cfgRow-${configId}`);
+                if (row) row.remove();
+                closeDeleteModal();
+            } else {
+                svNotify(data.detail || 'Erreur lors de la suppression.', 'ko');
+            }
+        } catch {
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+        }
+        deleteConfirmBtn.disabled = false;
+    });
+})();
+</script>
+
+{% endblock %}

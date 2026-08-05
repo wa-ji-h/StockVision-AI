@@ -34,9 +34,9 @@
         <thead>
             <tr>
                 <th>Entreprise</th>
-                <th>Secteur</th>
+                <th class="text-center">Secteur</th>
                 <th>Email</th>
-                <th>Statut</th>
+                <th class="text-center">Statut</th>
                 <th>Inscription</th>
             </tr>
         </thead>
@@ -49,9 +49,9 @@
                         <span>{{ entreprise.nom }}</span>
                     </div>
                 </td>
-                <td><span class="dash-pill">{{ entreprise.secteur_activite or 'Non renseigné' }}</span></td>
+                <td class="text-center"><span class="dash-pill">{{ entreprise.secteur_activite or 'Non renseigné' }}</span></td>
                 <td>{{ utilisateur.email }}</td>
-                <td>
+                <td class="text-center">
                     {% if entreprise.statut_demande.value == 'en_attente' %}
                     <span class="dash-status dash-status-pending">En attente</span>
                     {% elif entreprise.statut_demande.value == 'validee' %}
@@ -60,7 +60,7 @@
                     <span class="dash-status dash-status-ko">Refusée</span>
                     {% endif %}
                 </td>
-                <td>{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+                <td class="dash-cell-muted">{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -1,0 +1,375 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Supervision des imports — StockVision AI{% endblock %}
+{% block dash_content %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">{{ title }}</h1>
+    <p class="dash-page-guide">{{ guide }}</p>
+</div>
+
+<div class="dash-stats-grid mb-4">
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Total imports</span>
+            <span class="dash-stat-icon icon-blue"><i class="bi bi-archive-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ total_imports }}</span>
+        <span class="dash-stat-trend">Toutes entreprises</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Sources actives</span>
+            <span class="dash-stat-icon icon-violet"><i class="bi bi-check-circle-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ actives_count }}</span>
+        <span class="dash-stat-trend">Statut valide</span>
+    </div>
+
+    <div class="dash-stat-card">
+        <div class="dash-stat-card-top">
+            <span class="dash-stat-label">Sources en erreur</span>
+            <span class="dash-stat-icon icon-red"><i class="bi bi-exclamation-triangle-fill"></i></span>
+        </div>
+        <span class="dash-stat-value">{{ erreurs_count }}</span>
+        <span class="dash-stat-trend">À surveiller</span>
+    </div>
+</div>
+
+<div class="dash-tabs" id="admImhTabs">
+    <a href="?kind=all&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'all' }}">Toutes</a>
+    <a href="?kind=file&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'file' }}">Fichiers</a>
+    <a href="?kind=db&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'db' }}">Connexions base de données</a>
+</div>
+
+<div class="dash-toolbar">
+    <form class="dash-search" method="get" action="/dashboard/admin/imports">
+        <input type="hidden" name="kind" value="{{ kind_filtre }}">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une source ou une entreprise..." value="{{ q }}">
+    </form>
+    <div class="dash-select-wrap">
+        <select class="dash-select" id="admImhEntrepriseFilter">
+            <option value="0" {{ 'selected' if entreprise_id_filtre == 0 }}>Toutes les entreprises</option>
+            {% for ent in entreprises %}
+            <option value="{{ ent.idEntreprise }}" {{ 'selected' if entreprise_id_filtre == ent.idEntreprise }}>{{ ent.nom }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+{% if not sources %}
+<p class="text-muted">Aucune source de données ne correspond à ces critères.</p>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table">
+        <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Source</th>
+                <th class="text-center">Type</th>
+                <th class="text-center">Format / SGBD</th>
+                <th class="text-center">Statut</th>
+                <th>Dernière sync</th>
+                <th class="text-center">Nb sync</th>
+                <th>Créée le</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sources %}
+            <tr id="admImhRow-{{ s.id_source }}">
+                <td>
+                    <div class="dash-table-entity">
+                        <span class="dash-table-avatar">{{ s.entreprise_nom[0]|upper if s.entreprise_nom != '—' else '?' }}</span>
+                        <span>{{ s.entreprise_nom }}</span>
+                    </div>
+                </td>
+                <td>{{ s.nom }}</td>
+                <td class="text-center">
+                    {% if s.kind == 'db' %}
+                    <span class="dash-pill">Connexion BD</span>
+                    {% else %}
+                    <span class="dash-pill">Fichier</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if s.kind == 'db' %}
+                    {{ s.type_sgbd | upper }}
+                    {% else %}
+                    {{ s.type_format }}
+                    {% endif %}
+                </td>
+                <td class="text-center" id="admImhStatus-{{ s.id_source }}">
+                    {% if s.statut == 'erreur' %}
+                    <span class="dash-status dash-status-ko">Erreur</span>
+                    {% elif s.statut == 'suspendu' %}
+                    <span class="dash-status dash-status-ko">Suspendue</span>
+                    {% elif s.statut == 'valide' or s.statut == 'actif' %}
+                    <span class="dash-status dash-status-ok">Valide</span>
+                    {% else %}
+                    <span class="dash-status dash-status-pending">En attente</span>
+                    {% endif %}
+                </td>
+                <td class="dash-cell-muted">{{ s.derniere_date_fmt }}</td>
+                <td class="text-center">{{ s.sync_count }}</td>
+                <td class="dash-cell-muted">{{ s.date_creation_fmt }}</td>
+                <td class="dash-table-actions">
+                    <button type="button" class="dash-icon-btn admImh-btn-details" title="Voir les détails" aria-label="Voir les détails"
+                        data-detail='{{ {
+                            "kind": s.kind,
+                            "nom": s.nom,
+                            "entreprise": s.entreprise_nom,
+                            "format": (s.type_format if s.kind == "file" else s.type_sgbd),
+                            "taille": (s.taille_fmt if s.kind == "file" else None),
+                            "date": s.derniere_date_fmt,
+                            "columns": (s.columns if s.kind == "file" else []),
+                            "sql_creates": (s.sql_creates if s.kind == "file" else None),
+                            "sql_inserts": (s.sql_inserts if s.kind == "file" else None),
+                            "host": (s.host if s.kind == "db" else None),
+                            "db_name": (s.db_name if s.kind == "db" else None),
+                            "table_count": (s.table_count if s.kind == "db" else None),
+                        } | tojson }}'>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button type="button"
+                        class="dash-icon-btn admImh-btn-suspend {{ 'dash-icon-btn--success' if s.statut == 'suspendu' else 'dash-icon-btn--danger' }}"
+                        data-source-id="{{ s.id_source }}"
+                        data-nom="{{ s.nom }}"
+                        data-suspended="{{ 'true' if s.statut == 'suspendu' else 'false' }}"
+                        title="{{ 'Réactiver' if s.statut == 'suspendu' else 'Suspendre' }}"
+                        aria-label="{{ 'Réactiver' if s.statut == 'suspendu' else 'Suspendre' }}">
+                        {% if s.statut == 'suspendu' %}
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        {% else %}
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        {% endif %}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Modal détails -->
+<div class="imh-modal-overlay" id="admImhModal" style="display:none;">
+    <div class="imh-modal-card imh-modal-card--lg">
+        <button type="button" class="imh-modal-close" id="admImhModalClose" aria-label="Fermer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <h3 class="imh-modal-title">Détails de la source</h3>
+        <p class="imh-modal-subtitle">Structure et métadonnées — aucune donnée brute n'est affichée ici.</p>
+        <div class="imp-recap-grid">
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Entreprise</span>
+                <span class="imp-recap-val" id="admImhModalEntreprise">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Source</span>
+                <span class="imp-recap-val" id="admImhModalNom">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Format / SGBD</span>
+                <span class="imp-recap-val" id="admImhModalFormat">—</span>
+            </div>
+            <div class="imp-recap-item">
+                <span class="imp-recap-label">Dernière synchro</span>
+                <span class="imp-recap-val" id="admImhModalDate">—</span>
+            </div>
+            <div class="imp-recap-item" id="admImhModalTailleWrap">
+                <span class="imp-recap-label">Taille</span>
+                <span class="imp-recap-val" id="admImhModalTaille">—</span>
+            </div>
+            <div class="imp-recap-item" id="admImhModalHostWrap" style="display:none;">
+                <span class="imp-recap-label">Hôte / Base</span>
+                <span class="imp-recap-val" id="admImhModalHost">—</span>
+            </div>
+        </div>
+
+        <div class="imh-modal-detail" id="admImhModalCsvBlock" style="display:none;">
+            <h4 class="imh-modal-detail-title">Colonnes détectées</h4>
+            <div class="imh-columns-list" id="admImhModalColumns"></div>
+        </div>
+
+        <div class="imh-modal-detail" id="admImhModalSqlBlock" style="display:none;">
+            <h4 class="imh-modal-detail-title">Instructions détectées</h4>
+            <div class="imp-recap-grid">
+                <div class="imp-recap-item">
+                    <span class="imp-recap-label">CREATE TABLE</span>
+                    <span class="imp-recap-val" id="admImhModalCreates">—</span>
+                </div>
+                <div class="imp-recap-item">
+                    <span class="imp-recap-label">INSERT INTO</span>
+                    <span class="imp-recap-val" id="admImhModalInserts">—</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="imh-modal-detail" id="admImhModalDbBlock" style="display:none;">
+            <h4 class="imh-modal-detail-title">Connexion base de données</h4>
+            <div class="imp-recap-grid">
+                <div class="imp-recap-item">
+                    <span class="imp-recap-label">Tables détectées</span>
+                    <span class="imp-recap-val" id="admImhModalTableCount">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal confirmation suspension -->
+<div class="imh-modal-overlay" id="admImhSuspendModal" style="display:none;">
+    <div class="imh-modal-card">
+        <button type="button" class="imh-modal-close" id="admImhSuspendModalClose" aria-label="Fermer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <h3 class="imh-modal-title" id="admImhSuspendModalTitle">Suspendre cette source ?</h3>
+        <p class="imh-modal-subtitle" id="admImhSuspendModalText">Voulez-vous vraiment suspendre cette source ? L'entreprise ne pourra plus l'utiliser dans une nouvelle configuration d'analyse tant qu'elle reste suspendue.</p>
+        <div class="imh-modal-actions">
+            <button type="button" class="imh-btn" id="admImhSuspendCancel">Annuler</button>
+            <button type="button" class="imh-btn imh-btn--danger-solid" id="admImhSuspendConfirm">Confirmer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Filtre par entreprise ── */
+    const entFilter = document.getElementById('admImhEntrepriseFilter');
+    entFilter.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('entreprise_id', entFilter.value);
+        window.location.href = url.toString();
+    });
+
+    /* ── Modal détails ── */
+    const modal = document.getElementById('admImhModal');
+    document.querySelectorAll('.admImh-btn-details').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let d = {};
+            try { d = JSON.parse(btn.dataset.detail || '{}'); } catch {}
+
+            document.getElementById('admImhModalEntreprise').textContent = d.entreprise || '—';
+            document.getElementById('admImhModalNom').textContent = d.nom || '—';
+            document.getElementById('admImhModalFormat').textContent = (d.format || '—').toString().toUpperCase();
+            document.getElementById('admImhModalDate').textContent = d.date || '—';
+
+            const csvBlock = document.getElementById('admImhModalCsvBlock');
+            const sqlBlock = document.getElementById('admImhModalSqlBlock');
+            const dbBlock = document.getElementById('admImhModalDbBlock');
+            const tailleWrap = document.getElementById('admImhModalTailleWrap');
+            const hostWrap = document.getElementById('admImhModalHostWrap');
+            csvBlock.style.display = 'none';
+            sqlBlock.style.display = 'none';
+            dbBlock.style.display = 'none';
+            tailleWrap.style.display = '';
+            hostWrap.style.display = 'none';
+
+            if (d.kind === 'db') {
+                tailleWrap.style.display = 'none';
+                hostWrap.style.display = '';
+                document.getElementById('admImhModalHost').textContent = [d.host, d.db_name].filter(Boolean).join(' / ') || '—';
+                document.getElementById('admImhModalTableCount').textContent = d.table_count ?? '—';
+                dbBlock.style.display = '';
+            } else {
+                document.getElementById('admImhModalTaille').textContent = d.taille || '—';
+                if (d.format === 'CSV' && d.columns && d.columns.length) {
+                    const list = document.getElementById('admImhModalColumns');
+                    list.innerHTML = '';
+                    d.columns.forEach(col => {
+                        const span = document.createElement('span');
+                        span.className = 'db-table-pill';
+                        span.textContent = col;
+                        list.appendChild(span);
+                    });
+                    csvBlock.style.display = '';
+                } else if (d.format === 'SQL') {
+                    document.getElementById('admImhModalCreates').textContent = d.sql_creates ?? '—';
+                    document.getElementById('admImhModalInserts').textContent = d.sql_inserts ?? '—';
+                    sqlBlock.style.display = '';
+                }
+            }
+
+            modal.style.display = 'flex';
+        });
+    });
+    document.getElementById('admImhModalClose').addEventListener('click', () => modal.style.display = 'none');
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+
+    /* ── Suspension / réactivation (avec confirmation) ── */
+    const suspendModal = document.getElementById('admImhSuspendModal');
+    const suspendTitle = document.getElementById('admImhSuspendModalTitle');
+    const suspendText = document.getElementById('admImhSuspendModalText');
+    const suspendConfirmBtn = document.getElementById('admImhSuspendConfirm');
+    let pendingBtn = null;
+
+    document.querySelectorAll('.admImh-btn-suspend').forEach(btn => {
+        btn.addEventListener('click', () => {
+            pendingBtn = btn;
+            const isSuspended = btn.dataset.suspended === 'true';
+            if (isSuspended) {
+                suspendTitle.textContent = 'Réactiver cette source ?';
+                suspendText.textContent = `Voulez-vous réactiver « ${btn.dataset.nom} » ? L'entreprise pourra de nouveau l'utiliser normalement.`;
+            } else {
+                suspendTitle.textContent = 'Suspendre cette source ?';
+                suspendText.textContent = `Voulez-vous vraiment suspendre « ${btn.dataset.nom} » ? L'entreprise ne pourra plus l'utiliser dans une nouvelle configuration d'analyse tant qu'elle reste suspendue.`;
+            }
+            suspendConfirmBtn.textContent = isSuspended ? 'Réactiver' : 'Suspendre';
+            suspendModal.style.display = 'flex';
+        });
+    });
+
+    function closeSuspendModal() {
+        suspendModal.style.display = 'none';
+        pendingBtn = null;
+    }
+    document.getElementById('admImhSuspendCancel').addEventListener('click', closeSuspendModal);
+    document.getElementById('admImhSuspendModalClose').addEventListener('click', closeSuspendModal);
+    suspendModal.addEventListener('click', e => { if (e.target === suspendModal) closeSuspendModal(); });
+
+    suspendConfirmBtn.addEventListener('click', async () => {
+        if (!pendingBtn) return;
+        const btn = pendingBtn;
+        const sourceId = btn.dataset.sourceId;
+        suspendConfirmBtn.disabled = true;
+        try {
+            const res = await fetch(`/dashboard/admin/imports/${sourceId}/suspend`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+                const statusCell = document.getElementById(`admImhStatus-${sourceId}`);
+                const playIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+                const pauseIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+                if (data.suspended) {
+                    statusCell.innerHTML = '<span class="dash-status dash-status-ko">Suspendue</span>';
+                    btn.innerHTML = playIcon;
+                    btn.title = 'Réactiver';
+                    btn.setAttribute('aria-label', 'Réactiver');
+                    btn.dataset.suspended = 'true';
+                    btn.classList.remove('dash-icon-btn--danger');
+                    btn.classList.add('dash-icon-btn--success');
+                } else {
+                    statusCell.innerHTML = '<span class="dash-status dash-status-ok">Valide</span>';
+                    btn.innerHTML = pauseIcon;
+                    btn.title = 'Suspendre';
+                    btn.setAttribute('aria-label', 'Suspendre');
+                    btn.dataset.suspended = 'false';
+                    btn.classList.remove('dash-icon-btn--success');
+                    btn.classList.add('dash-icon-btn--danger');
+                }
+                closeSuspendModal();
+            } else {
+                svNotify('Erreur lors de la mise à jour du statut.', 'ko');
+            }
+        } catch {
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+        }
+        suspendConfirmBtn.disabled = false;
+    });
+})();
+</script>
+
+{% endblock %}

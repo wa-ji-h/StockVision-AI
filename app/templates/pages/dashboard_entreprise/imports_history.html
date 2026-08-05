@@ -16,7 +16,7 @@
 
 <div class="imh-grid" id="imhGrid">
     {% for s in sources %}
-    <div class="imh-card {% if s.statut == 'erreur' %}imh-card--ko{% endif %}"
+    <div class="imh-card {% if s.statut == 'erreur' or s.statut == 'suspendu' %}imh-card--ko{% endif %}"
          id="imhCard-{{ s.id_source }}"
          data-kind="{{ s.kind }}"
          data-source-id="{{ s.id_source }}"
@@ -46,8 +46,8 @@
                 {% endif %}
             </div>
 
-            <span class="dash-status {% if s.statut == 'valide' or s.statut == 'actif' %}dash-status-ok{% elif s.statut == 'erreur' %}dash-status-ko{% else %}dash-status-pending{% endif %}" id="imhStatus-{{ s.id_source }}">
-                {% if s.statut == 'erreur' %}Erreur{% elif s.statut == 'valide' or s.statut == 'actif' %}Valide{% else %}En attente{% endif %}
+            <span class="dash-status {% if s.statut == 'valide' or s.statut == 'actif' %}dash-status-ok{% elif s.statut == 'erreur' or s.statut == 'suspendu' %}dash-status-ko{% else %}dash-status-pending{% endif %}" id="imhStatus-{{ s.id_source }}">
+                {% if s.statut == 'erreur' %}Erreur{% elif s.statut == 'suspendu' %}Suspendue par l'administrateur{% elif s.statut == 'valide' or s.statut == 'actif' %}Valide{% else %}En attente{% endif %}
             </span>
         </div>
 
@@ -118,7 +118,7 @@
 
 <!-- Modal détails fichier -->
 <div class="imh-modal-overlay" id="imhModal" style="display:none;">
-    <div class="imh-modal-card">
+    <div class="imh-modal-card imh-modal-card--lg">
         <button type="button" class="imh-modal-close" id="imhModalClose" aria-label="Fermer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -290,10 +290,10 @@
                 if (card) card.remove();
                 closeDeleteModal();
             } else {
-                alert('Erreur lors de la suppression.');
+                svNotify('Erreur lors de la suppression.', 'ko');
             }
         } catch {
-            alert('Erreur réseau — vérifiez votre connexion.');
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
         }
         deleteConfirmBtn.disabled = false;
     });
