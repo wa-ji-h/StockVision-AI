@@ -9,7 +9,9 @@
 {% elif icon == 'alert-triangle' %}
 <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
 {% else %}
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+{# arrows-sort — « Comparer et classer ». Doit rester identique à la macro du wizard :
+   l'ancienne icône « adjustements » traînait ici et affichait des curseurs. #}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><line x1="7" y1="5" x2="7" y2="19"/><path d="M21 15l-4 4-4-4"/><line x1="17" y1="19" x2="17" y2="5"/></svg>
 {% endif %}
 {% endmacro %}
 
@@ -51,6 +53,14 @@
             {{ obj.label }}
         </a>
         {% endfor %}
+        {# Sans cette catégorie, les configurations pilotées par le seul besoin exprimé
+           disparaîtraient de la liste dès qu'un filtre d'objectif est actif. #}
+        <a href="?frequence={{ frequence_filtre }}&objectif={{ 'tous' if objectif_filtre == filtre_besoin_libre else filtre_besoin_libre }}"
+           class="cfg-filter-chip {{ 'active' if objectif_filtre == filtre_besoin_libre }}"
+           style="border-color: rgba(148,163,184,0.35); color: var(--text-muted);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Besoin libre
+        </a>
     </div>
 </div>
 
@@ -100,7 +110,15 @@
                         <span class="cfg-obj-badge" style="background:{{ c.objectif_color }}26; color:{{ c.objectif_color }};">
                             {{ obj_icon(c.objectif_icon) }}
                         </span>
-                        <span class="cfg-obj-name">{{ c.objectif }}</span>
+                        {# Une config « besoin libre » affiche son besoin en principal :
+                           sinon la ligne serait vide et impossible à identifier. #}
+                        <span class="cfg-obj-texte">
+                            <span class="cfg-obj-name {{ 'cfg-obj-name--libre' if c.objectif_libre }}"
+                                  {% if c.objectif_titre %}title="{{ c.objectif_titre }}"{% endif %}>{{ c.objectif }}</span>
+                            {% if c.objectif_sous_ligne %}
+                            <span class="cfg-obj-besoin" title="{{ c.objectif_sous_ligne }}">{{ c.objectif_sous_ligne }}</span>
+                            {% endif %}
+                        </span>
                     </div>
                 </td>
                 <td class="text-center">
@@ -174,7 +192,7 @@
                 <span class="imp-recap-val" id="cfgDetailStatut">—</span>
             </div>
             <div class="imp-recap-item">
-                <span class="imp-recap-label">Objectif</span>
+                <span class="imp-recap-label" id="cfgDetailObjectifLabel">Objectif</span>
                 <span class="imp-recap-val" id="cfgDetailObjectif">—</span>
             </div>
             <div class="imp-recap-item">
@@ -204,14 +222,24 @@
             <span id="cfgDetailMessage">—</span>
         </div>
 
-        <div class="imh-modal-detail">
-            <h4 class="imh-modal-detail-title">Données sélectionnées</h4>
-            <div id="cfgDetailTables"></div>
+        {# Ordre voulu : ce qui exige une réaction d'abord — état d'exécution, besoin,
+           reformulation — puis seulement le rappel de la sélection. Le détail technique
+           poussait auparavant les messages sous la ligne de flottaison. #}
+        <div class="imh-modal-detail" id="cfgDetailBesoinBlock" style="display:none;">
+            <h4 class="imh-modal-detail-title">Votre besoin</h4>
+            <p class="wiz-panel-sub" id="cfgDetailBesoin" style="margin:0;"></p>
         </div>
 
-        <div class="imh-modal-detail" id="cfgDetailPrecisionBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Précision complémentaire</h4>
-            <p class="wiz-panel-sub" id="cfgDetailPrecision" style="margin:0;"></p>
+        {# Garde-fou : ce que le système a compris, affiché dès la traduction et avant
+           tout calcul, pour qu'une mauvaise interprétation ne passe jamais inaperçue. #}
+        <div class="imh-modal-note imh-modal-note--info" id="cfgDetailIntentionWrap" style="display:none;">
+            <span class="imh-modal-note-title">Ce que nous avons compris</span>
+            <span id="cfgDetailIntention">—</span>
+        </div>
+
+        <div class="imh-modal-detail">
+            <h4 class="imh-modal-detail-title">Données sélectionnées</h4>
+            <div id="cfgDetailTables" class="cfg-sel"></div>
         </div>
     </div>
 </div>
@@ -294,7 +322,12 @@
 
             document.getElementById('cfgDetailSource').textContent = d.source_nom || '—';
             document.getElementById('cfgDetailStatut').textContent = d.statut || '—';
+            /* Même logique que la colonne « Objectif » de la liste : une configuration
+               sans objectif prédéfini affiche son besoin, et le champ est renommé pour
+               que l'entreprise sache ce qu'elle lit. */
             document.getElementById('cfgDetailObjectif').textContent = d.objectif || '—';
+            document.getElementById('cfgDetailObjectifLabel').textContent =
+                d.objectif_libre ? 'Besoin exprimé' : 'Objectif';
             document.getElementById('cfgDetailFrequence').textContent = d.frequence || '—';
             document.getElementById('cfgDetailDate').textContent = d.date_creation || '—';
 
@@ -340,40 +373,75 @@
             if (!tableNames.length) {
                 tablesWrap.innerHTML = '<span class="wiz-columns-error">Aucune donnée enregistrée.</span>';
             } else {
+                /* Une ligne par table, nom et colonnes sur le même flux : l'empilement
+                   précédent (un bloc par table, un badge « Toutes les colonnes » sous
+                   chaque nom) imposait un défilement dès trois tables. */
+                const MAX_CHIPS = 8;
                 tableNames.forEach(table => {
                     const cols = tables[table];
-                    const block = document.createElement('div');
-                    block.style.marginBottom = '0.75rem';
-                    block.innerHTML = `<span class="wiz-item-desc" style="display:block;margin-bottom:0.35rem;font-weight:600;color:var(--text);">${table}</span>`;
-                    const list = document.createElement('div');
-                    list.className = 'wiz-columns-panel';
-                    list.style.border = 'none';
-                    list.style.paddingTop = '0';
-                    list.style.marginTop = '0';
+                    const ligne = document.createElement('div');
+                    ligne.className = 'cfg-sel-ligne';
+
+                    const nom = document.createElement('span');
+                    nom.className = 'cfg-sel-table';
+                    nom.textContent = table;
+                    ligne.appendChild(nom);
+
                     if (cols === '*' || !Array.isArray(cols)) {
-                        const chip = document.createElement('span');
-                        chip.className = 'wiz-col-chip selected';
-                        chip.textContent = 'Toutes les colonnes';
-                        list.appendChild(chip);
+                        // Mention en texte plutôt qu'en badge : « toutes » n'est pas une
+                        // colonne, la mettre en badge la faisait passer pour telle.
+                        const tout = document.createElement('span');
+                        tout.className = 'cfg-sel-tout';
+                        tout.textContent = 'toutes les colonnes';
+                        ligne.appendChild(tout);
                     } else {
-                        cols.forEach(c => {
+                        cols.slice(0, MAX_CHIPS).forEach(c => {
                             const chip = document.createElement('span');
-                            chip.className = 'wiz-col-chip selected';
+                            chip.className = 'cfg-sel-chip';
                             chip.textContent = c;
-                            list.appendChild(chip);
+                            ligne.appendChild(chip);
                         });
+                        if (cols.length > MAX_CHIPS) {
+                            const reste = document.createElement('span');
+                            reste.className = 'cfg-sel-reste';
+                            reste.textContent = `+${cols.length - MAX_CHIPS}`;
+                            reste.title = cols.join(', ');
+                            ligne.appendChild(reste);
+                        }
                     }
-                    block.appendChild(list);
-                    tablesWrap.appendChild(block);
+                    tablesWrap.appendChild(ligne);
                 });
             }
 
-            const precisionBlock = document.getElementById('cfgDetailPrecisionBlock');
-            if (d.precision) {
-                document.getElementById('cfgDetailPrecision').textContent = d.precision;
-                precisionBlock.style.display = '';
+            const besoinBlock = document.getElementById('cfgDetailBesoinBlock');
+            if (d.besoin) {
+                document.getElementById('cfgDetailBesoin').textContent = d.besoin;
+                besoinBlock.style.display = '';
             } else {
-                precisionBlock.style.display = 'none';
+                besoinBlock.style.display = 'none';
+            }
+
+            /* Reformulation : disponible dès la finalisation, sans qu'aucune analyse
+               n'ait été lancée. C'est là que l'entreprise repère un contresens.
+               Si l'interprétation n'a pas abouti, on dit pourquoi plutôt que de rester
+               muet — sinon rien ne distingue « pas encore traduit » de « mal compris ». */
+            const intentionWrap = document.getElementById('cfgDetailIntentionWrap');
+            const intentionEl = document.getElementById('cfgDetailIntention');
+            const intentionTitre = intentionWrap.querySelector('.imh-modal-note-title');
+            if (d.intention_reformulee) {
+                intentionWrap.className = 'imh-modal-note imh-modal-note--info';
+                intentionTitre.textContent = 'Ce que nous avons compris';
+                intentionEl.textContent = d.intention_reformulee;
+                intentionWrap.style.display = '';
+            } else if (d.intention_erreur) {
+                /* Colonne dédiée : cette trace survit à un lancement réussi, contrairement
+                   à message_execution qui appartient aux tâches 4.1/4.2. */
+                intentionWrap.className = 'imh-modal-note imh-modal-note--ko';
+                intentionTitre.textContent = 'Interprétation indisponible';
+                intentionEl.textContent = d.intention_erreur;
+                intentionWrap.style.display = '';
+            } else {
+                intentionWrap.style.display = 'none';
             }
 
             detailModal.style.display = 'flex';

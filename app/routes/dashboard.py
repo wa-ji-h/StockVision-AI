@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import logging
 import os
 import re
 import time
@@ -10,7 +11,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -32,14 +33,25 @@ from app.services.moteur_analyse import (
     NIVEAUX_FIABILITE,
     OBJECTIFS_TEMPORELS,
     PAS_PAR_FREQUENCE,
+    TYPE_PAR_OBJECTIF,
+    LIBELLE_PAR_NIVEAU,
+    NIVEAUX_CRITICITE,
     SEUIL_FIABILITE_BONNE,
+    adequation_frequence,
     STATUT_ERREUR_DONNEES,
     STATUT_EXTRACTION_EN_COURS,
     ExtractionError,
+    SpecificationInvalide,
+    executer_et_stocker,
     executer_extraction,
     executer_preparation,
+    interpreter_et_stocker,
+    LIBELLE_MODELE,
+    decrire_colonnes,
     evaluer_fiabilite,
+    intention_depuis_resume,
     profiler_selection,
+    traduire_intention,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # app/
@@ -47,6 +59,11 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 templates.env.globals["asset_version"] = str(int(time.time()))
 
 router = APIRouter(tags=["dashboard"])
+
+# Traçage de la traduction de l'intention (Module 4). Visible dans la console uvicorn.
+# Un échec de traduction ne doit jamais passer inaperçu : il est journalisé ici ET
+# stocké dans ConfigurationAnalyse.intention_erreur.
+_log = logging.getLogger("stockvision.moteur_analyse")
 
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 
@@ -1401,12 +1418,117 @@ _OBJECTIFS = [
 for _o in _OBJECTIFS:
     _o["temporel"] = _o["val"] in OBJECTIFS_TEMPORELS
 
+# Ce qui bloque un objectif, et **comment le débloquer** : une carte indisponible qui se
+# contente de nommer la contrainte laisse l'entreprise sans action. Chaque entrée est
+# (constat, action) — deux champs distincts, pas une phrase à découper à l'affichage.
+_BLOCAGES: dict[str, tuple[str, str]] = {
+    "sans_date": (
+        "Vos données ne contiennent aucune colonne de date.",
+        "Choisissez un import qui porte une date (commande, facture, mouvement de stock), "
+        "ou ajoutez la colonne de date à votre sélection à l'étape précédente.",
+    ),
+    "sans_mesure": (
+        "Vos données portent une date, mais aucune valeur chiffrée à suivre dans le temps.",
+        "Ajoutez à votre sélection une colonne chiffrée : quantité, montant, total.",
+    ),
+    # Distincts du précédent : ici il *y a* des colonnes chiffrées, mais aucune n'est une
+    # grandeur. Sans cette nuance, le message passerait pour une erreur de détection —
+    # et le constat nomme la bonne catégorie plutôt que de les mélanger.
+    "sans_mesure_identifiants": (
+        "Les seules colonnes chiffrées de votre sélection sont des identifiants "
+        "(clés, numéros de ligne) : ce ne sont pas des grandeurs à analyser.",
+        "Ajoutez une colonne qui mesure quelque chose : quantité, montant, total, durée.",
+    ),
+    "sans_mesure_booleens": (
+        "Les seules colonnes chiffrées de votre sélection sont des indicateurs oui/non : "
+        "ils décrivent un état, ils ne mesurent aucune quantité.",
+        "Ajoutez une colonne qui mesure quelque chose : quantité, montant, total, durée. "
+        "L'indicateur reste utilisable pour répartir les résultats.",
+    ),
+    "sans_mesure_non_mesurables": (
+        "Les seules colonnes chiffrées de votre sélection sont des identifiants et des "
+        "indicateurs oui/non : aucune ne mesure de quantité.",
+        "Ajoutez une colonne qui mesure quelque chose : quantité, montant, total, durée.",
+    ),
+}
+
+# Constat/action à retenir quand aucune grandeur ne subsiste, selon ce qui a réellement
+# été écarté. Nommer la mauvaise catégorie ferait douter l'entreprise de la détection.
+_CLES_SANS_MESURE = {
+    (True, False): "sans_mesure_identifiants",
+    (False, True): "sans_mesure_booleens",
+    (True, True): "sans_mesure_non_mesurables",
+    (False, False): "sans_mesure",
+    "sans_donnee": (
+        "La sélection ne contient aucune ligne exploitable.",
+        "Vérifiez votre sélection à l'étape précédente, ou réimportez le fichier source.",
+    ),
+}
+
 _OBJECTIF_LABELS = {o["val"]: o["label"] for o in _OBJECTIFS}
+
+
+def _presenter_objectif(c) -> dict:
+    """Comment identifier une configuration — **source unique** de cet affichage.
+
+    Utilisée par la liste des configurations, son modal, ses filtres et la page de
+    résultats : une configuration doit se reconnaître à l'identique partout.
+
+    Une configuration peut n'avoir qu'un besoin exprimé (pas d'objectif prédéfini) :
+    afficher une case vide la rendrait impossible à reconnaître. On retombe alors sur
+    le besoin lui-même, avec l'icône déduite du type d'analyse réellement traduit.
+    """
+    besoin = (c.besoin or "").strip()
+    if c.objectif:
+        meta = _OBJECTIF_BY_VAL.get(c.objectif, _OBJECTIF_FALLBACK)
+        return {
+            "label": _OBJECTIF_LABELS.get(c.objectif, c.objectif),
+            "sous_ligne": besoin,          # le besoin précise l'objectif, en second plan
+            "titre": besoin,
+            "icon": meta["icon"],
+            "color": meta["color"],
+            "libre": False,
+        }
+    if besoin:
+        meta = _OBJECTIF_FALLBACK
+        # L'icône vient du type d'analyse retenu par la traduction, s'il existe.
+        try:
+            spec = json.loads(c.specification_json or "{}")
+            type_analyse = (spec.get("specification") or {}).get("type_analyse")
+            cle = _OBJECTIF_PAR_TYPE.get(type_analyse)
+            if cle:
+                meta = _OBJECTIF_BY_VAL.get(cle, _OBJECTIF_FALLBACK)
+        except Exception:
+            pass
+        return {
+            "label": besoin,
+            "sous_ligne": "",
+            "titre": besoin,
+            "icon": meta["icon"],
+            "color": meta["color"],
+            "libre": True,
+        }
+    return {
+        "label": "Sans objectif ni besoin",
+        "sous_ligne": "",
+        "titre": "",
+        "icon": _OBJECTIF_FALLBACK["icon"],
+        "color": _OBJECTIF_FALLBACK["color"],
+        "libre": True,
+    }
 _OBJECTIF_KEYS = {o["val"] for o in _OBJECTIFS}
 _OBJECTIF_BY_VAL = {o["val"]: o for o in _OBJECTIFS}
 # Objectifs obsolètes (dont l'ancien « optimisation_ressource », remplacé par
 # « comparaison_classement ») : rendus en gris neutre plutôt que de casser l'affichage.
 _OBJECTIF_FALLBACK = {"icon": "arrows-sort", "color": "#64748b"}
+
+# Type d'analyse traduit → objectif équivalent, pour donner à une configuration « besoin
+# libre » l'icône et la couleur de l'analyse réellement retenue. Dérivé, jamais recopié.
+_OBJECTIF_PAR_TYPE = {type_: val for val, type_ in TYPE_PAR_OBJECTIF.items()}
+
+# Catégorie de filtre pour les configurations sans objectif prédéfini. Sans elle, elles
+# disparaîtraient silencieusement de la liste dès qu'un filtre d'objectif est actif.
+_FILTRE_BESOIN_LIBRE = "besoin_libre"
 
 _FREQUENCE_COLORS = {
     "ponctuelle": "#1D9E75",
@@ -1452,7 +1574,13 @@ def entreprise_configurations_list(
             query = db.query(ConfigurationAnalyse).filter(*base_filters)
             if frequence != "toutes" and frequence in {f[0] for f in _FREQUENCES}:
                 query = query.filter(ConfigurationAnalyse.frequence == frequence)
-            if objectif != "tous" and objectif in _OBJECTIF_KEYS:
+            if objectif == _FILTRE_BESOIN_LIBRE:
+                # Configurations pilotées par le seul besoin exprimé : sans cette branche
+                # elles n'auraient correspondu à aucun filtre et auraient disparu.
+                query = query.filter(
+                    or_(ConfigurationAnalyse.objectif.is_(None), ConfigurationAnalyse.objectif == "")
+                )
+            elif objectif != "tous" and objectif in _OBJECTIF_KEYS:
                 query = query.filter(ConfigurationAnalyse.objectif == objectif)
             configs = query.order_by(ConfigurationAnalyse.date_creation.desc()).all()
             _reparer_executions_bloquees(db, configs)
@@ -1468,13 +1596,14 @@ def entreprise_configurations_list(
         source_noms = import_id_to_source_nom
 
     _STATUT_LABELS = {"actif": "Active", "brouillon": "Brouillon"}
+
     # Libellés dérivés de NIVEAUX_FIABILITE : aucune chaîne recopiée ici.
     _FIABILITE_LABELS = {code: label for _, code, label, _ in NIVEAUX_FIABILITE}
 
     configs_data = []
     for c in configs:
-        obj_meta = _OBJECTIF_BY_VAL.get(c.objectif, _OBJECTIF_FALLBACK)
-        objectif_label = _OBJECTIF_LABELS.get(c.objectif, c.objectif)
+        presentation = _presenter_objectif(c)
+        objectif_label = presentation["label"]
         frequence_label = dict(_FREQUENCES).get(c.frequence, c.frequence or "—")
         date_fmt = c.date_creation.strftime("%d/%m/%Y") if c.date_creation else "—"
 
@@ -1488,8 +1617,11 @@ def entreprise_configurations_list(
         configs_data.append({
             "id_configuration": c.id_configuration,
             "objectif": objectif_label,
-            "objectif_icon": obj_meta["icon"],
-            "objectif_color": obj_meta["color"],
+            "objectif_sous_ligne": presentation["sous_ligne"],
+            "objectif_titre": presentation["titre"],
+            "objectif_libre": presentation["libre"],
+            "objectif_icon": presentation["icon"],
+            "objectif_color": presentation["color"],
             "frequence_val": c.frequence,
             "frequence": frequence_label,
             "frequence_color": _FREQUENCE_COLORS.get(c.frequence, "#64748b"),
@@ -1504,8 +1636,9 @@ def entreprise_configurations_list(
             "detail": {
                 "source_nom": source_noms.get(c.id_import, "—"),
                 "objectif": objectif_label,
+                "objectif_libre": presentation["libre"],
                 "frequence": frequence_label,
-                "precision": c.precision_complementaire or "",
+                "besoin": c.besoin or "",
                 "date_creation": date_fmt,
                 "statut": _STATUT_LABELS.get(c.statut, c.statut),
                 "tables": facteurs,
@@ -1513,6 +1646,8 @@ def entreprise_configurations_list(
                 "derniere_execution": c.derniere_execution.strftime("%d/%m/%Y %H:%M") if c.derniere_execution else None,
                 "prochaine_execution": c.prochaine_execution.strftime("%d/%m/%Y %H:%M") if c.prochaine_execution else None,
                 "message_execution": c.message_execution,
+                "intention_reformulee": c.intention_reformulee,
+                "intention_erreur": c.intention_erreur,
                 "fiabilite": _FIABILITE_LABELS.get(c.fiabilite_execution),
                 "fiabilite_code": c.fiabilite_execution,
                 "points_execution": c.points_execution,
@@ -1534,6 +1669,7 @@ def entreprise_configurations_list(
             "frequences": _FREQUENCES,
             "frequence_colors": _FREQUENCE_COLORS,
             "objectifs": _OBJECTIFS,
+            "filtre_besoin_libre": _FILTRE_BESOIN_LIBRE,
             "frequence_filtre": frequence,
             "objectif_filtre": objectif,
         },
@@ -1711,39 +1847,57 @@ def _evaluer_objectifs(profil: dict) -> tuple[dict, list[dict]]:
     assez de points — c'est cette table-là qui sera analysable, pas le total toutes tables
     confondues. La recommandation est déduite du profil, jamais figée."""
     lignes_max = max((t["lignes"] for t in profil.values()), default=0)
+    # Une table sans ligne fait échouer l'extraction au lancement. Le profilage connaît
+    # déjà le décompte : elle est nommée dès l'étape 2, pas découverte au lancement.
+    tables_vides = sorted(nom for nom, t in profil.items() if t["lignes"] < 1)
     tables_datees = [t for t in profil.values() if any(c["est_date"] for c in t["colonnes"])]
     colonnes_date = sorted({
         c["nom"] for t in profil.values() for c in t["colonnes"] if c["est_date"]
     })
+    # `est_mesure` exclut les identifiants : ils sont numériques sans être des grandeurs.
     colonnes_mesure = sorted({
-        c["nom"] for t in profil.values() for c in t["colonnes"] if c["est_numerique"]
+        c["nom"] for t in profil.values() for c in t["colonnes"] if c.get("est_mesure")
+    })
+    colonnes_identifiants = sorted({
+        c["nom"] for t in profil.values() for c in t["colonnes"] if c.get("est_identifiant")
+    })
+    colonnes_booleennes = sorted({
+        c["nom"] for t in profil.values() for c in t["colonnes"] if c.get("est_booleen")
     })
     # Une série temporelle a besoin d'une date ET d'une mesure à projeter : les deux doivent
     # se trouver dans la MÊME table, sinon il n'y a rien à tracer dans le temps.
     tables_analysables = [
-        t for t in tables_datees if any(c["est_numerique"] for c in t["colonnes"])
+        t for t in tables_datees if any(c.get("est_mesure") for c in t["colonnes"])
     ]
     a_mesure = bool(colonnes_mesure)
     points_temporels = max((t["lignes"] for t in tables_analysables), default=0)
 
     # Le volume ne rend JAMAIS un objectif indisponible : seule l'impossibilité mathématique
     # le fait (pas de date, pas de mesure, aucune donnée). Le volume qualifie la fiabilité.
+    # Quand rien n'est mesurable, la raison dépend de ce qui a été écarté.
+    cle_mesure = _CLES_SANS_MESURE[(bool(colonnes_identifiants), bool(colonnes_booleennes))]
+
     evalues = []
     for obj in _OBJECTIFS:
-        etat, raison, fiabilite = "compatible", None, None
+        etat, raison, resolution, fiabilite = "compatible", None, None, None
         if obj["temporel"]:
             if not tables_datees:
-                etat, raison = "indisponible", "Nécessite une colonne de date"
+                etat, raison, resolution = "indisponible", *_BLOCAGES["sans_date"]
             elif not tables_analysables:
-                etat = "indisponible"
-                raison = "Nécessite au moins une mesure numérique en plus de la date"
+                etat, raison, resolution = "indisponible", *_BLOCAGES[cle_mesure]
             else:
                 fiabilite = evaluer_fiabilite(points_temporels)
         elif lignes_max < 1:
-            etat, raison = "indisponible", "Aucune donnée disponible"
+            etat, raison, resolution = "indisponible", *_BLOCAGES["sans_donnee"]
         else:
             fiabilite = evaluer_fiabilite(lignes_max)
-        evalues.append({**obj, "etat": etat, "raison": raison, "fiabilite": fiabilite})
+        evalues.append({
+            **obj,
+            "etat": etat,
+            "raison": raison,
+            "resolution": resolution,
+            "fiabilite": fiabilite,
+        })
 
     # Recommandation : la prévision dès que l'historique la rend fiable, sinon la comparaison.
     prefere = "prevision_evolution" if points_temporels >= SEUIL_FIABILITE_BONNE else "comparaison_classement"
@@ -1761,19 +1915,33 @@ def _evaluer_objectifs(profil: dict) -> tuple[dict, list[dict]]:
     # « ponctuelle » n'agrège pas — ses points sont les lignes elles-mêmes, ce qui en fait
     # presque toujours la fréquence la plus fiable. Elle a droit au même indicateur que les
     # autres : un affichage à deux régimes serait incohérent.
+    # `adequation` est ce que l'interface affiche ; `points` et `fiabilite` restent
+    # transmis pour le diagnostic, mais ne sont plus le message principal.
+    def _cadence(n: int) -> dict:
+        return {
+            "points": n,
+            "fiabilite": evaluer_fiabilite(n),
+            "adequation": adequation_frequence(n),
+        }
+
     lignes_analysables = max((t["lignes"] for t in tables_analysables), default=lignes_max)
-    par_frequence = {"ponctuelle": {"points": lignes_analysables, "fiabilite": evaluer_fiabilite(lignes_analysables)}}
+    par_frequence = {"ponctuelle": _cadence(lignes_analysables)}
     for freq in PAS_PAR_FREQUENCE:
         n = max((t.get("points_par_frequence", {}).get(freq, 0) for t in tables_analysables), default=0)
-        par_frequence[freq] = {"points": n, "fiabilite": evaluer_fiabilite(n)}
+        par_frequence[freq] = _cadence(n)
 
     resume = {
         "lignes": lignes_max,
         "a_date": bool(tables_datees),
         "a_mesure": a_mesure,
         "analysable": bool(tables_analysables),
+        "tables_vides": tables_vides,
         "colonnes_date": colonnes_date,
         "colonnes_mesure": colonnes_mesure,
+        # Le bandeau n'énumère plus les colonnes — il tient en une phrase. Ces listes
+        # servent à choisir *quelle* phrase afficher, et au diagnostic via les logs.
+        "colonnes_identifiants": colonnes_identifiants,
+        "colonnes_booleennes": colonnes_booleennes,
         "points_temporels": points_temporels,
         "fiabilite": evaluer_fiabilite(points_temporels if tables_analysables else lignes_max),
         "par_frequence": par_frequence,
@@ -1814,6 +1982,17 @@ async def entreprise_configuration_profil(
         return JSONResponse({"ok": False, "error": f"Analyse impossible des données : {exc}"}, status_code=200)
 
     resume, objectifs = _evaluer_objectifs(profil)
+
+    # Le bandeau du wizard ne montre qu'une phrase : le détail du profil vit ici, pour
+    # comprendre après coup pourquoi une colonne n'a pas été retenue comme mesure.
+    _log.info(
+        "[profil] source %s (%s) : %s table(s), %s ligne(s) max | dates=%s | mesures=%s "
+        "| identifiants ecartes=%s | oui/non ecartes=%s | tables vides=%s",
+        source_id, source.type_source, resume["nb_tables"], resume["lignes"],
+        resume["colonnes_date"] or "-", resume["colonnes_mesure"] or "-",
+        resume["colonnes_identifiants"] or "-", resume["colonnes_booleennes"] or "-",
+        resume["tables_vides"] or "-",
+    )
     return JSONResponse({"ok": True, "resume": resume, "objectifs": objectifs, "profil": profil})
 
 
@@ -1873,15 +2052,22 @@ async def entreprise_configuration_finalize(
     body = await request.json()
     objectif = (body.get("objectif") or "").strip()
     frequence = (body.get("frequence") or "").strip()
-    precision = (body.get("precision") or "").strip()
+    besoin = (body.get("besoin") or "").strip()
 
     valid_frequences = {f[0] for f in _FREQUENCES}
-    if objectif not in _OBJECTIF_KEYS:
+    # Un objectif OU un besoin suffit, mais il en faut au moins un : sans l'un des deux,
+    # il n'y a rien à traduire en analyse.
+    if not objectif and not besoin:
+        raise HTTPException(
+            status_code=422,
+            detail="Choisissez un objectif ou décrivez votre besoin — au moins l'un des deux.",
+        )
+    if objectif and objectif not in _OBJECTIF_KEYS:
         raise HTTPException(status_code=422, detail="Objectif invalide.")
     if frequence not in valid_frequences:
         raise HTTPException(status_code=422, detail="Fréquence invalide.")
-    if len(precision) > 2000:
-        raise HTTPException(status_code=422, detail="Précision complémentaire trop longue (2000 caractères max).")
+    if len(besoin) > 2000:
+        raise HTTPException(status_code=422, detail="Besoin trop long (2000 caractères max).")
 
     config = (
         db.query(ConfigurationAnalyse)
@@ -1898,11 +2084,83 @@ async def entreprise_configuration_finalize(
 
     config.objectif = objectif
     config.frequence = frequence
-    config.precision_complementaire = precision or None
+    config.besoin = besoin or None
     config.statut = "actif"
+    # Horodaté ici et nulle part ailleurs : /finalize est le seul point par lequel une
+    # configuration change (création comme modification). La page de résultats s'en sert
+    # pour ne pas présenter un changement de paramétrage comme une évolution métier.
+    config.date_modification = datetime.now()
     db.commit()
 
-    return JSONResponse({"ok": True, "redirect": "/dashboard/entreprise/configurations"})
+    # Traduction de l'intention dès la finalisation, avant tout calcul : l'entreprise
+    # doit pouvoir vérifier ce que le système a compris sans avoir rien lancé.
+    reformulation = _traduire_et_stocker(db, config)
+
+    return JSONResponse({
+        "ok": True,
+        "redirect": "/dashboard/entreprise/configurations",
+        "intention_reformulee": reformulation,
+    })
+
+
+def _echec_traduction(db: Session, config: ConfigurationAnalyse, motif: str) -> None:
+    """Enregistre un échec de traduction — en base ET dans les logs.
+
+    `intention_erreur` est une colonne dédiée : partager `message_execution` avec 4.1/4.2
+    faisait écraser la trace dès le premier lancement réussi, rendant l'échec invisible.
+    """
+    _log.warning("[traduction] cfg %s : ECHEC — %s", config.id_configuration, motif)
+    config.specification_json = None
+    config.intention_reformulee = None
+    config.intention_erreur = motif
+    db.commit()
+
+
+def _traduire_et_stocker(db: Session, config: ConfigurationAnalyse) -> str | None:
+    """Traduit le besoin en spécification et la stocke sur la configuration.
+
+    Ne lève jamais — une traduction indisponible ne doit pas empêcher d'enregistrer une
+    configuration par ailleurs valide — mais **ne se tait jamais non plus** : tout échec
+    est journalisé et écrit dans `intention_erreur`.
+    """
+    _log.info(
+        "[traduction] cfg %s : début (objectif=%r, besoin=%r)",
+        config.id_configuration, config.objectif or None, (config.besoin or "")[:60],
+    )
+    try:
+        imp = db.query(ImportDonnee).filter(ImportDonnee.id_import == config.id_import).first()
+        source = db.query(SourceDonnee).filter(SourceDonnee.id_source == imp.id_source).first() if imp else None
+        if not source:
+            _echec_traduction(db, config, "Source introuvable pour cette configuration.")
+            return None
+
+        facteurs = json.loads(config.facteurs_selectionnes or "{}")
+        selection = facteurs.get("tables", {}) if isinstance(facteurs, dict) else {}
+        if not selection:
+            _echec_traduction(db, config, "Aucune donnée sélectionnée : rien à interpréter.")
+            return None
+
+        profil = profiler_selection(db, source, selection)
+        resultat = traduire_intention(config.besoin or "", config.objectif or None, profil)
+    except SpecificationInvalide as exc:
+        _echec_traduction(db, config, exc.message_complet())
+        return None
+    except Exception as exc:
+        # Profilage impossible (source injoignable, fichier absent…). On n'empêche pas
+        # l'enregistrement, mais on garde une trace complète pour le diagnostic.
+        _log.exception("[traduction] cfg %s : erreur inattendue", config.id_configuration)
+        _echec_traduction(db, config, f"Interprétation impossible : {exc}")
+        return None
+
+    config.specification_json = json.dumps(resultat.resume(), ensure_ascii=False)
+    config.intention_reformulee = resultat.reformulation
+    config.intention_erreur = None
+    db.commit()
+    _log.info(
+        "[traduction] cfg %s : OK (source=%s) — %s",
+        config.id_configuration, resultat.source, resultat.reformulation,
+    )
+    return resultat.reformulation
 
 
 def _get_owned_config(db: Session, config_id: int, user: Utilisateur) -> ConfigurationAnalyse | None:
@@ -1963,7 +2221,7 @@ def entreprise_configuration_edit(
                 "items": _flatten_facteurs(config.facteurs_selectionnes),
                 "objectif": config.objectif,
                 "frequence": config.frequence,
-                "precision": config.precision_complementaire or "",
+                "besoin": config.besoin or "",
             },
         },
     )
@@ -2025,12 +2283,16 @@ async def entreprise_configuration_duplicate(
     if not config:
         raise HTTPException(status_code=404, detail="Configuration introuvable.")
 
+    # La copie reprend le besoin ET sa traduction : à objectif, besoin et sélection
+    # identiques, la spécification l'est aussi — inutile de refaire un appel au LLM.
     duplicate = ConfigurationAnalyse(
         objectif=config.objectif,
         id_import=config.id_import,
         facteurs_selectionnes=config.facteurs_selectionnes,
         frequence=config.frequence,
-        precision_complementaire=config.precision_complementaire,
+        besoin=config.besoin,
+        specification_json=config.specification_json,
+        intention_reformulee=config.intention_reformulee,
         statut="actif",
     )
     db.add(duplicate)
@@ -2099,24 +2361,17 @@ def _diagnostiquer_objectif(resultat, objectif: str) -> str | None:
     Une configuration valide à sa création peut devenir incompatible (colonne de date
     supprimée, historique tronqué). Le message produit *guide* — il dit ce qui manque et
     quelle action débloque — plutôt que de constater l'échec."""
-    import pandas as pd
-
     obj = _OBJECTIF_BY_VAL.get(objectif)
     if not obj:
         return None  # objectif obsolète : le fallback l'affiche déjà en gris, rien à diagnostiquer
 
+    # `decrire_colonnes` et non une description reconstruite ici : ce profil est confronté
+    # aux MÊMES règles que celui du wizard (`_evaluer_objectifs`). Une description locale
+    # avait omis `est_mesure`, et tout objectif temporel devenait irréalisable au
+    # lancement alors que le wizard l'annonçait compatible. Deux producteurs de profil,
+    # une seule fonction : ils ne peuvent plus diverger.
     profil = {
-        nom: {
-            "lignes": len(df),
-            "colonnes": [
-                {
-                    "nom": str(c),
-                    "est_date": bool(pd.api.types.is_datetime64_any_dtype(df[c])),
-                    "est_numerique": bool(pd.api.types.is_numeric_dtype(df[c])),
-                }
-                for c in df.columns
-            ],
-        }
+        nom: {"lignes": len(df), "colonnes": decrire_colonnes(df)}
         for nom, df in resultat.donnees.items()
     }
     resume, evalues = _evaluer_objectifs(profil)
@@ -2285,12 +2540,18 @@ async def entreprise_configuration_lancer(
             "code": config.objectif,
             "label": _OBJECTIF_LABELS.get(config.objectif, config.objectif),
         },
-        "precision_complementaire": config.precision_complementaire or "",
+        "besoin": config.besoin or "",
         "frequence": config.frequence,
         "genere_le": now.isoformat(),
     }
     config.payload_execution = json.dumps(payload, ensure_ascii=False)
     db.commit()
+
+    # 3 bis. Traduction : rattrape les configurations jamais traduites (créées avant la
+    # couche de traduction) ou dont la traduction avait échoué — par exemple parce que la
+    # clé API manquait alors et vient d'être ajoutée.
+    if not config.intention_reformulee:
+        _traduire_et_stocker(db, config)
 
     # 4. Module 4 — tâche 4.1 : extraction des données sélectionnées.
     # Exécution synchrone (aucun scheduler/worker à ce stade) : la requête reste ouverte
@@ -2317,6 +2578,34 @@ async def entreprise_configuration_lancer(
             "error": config.message_execution,
         }, status_code=200)
 
+    # 7. Exécution — le moteur de calcul. La spécification vient de la traduction déjà
+    # stockée : aucun appel LLM supplémentaire au lancement.
+    calcul = None
+    if not config.specification_json:
+        config.execution_erreur = (
+            "Aucune spécification d'analyse n'est disponible : l'interprétation de votre "
+            "besoin n'a pas abouti. Consultez le détail de cette configuration."
+        )
+        db.commit()
+    else:
+        try:
+            intention = intention_depuis_resume(json.loads(config.specification_json))
+        except SpecificationInvalide as exc:
+            _log.warning("[execution] cfg %s : spécification illisible — %s",
+                         config.id_configuration, exc.message_complet())
+            config.execution_erreur = exc.message_complet()
+            db.commit()
+        else:
+            calcul = executer_et_stocker(db, config, intention, prepare)
+
+    # 8. Tâche 4.5 — restitution en langage naturel. Ne s'exécute que si le calcul a
+    # produit un résultat : il n'y a rien à commenter autrement. Ne lève jamais, et
+    # l'indisponibilité du service externe ne dégrade pas le lancement — les chiffres
+    # sont déjà en base, seule la rédaction manque.
+    interpretation = None
+    if calcul is not None:
+        interpretation = interpreter_et_stocker(db, config, calcul)
+
     return JSONResponse({
         "ok": True,
         "statut_execution": config.statut_execution,
@@ -2325,7 +2614,335 @@ async def entreprise_configuration_lancer(
         "prochaine_execution": config.prochaine_execution.strftime("%d/%m/%Y %H:%M") if config.prochaine_execution else None,
         "extraction": resultat.resume(),
         "preparation": prepare.resume(),
+        # Le calcul peut échouer sans invalider extraction et préparation : on renvoie le
+        # motif plutôt que de faire passer tout le lancement pour un échec.
+        "execution": calcul.resume() if calcul else None,
+        "execution_erreur": config.execution_erreur,
+        # `disponible: false` n'est pas un échec du lancement : c'est un texte manquant
+        # au-dessus de chiffres valides. L'interface doit les distinguer.
+        "interpretation": interpretation.resume() if interpretation else None,
     })
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Module 4 — page de résultats
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Rend visible tout ce que la chaîne 4.1 → 4.6 a produit : chiffres, intervalles,
+# indicateurs, criticité, interprétation. Déclarée AVANT la route générique
+# `/{section}`, qui l'absorberait sinon (FastAPI apparie dans l'ordre de déclaration).
+
+# Grandeur comparable d'une exécution à l'autre, par type d'analyse. Comparer deux
+# résultats n'a de sens que sur une même grandeur — d'où ce choix explicite plutôt qu'une
+# diff générique sur tous les indicateurs.
+_COMPARABLE_PAR_TYPE: dict[str, tuple[str, str]] = {
+    "prevision": ("valeur_prevue", "valeur prévue"),
+    "tendance": ("variation_pct", "variation"),
+    "anomalie": ("nb_anomalies", "anomalies"),
+    "classement": ("concentration", "concentration"),
+}
+
+
+def _fmt_nombre(valeur, decimales: int = 2) -> str:
+    """Nombre lisible : espace fine insécable comme séparateur de milliers, virgule décimale."""
+    if valeur is None:
+        return "—"
+    try:
+        nombre = float(valeur)
+    except (TypeError, ValueError):
+        return str(valeur)
+    if nombre == int(nombre) and abs(nombre) < 1e15:
+        texte = f"{int(nombre):,}".replace(",", " ")
+        return texte
+    texte = f"{nombre:,.{decimales}f}".replace(",", " ").replace(".", ",")
+    return texte
+
+
+def _fmt_pct(valeur, decimales: int = 1) -> str:
+    if valeur is None:
+        return "—"
+    try:
+        return f"{float(valeur):.{decimales}f}".replace(".", ",") + " %"
+    except (TypeError, ValueError):
+        return str(valeur)
+
+
+def _indicateurs_cles(type_analyse: str, ind: dict, ligne, fiabilite: dict) -> list[dict]:
+    """Trois à quatre valeurs, choisies selon ce que l'opération produit réellement.
+
+    Un résultat non concluant ne met **jamais** sa variation en avant : la donner comme
+    chiffre clé reviendrait à affirmer ce que le calcul refuse de soutenir.
+    """
+    concluant = bool(ind.get("conclusif"))
+    fiab = {
+        "libelle": "Fiabilité",
+        "valeur": (fiabilite.get("label") or "—").replace("Fiabilité ", "").capitalize(),
+        "detail": f"{fiabilite.get('points', '—')} points",
+        "ton": fiabilite.get("code") or "indicative",
+    }
+
+    if type_analyse == "prevision":
+        return [
+            {"libelle": "Dernière valeur observée", "valeur": _fmt_nombre(ind.get("valeur_depart")),
+             "detail": ligne.get("unite") or ""},
+            {"libelle": "Valeur prévue", "valeur": _fmt_nombre(ligne.get("valeur_prevue")),
+             "detail": (_fmt_pct(ind.get("variation_pct")) + " d'écart") if concluant
+                       else "sens non déterminé"},
+            {"libelle": "Intervalle de confiance",
+             "valeur": f"{_fmt_nombre(ligne.get('intervalle_bas'))} – {_fmt_nombre(ligne.get('intervalle_haut'))}",
+             "detail": "estimé sur les résidus" if ligne.get("methode_intervalle") == "residus"
+                       else "fourni par le modèle"},
+            fiab,
+        ]
+    if type_analyse == "tendance":
+        return [
+            {"libelle": "Valeur de départ", "valeur": _fmt_nombre(ind.get("valeur_depart")),
+             "detail": ligne.get("unite") or ""},
+            {"libelle": "Valeur d'arrivée", "valeur": _fmt_nombre(ind.get("valeur_arrivee")),
+             "detail": ligne.get("unite") or ""},
+            {"libelle": "Évolution sur la période",
+             "valeur": _fmt_pct(ind.get("variation_pct")) if concluant else "non déterminée",
+             "detail": f"ajustement R² = {_fmt_nombre(ind.get('r2'))}"},
+            fiab,
+        ]
+    if type_analyse == "anomalie":
+        return [
+            {"libelle": "Observations inhabituelles", "valeur": _fmt_nombre(ind.get("nb_anomalies")),
+             "detail": f"sur {_fmt_nombre(ind.get('nb_observations'))} mesures"},
+            {"libelle": "Valeur moyenne", "valeur": _fmt_nombre(ind.get("moyenne")),
+             "detail": ligne.get("unite") or ""},
+            {"libelle": "Écart-type", "valeur": _fmt_nombre(ind.get("ecart_type")),
+             "detail": f"seuil retenu : {_fmt_nombre(ind.get('seuil_ecarts_types'))} σ"},
+            fiab,
+        ]
+    # classement
+    concentration = ind.get("concentration")
+    return [
+        {"libelle": "En tête du classement", "valeur": str(ind.get("premier") or "—"),
+         "detail": f"{_fmt_nombre(ind.get('valeur_premier'))} {ligne.get('unite') or ''}".strip()},
+        {"libelle": "Part du total",
+         "valeur": _fmt_pct(concentration * 100) if concentration is not None else "—",
+         "detail": "capté par le premier"},
+        {"libelle": "Éléments comparés", "valeur": _fmt_nombre(ind.get("nb_elements")),
+         "detail": f"écart premier/dernier : {_fmt_nombre(ind.get('ecart_premier_dernier'))}"},
+        fiab,
+    ]
+
+
+def _evolution(courant: dict, precedent: dict | None, config) -> dict | None:
+    """Évolution par rapport à l'exécution précédente de la MÊME configuration.
+
+    Renvoie `None` — et c'est le cœur de cette fonction — dès qu'une comparaison serait
+    trompeuse. Un delta faux est pire que pas de delta :
+
+    1. l'une des deux exécutions n'est pas concluante : on ne compare pas des incertitudes ;
+    2. le type d'analyse a changé (configuration retraduite) : rien de comparable ;
+    3. la fréquence a changé : le pas d'agrégation diffère, les points ne se comparent pas ;
+    4. la configuration a été modifiée entre les deux : ce serait un changement de
+       paramétrage présenté comme une évolution métier.
+    """
+    if precedent is None:
+        return None
+    if not courant["ind"].get("conclusif") or not precedent["ind"].get("conclusif"):
+        return None
+    if courant["type_analyse"] != precedent["type_analyse"]:
+        return {"bloque": "Type d'analyse modifié depuis la dernière exécution."}
+
+    modifiee = getattr(config, "date_modification", None)
+    if modifiee and precedent["date_brute"] and modifiee > precedent["date_brute"]:
+        return {"bloque": "Configuration modifiée depuis la dernière exécution : "
+                          "les deux résultats ne sont pas comparables."}
+
+    type_analyse = courant["type_analyse"]
+
+    # Sur un classement, le changement de tête prime : « Produit C a remplacé Produit A »
+    # est l'information métier ; la concentration ne parle que si la tête n'a pas bougé.
+    if type_analyse == "classement":
+        avant, apres = precedent["ind"].get("premier"), courant["ind"].get("premier")
+        if avant and apres and avant != apres:
+            return {"sens": "change", "texte": f"« {apres} » a remplacé « {avant} » en tête",
+                    "depuis": precedent["date"]}
+
+    cle, libelle = _COMPARABLE_PAR_TYPE.get(type_analyse, (None, ""))
+    if not cle:
+        return None
+    avant = precedent["ind"].get(cle) if cle != "valeur_prevue" else precedent["valeur_prevue"]
+    apres = courant["ind"].get(cle) if cle != "valeur_prevue" else courant["valeur_prevue"]
+    if avant is None or apres is None:
+        return None
+    try:
+        avant, apres = float(avant), float(apres)
+    except (TypeError, ValueError):
+        return None
+
+    if cle == "concentration":
+        avant, apres = avant * 100, apres * 100
+        formate = _fmt_pct
+    elif cle == "nb_anomalies":
+        formate = lambda v: _fmt_nombre(v, 0)
+    elif cle == "variation_pct":
+        formate = _fmt_pct
+    else:
+        formate = _fmt_nombre
+
+    ecart = apres - avant
+    if abs(ecart) < 1e-9:
+        return {"sens": "stable", "texte": f"{libelle} inchangée ({formate(apres)})",
+                "depuis": precedent["date"]}
+    return {
+        "sens": "hausse" if ecart > 0 else "baisse",
+        "texte": f"{libelle} : {formate(avant)} → {formate(apres)}",
+        "depuis": precedent["date"],
+    }
+
+
+@router.get("/dashboard/entreprise/resultats")
+def entreprise_resultats(
+    request: Request,
+    criticite: str = "tous",
+    config: int | None = None,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
+):
+    """Résultats et prévisions — une carte par exécution, la plus récente dépliée."""
+    title, guide = _ENTREPRISE_SECTIONS["resultats"]
+
+    # Seuls les résultats des configurations de cette entreprise, via l'import et la source.
+    lignes = (
+        db.query(ResultatAnalyse, ConfigurationAnalyse)
+        .join(ConfigurationAnalyse,
+              ResultatAnalyse.id_configuration == ConfigurationAnalyse.id_configuration)
+        .join(ImportDonnee, ConfigurationAnalyse.id_import == ImportDonnee.id_import)
+        .join(SourceDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
+        .filter(SourceDonnee.idEntreprise == user.idUtilisateur)
+        .order_by(ResultatAnalyse.date_execution.asc(), ResultatAnalyse.id_resultat.asc())
+        .all()
+    )
+
+    _FIABILITE_LABELS = {code: label for _, code, label, _ in NIVEAUX_FIABILITE}
+    _FREQ_LABELS = dict(_FREQUENCES)
+
+    # Premier passage en ordre chronologique : il faut le prédécesseur de chaque exécution
+    # pour calculer l'évolution. L'ordre d'affichage est inversé ensuite.
+    par_config: dict[int, list[dict]] = {}
+    cartes: list[dict] = []
+    for res, cfg in lignes:
+        resume = {}
+        if res.resultat_json:
+            try:
+                resume = json.loads(res.resultat_json)
+            except Exception:
+                resume = {}
+        ind = resume.get("indicateurs") or {}
+        vis = resume.get("visualisation") or {}
+        fiabilite = resume.get("fiabilite") or {}
+        if not fiabilite.get("label") and res.fiabilite:
+            fiabilite = {"code": res.fiabilite, "label": _FIABILITE_LABELS.get(res.fiabilite, ""),
+                         "points": ind.get("nb_observations")}
+
+        interpretation = {}
+        if res.interpretation_json:
+            try:
+                interpretation = (json.loads(res.interpretation_json) or {}).get("interpretation") or {}
+            except Exception:
+                interpretation = {}
+
+        presentation = _presenter_objectif(cfg)
+        type_analyse = res.type_analyse or resume.get("type_analyse") or ""
+        criticite_detail = resume.get("criticite") or {}
+
+        carte = {
+            "id": res.id_resultat,
+            "id_configuration": cfg.id_configuration,
+            "type_analyse": type_analyse,
+            "date": res.date_execution.strftime("%d/%m/%Y à %H:%M") if res.date_execution else "—",
+            "date_courte": res.date_execution.strftime("%d/%m") if res.date_execution else "—",
+            "date_brute": res.date_execution,
+            "objectif": presentation,
+            "frequence": _FREQ_LABELS.get(cfg.frequence, cfg.frequence or "—"),
+            "frequence_color": _FREQUENCE_COLORS.get(cfg.frequence, "#64748b"),
+            # Le besoin exprimé prime sur la reformulation : c'est la question posée par
+            # l'entreprise, pas ce que le système en a compris. La reformulation prend le
+            # relais quand aucun besoin libre n'a été saisi.
+            "demande": (cfg.besoin or "").strip() or (cfg.intention_reformulee or "").strip(),
+            "demande_source": "besoin" if (cfg.besoin or "").strip() else "reformulation",
+            "criticite": res.criticite or "normal",
+            "criticite_rang": res.criticite_rang if res.criticite_rang is not None else 0,
+            "criticite_libelle": criticite_detail.get("libelle")
+                                 or LIBELLE_PAR_NIVEAU.get(res.criticite or "normal", "Normal"),
+            "criticite_motif": res.criticite_motif or criticite_detail.get("motif") or "",
+            "criticite_plafonnements": criticite_detail.get("plafonnements") or [],
+            "concluant": bool(ind.get("conclusif")),
+            "modele": LIBELLE_MODELE.get(res.modele_applique, res.modele_applique or "—"),
+            "fiabilite": fiabilite,
+            "unite": resume.get("unite") or "",
+            "valeur_prevue": resume.get("valeur_prevue"),
+            "intervalle_bas": (resume.get("intervalle") or {}).get("bas"),
+            "intervalle_haut": (resume.get("intervalle") or {}).get("haut"),
+            "methode_intervalle": (resume.get("intervalle") or {}).get("methode"),
+            "avertissements": resume.get("avertissements") or [],
+            "ind": ind,
+            "interpretation": interpretation,
+            "interpretation_source": res.interpretation_source,
+            "interpretation_erreur": res.interpretation_erreur,
+            # Séries de visualisation, telles que 4.4 les a produites : le graphique les
+            # lit sans retraitement.
+            "graphique": {
+                "type": type_analyse,
+                "historique": vis.get("serie_historique") or [],
+                "prevue": vis.get("serie_prevue") or [],
+                "elements": vis.get("elements_classes") or [],
+                "aberrantes": vis.get("observations_aberrantes") or [],
+                "concluant": bool(ind.get("conclusif")),
+                "unite": resume.get("unite") or "",
+            },
+        }
+        carte["indicateurs_cles"] = _indicateurs_cles(type_analyse, ind, carte, fiabilite)
+
+        lignee = par_config.setdefault(cfg.id_configuration, [])
+        carte["rang_lignee"] = len(lignee) + 1
+        carte["evolution"] = _evolution(carte, lignee[-1] if lignee else None, cfg)
+        lignee.append(carte)
+        cartes.append(carte)
+
+    for carte in cartes:
+        carte["total_lignee"] = len(par_config.get(carte["id_configuration"], []))
+
+    # Comptes calculés avant filtrage : un filtre doit annoncer ce qu'il cache.
+    comptes = {code: 0 for code, _, _ in NIVEAUX_CRITICITE}
+    for carte in cartes:
+        comptes[carte["criticite"]] = comptes.get(carte["criticite"], 0) + 1
+
+    total = len(cartes)
+    if config is not None:
+        cartes = [c for c in cartes if c["id_configuration"] == config]
+    if criticite != "tous" and criticite in comptes:
+        cartes = [c for c in cartes if c["criticite"] == criticite]
+
+    cartes.reverse()   # la plus récente en premier
+
+    response = templates.TemplateResponse(
+        request,
+        "pages/dashboard_entreprise/resultats.html",
+        {
+            "user": user,
+            "active_page": "resultats",
+            "notifications_count": 0,
+            "pending_count": 0,
+            "title": title,
+            "guide": guide,
+            "cartes": cartes,
+            "total": total,
+            "comptes": comptes,
+            "niveaux": [
+                {"code": code, "rang": rang, "libelle": libelle}
+                for code, rang, libelle in NIVEAUX_CRITICITE
+            ],
+            "criticite_filtre": criticite,
+            "config_filtre": config,
+        },
+    )
+    return _no_store(response)
 
 
 @router.get("/dashboard/entreprise/{section}")

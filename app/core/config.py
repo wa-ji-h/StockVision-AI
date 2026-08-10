@@ -29,6 +29,20 @@ class Settings:
     GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
 
+    # LLM (Module 4 — traduction de l'intention et interprétation des résultats).
+    # Laissé vide = pas d'appel réseau : la traduction bascule sur le repli déterministe
+    # de l'objectif prédéfini. Le système reste entièrement fonctionnel sans clé.
+    #
+    # LLM_PROVIDER : « gemini » (défaut, palier gratuit) ou « anthropic ». Les détails de
+    # chaque API vivent dans app/services/moteur_analyse/llm_client.py, nulle part ailleurs.
+    # LLM_BASE_URL est facultatif : vide, chaque fournisseur applique la sienne.
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
+    LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+    # gemini-2.5-flash est plafonné à 20 requêtes/JOUR sur le palier gratuit : inutilisable
+    # en développement. Le quota est compté par modèle, d'où ce défaut.
+    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash")
+    LLM_BASE_URL = os.getenv("LLM_BASE_URL", "")
+
     # SMTP — laissé vide en dev : les emails sont alors juste loggés en console
     # (voir app/utils/email.py) au lieu d'échouer.
     SMTP_HOST = os.getenv("SMTP_HOST", "")
