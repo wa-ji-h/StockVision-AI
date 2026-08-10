@@ -59,6 +59,53 @@ def phrase_fiabilite(n_points: int) -> str:
     )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Adéquation d'une fréquence — le même calcul, dit en langage métier
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Les points et le niveau de fiabilité restent calculés et stockés : ils servent au
+# diagnostic et à l'interprétation. Ils ne sont simplement plus ce qu'on **montre** —
+# « 20 pts · bonne » ne se lit pas sans bagage statistique.
+#
+# Dérivé de NIVEAUX_FIABILITE, jamais une seconde échelle : une fréquence est « adaptée »
+# exactement quand sa fiabilité est bonne. Déplacer le seuil déplace les deux ensemble.
+
+# En dessous de 2 périodes il n'y a pas de série : rien à comparer, rien à projeter.
+MINIMUM_PERIODES = 2
+
+MESSAGES_ADEQUATION: dict[str, str | None] = {
+    # Fréquence adaptée : aucun message. Pas de bruit visuel quand tout va bien.
+    "adaptee": None,
+    "peu_adaptee": (
+        "Vos données couvrent une période courte — à ce rythme, le résultat sera peu précis."
+    ),
+    "impossible": (
+        "Vos données ne couvrent qu'une seule période à ce rythme. "
+        "Choisissez une fréquence plus fine pour que l'analyse soit réalisable."
+    ),
+}
+
+
+def adequation_frequence(n_points: int) -> dict:
+    """Ce que le pas de temps change pour l'entreprise, sans vocabulaire technique.
+
+    `bloquant` distingue le rythme qui rend l'analyse irréalisable de celui qui la rend
+    seulement imprécise — c'est cette distinction, et non le nombre de points, qui doit
+    remonter jusqu'à l'interface.
+    """
+    if n_points < MINIMUM_PERIODES:
+        code = "impossible"
+    elif n_points < SEUIL_FIABILITE_BONNE:
+        code = "peu_adaptee"
+    else:
+        code = "adaptee"
+    return {
+        "code": code,
+        "message": MESSAGES_ADEQUATION[code],
+        "bloquant": code == "impossible",
+    }
+
+
 def points_par_frequence(dates: pd.Series) -> dict[str, int]:
     """Nombre de points obtenus à chaque pas de temps, pour une colonne de dates.
 

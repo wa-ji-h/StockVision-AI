@@ -23,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 
 import pandas as pd
+from sqlalchemy import types as sqltypes
 
 from app.core.config import settings
 from app.database.models.connexion_bdd import ConnexionBDD
@@ -349,15 +350,24 @@ def _lire_tuple(texte: str, i: int) -> tuple[list, int]:
     return valeurs, i
 
 
-def _colonnes_create_table(sql_text: str, table: str) -> list[str]:
-    """Colonnes déclarées par le CREATE TABLE de `table` (même logique qu'à l'upload)."""
+# Mots ouvrant une contrainte, pas une colonne. Partagés par les deux lectures du corps
+# d'un CREATE TABLE : la liste des colonnes et celle des clés primaires.
+_MOTS_CLES_CONTRAINTE = {"primary", "foreign", "key", "constraint", "unique", "index", "check"}
+
+
+def _corps_create_table(sql_text: str, table: str) -> str:
+    """Contenu entre parenthèses du CREATE TABLE de `table`, ou chaîne vide.
+
+    Extrait une fois, exploité deux fois : liste des colonnes et clés primaires. Le
+    comptage de parenthèses gère les types paramétrés (`DECIMAL(10,2)`).
+    """
     motif = re.compile(
         r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"\[]?" + re.escape(table) + r"[`\"\]]?\s*\(",
         re.IGNORECASE,
     )
     m = motif.search(sql_text)
     if not m:
-        return []
+        return ""
     profondeur, debut, pos = 1, m.end(), m.end()
     while pos < len(sql_text) and profondeur > 0:
         if sql_text[pos] == "(":
@@ -365,8 +375,44 @@ def _colonnes_create_table(sql_text: str, table: str) -> list[str]:
         elif sql_text[pos] == ")":
             profondeur -= 1
         pos += 1
-    corps = sql_text[debut : pos - 1]
-    mots_cles = {"primary", "foreign", "key", "constraint", "unique", "index", "check"}
+    return sql_text[debut : pos - 1]
+
+
+def _cles_primaires_sql(sql_text: str, table: str) -> set[str]:
+    """Colonnes déclarées clé primaire dans le CREATE TABLE d'un fichier SQL.
+
+    Les deux écritures sont reconnues : contrainte de table
+    (`PRIMARY KEY (\\`id\\`, \\`autre\\`)`) et déclaration en ligne
+    (`id INT AUTO_INCREMENT PRIMARY KEY`).
+    """
+    corps = _corps_create_table(sql_text, table)
+    if not corps:
+        return set()
+    cles: set[str] = set()
+    for m in re.finditer(r"PRIMARY\s+KEY\s*\(([^)]*)\)", corps, re.IGNORECASE):
+        for brut in m.group(1).split(","):
+            nom = brut.strip().strip("`\"[]").split("(")[0].strip()
+            if nom:
+                cles.add(nom)
+    for ligne in corps.split(","):
+        texte = ligne.strip()
+        m_col = re.match(r"[`\"\[]?(\w+)[`\"\]]?\s+\w", texte)
+        # `PRIMARY KEY (...)` matche ce motif tout autant qu'une vraie colonne : sans ce
+        # filtre, « PRIMARY » entrerait dans les clés. Mêmes mots-clés qu'en lecture
+        # des colonnes, pour que les deux passes s'accordent.
+        if m_col and m_col.group(1).lower() in _MOTS_CLES_CONTRAINTE:
+            continue
+        if m_col and re.search(r"\bPRIMARY\s+KEY\b", texte, re.IGNORECASE):
+            cles.add(m_col.group(1))
+    return cles
+
+
+def _colonnes_create_table(sql_text: str, table: str) -> list[str]:
+    """Colonnes déclarées par le CREATE TABLE de `table` (même logique qu'à l'upload)."""
+    corps = _corps_create_table(sql_text, table)
+    if not corps:
+        return []
+    mots_cles = _MOTS_CLES_CONTRAINTE
     colonnes = []
     for ligne in corps.split(","):
         m_col = re.match(r"[`\"\[]?(\w+)[`\"\]]?\s+\w", ligne.strip())
@@ -641,6 +687,177 @@ def colonnes_temporelles(df: pd.DataFrame) -> list[str]:
     return [str(col) for col in df.columns if pd.api.types.is_datetime64_any_dtype(df[col])]
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Identifiants — numériques, mais pas des grandeurs
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Une clé primaire est numérique au sens du dtype, jamais au sens métier : une anomalie
+# sur « idAdmin » ne veut rien dire, une prévision de « id_commande » non plus. Ces
+# colonnes sont donc écartées de la sélection **des mesures** — elles restent utilisables
+# comme dimension, où grouper par identifiant garde du sens.
+#
+# Trois critères objectifs et indépendants, un seul suffit. Aucun ne porte de jugement sur
+# le métier : nom, forme des valeurs, schéma déclaré.
+
+# En dessous de ce nombre de valeurs, « unique et croissant » arrive par hasard (3 lignes
+# de montants triés suffiraient à déclencher un faux positif).
+MINIMUM_VALEURS_CLE = 5
+
+_SEPARATEURS_NOM = "_-. "
+
+
+def nom_evoque_identifiant(nom: str) -> bool:
+    """Nom commençant ou finissant par « id », séparateur ou casse faisant foi.
+
+    Retenus : `id`, `id_client`, `idAdmin`, `client_id`, `clientId`.
+    Écartés : `idee`, `rigide`, `valide` — « id » y est un fragment de mot, pas un
+    préfixe ni un suffixe. Un test de sous-chaîne nu confondrait les deux.
+    """
+    n = (nom or "").strip()
+    bas = n.lower()
+    if bas == "id":
+        return True
+    if bas.startswith("id") and len(n) > 2:
+        suite = n[2]
+        if suite in _SEPARATEURS_NOM or suite.isupper() or suite.isdigit():
+            return True
+    if bas.endswith("id") and len(n) > 2:
+        avant = n[-3]
+        if avant in _SEPARATEURS_NOM or (n[-2] == "I" and avant.islower()):
+            return True
+    return False
+
+
+def valeurs_forment_une_cle(serie: pd.Series) -> bool:
+    """Valeurs entières, strictement uniques **et** croissantes : signature d'un compteur.
+
+    Les trois conditions ensemble : des montants peuvent être uniques sans être triés,
+    un stock peut croître avec des répétitions. C'est leur conjonction qui décrit un
+    auto-incrément, pas l'une d'elles isolément.
+
+    La condition d'entier n'est pas décorative : sans elle, une colonne de montants qui
+    se trouve triée dans le fichier serait écartée des mesures — exactement la colonne
+    qu'on cherche à analyser. Une clé auto-incrémentée est toujours entière, la
+    restriction ne coûte donc aucun vrai positif.
+    """
+    propre = serie.dropna()
+    if len(propre) < MINIMUM_VALEURS_CLE:
+        return False
+    if not pd.api.types.is_integer_dtype(propre):
+        return False
+    return bool(propre.is_unique and propre.is_monotonic_increasing)
+
+
+# Un indicateur oui/non est stocké en `tinyint(1)` : numérique au sens du dtype, mais on
+# ne prévoit pas « doit_changer_mdp » et une anomalie de drapeau ne veut rien dire. Il
+# décrit une catégorie — c'est une dimension.
+MINIMUM_VALEURS_BOOLEEN = 5
+
+
+def colonne_est_booleenne(serie: pd.Series) -> bool:
+    """Colonne à deux états déduite de son contenu : type booléen, ou 0/1 uniquement.
+
+    La restriction à {0, 1} est volontaire : deux valeurs distinctes ne suffisent pas
+    (une taille qui ne prend que 5 et 10 reste une grandeur). Le seuil de valeurs évite
+    qu'un échantillon de trois lignes valant 0 ou 1 fasse passer un compteur pour un
+    drapeau.
+    """
+    if pd.api.types.is_bool_dtype(serie):
+        return True
+    if not pd.api.types.is_numeric_dtype(serie):
+        return False
+    propre = serie.dropna()
+    if len(propre) < MINIMUM_VALEURS_BOOLEEN:
+        return False
+    valeurs = set(propre.unique())
+    return valeurs.issubset({0, 1}) and len(valeurs) <= 2
+
+
+def booleens_declares_bdd(table) -> set[str]:
+    """Colonnes déclarées booléennes au schéma d'une table SQLAlchemy.
+
+    Le schéma tranche là où l'échantillon ne peut pas : une table de deux lignes ne
+    permet pas de conclure sur le contenu, alors que `TINYINT(1)` est explicite. MySQL
+    n'a pas de type booléen — `BOOL` y est un alias de `TINYINT(1)`, et c'est la largeur
+    d'affichage qui porte l'intention.
+    """
+    declares: set[str] = set()
+    for col in table.columns:
+        type_col = col.type
+        if isinstance(type_col, sqltypes.Boolean):
+            declares.add(str(col.name))
+            continue
+        if type_col.__class__.__name__.upper() == "TINYINT" and getattr(
+            type_col, "display_width", None
+        ) == 1:
+            declares.add(str(col.name))
+    return declares
+
+
+_TYPES_BOOLEENS_SQL = re.compile(
+    r"\b(BOOL|BOOLEAN|BIT\s*\(\s*1\s*\)|TINYINT\s*\(\s*1\s*\))", re.IGNORECASE
+)
+
+
+def booleens_declares_sql(sql_text: str, table: str) -> set[str]:
+    """Colonnes déclarées booléennes dans le CREATE TABLE d'un fichier SQL."""
+    corps = _corps_create_table(sql_text, table)
+    if not corps:
+        return set()
+    declares: set[str] = set()
+    # Les types paramétrés contiennent des virgules (`DECIMAL(10,2)`) : on découpe sur
+    # les virgules hors parenthèses pour ne pas casser une déclaration en deux.
+    profondeur, courant, morceaux = 0, [], []
+    for car in corps:
+        if car == "(":
+            profondeur += 1
+        elif car == ")":
+            profondeur -= 1
+        if car == "," and profondeur == 0:
+            morceaux.append("".join(courant))
+            courant = []
+        else:
+            courant.append(car)
+    morceaux.append("".join(courant))
+
+    for ligne in morceaux:
+        texte = ligne.strip()
+        m_col = re.match(r"[`\"\[]?(\w+)[`\"\]]?\s+(\w.*)", texte, re.DOTALL)
+        if not m_col or m_col.group(1).lower() in _MOTS_CLES_CONTRAINTE:
+            continue
+        if _TYPES_BOOLEENS_SQL.match(m_col.group(2).strip()):
+            declares.add(m_col.group(1))
+    return declares
+
+
+def colonnes_booleennes(df: pd.DataFrame, declares=()) -> set[str]:
+    """Colonnes à deux états, à traiter comme dimensions et non comme mesures.
+
+    Deux sources, la déclaration l'emportant sur la déduction : le schéma quand il en
+    existe un, le contenu de l'échantillon sinon (cas d'un CSV).
+    """
+    trouvees = {str(c) for c in (declares or ()) if str(c) in {str(x) for x in df.columns}}
+    trouvees |= {str(col) for col in df.columns if colonne_est_booleenne(df[col])}
+    return trouvees
+
+
+def colonnes_identifiantes(df: pd.DataFrame, cles_primaires=()) -> set[str]:
+    """Colonnes numériques à écarter de la sélection automatique des mesures.
+
+    Seules les colonnes numériques sont examinées : un identifiant textuel n'a jamais été
+    candidat comme mesure, l'écarter n'apporterait rien.
+    """
+    pk = {str(c) for c in (cles_primaires or ())}
+    trouvees: set[str] = set()
+    for col in df.columns:
+        nom = str(col)
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        if nom in pk or nom_evoque_identifiant(nom) or valeurs_forment_une_cle(df[col]):
+            trouvees.add(nom)
+    return trouvees
+
+
 def _points_par_frequence(df_complet: pd.DataFrame, colonne_date: str | None) -> dict[str, int]:
     """Points obtenus à chaque pas de temps, pour guider le choix de fréquence.
 
@@ -654,18 +871,31 @@ def _points_par_frequence(df_complet: pd.DataFrame, colonne_date: str | None) ->
     return points_par_frequence(df_complet[colonne_date])
 
 
-def _decrire_colonnes(df: pd.DataFrame) -> list[dict]:
-    """Description typée d'un échantillon, telle que la verra l'extraction réelle."""
+def decrire_colonnes(df: pd.DataFrame, cles_primaires=(), booleens_declares=()) -> list[dict]:
+    """Description typée d'un échantillon, telle que la verra l'extraction réelle.
+
+    `est_numerique` reste le fait de typage brut ; `est_mesure` est ce qui décide
+    qu'une colonne peut être *analysée*. Les deux diffèrent sur les identifiants et sur
+    les indicateurs oui/non — numériques tous les deux, grandeurs ni l'un ni l'autre.
+    C'est `est_mesure` que le reste de la chaîne consomme.
+    """
     dates = set(colonnes_temporelles(df))
-    return [
-        {
-            "nom": str(col),
+    identifiants = colonnes_identifiantes(df, cles_primaires)
+    booleens = colonnes_booleennes(df, booleens_declares)
+    colonnes = []
+    for col in df.columns:
+        nom = str(col)
+        numerique = bool(pd.api.types.is_numeric_dtype(df[col]))
+        colonnes.append({
+            "nom": nom,
             "type": str(df[col].dtype),
-            "est_date": str(col) in dates,
-            "est_numerique": bool(pd.api.types.is_numeric_dtype(df[col])),
-        }
-        for col in df.columns
-    ]
+            "est_date": nom in dates,
+            "est_numerique": numerique,
+            "est_identifiant": nom in identifiants,
+            "est_booleen": nom in booleens,
+            "est_mesure": numerique and nom not in identifiants and nom not in booleens,
+        })
+    return colonnes
 
 
 def _profiler_bdd(db, source: SourceDonnee, selection: dict, echantillon: int) -> dict:
@@ -713,7 +943,11 @@ def _profiler_bdd(db, source: SourceDonnee, selection: dict, echantillon: int) -
                     points_freq = {}
             profil[nom_table] = {
                 "lignes": int(total),
-                "colonnes": _decrire_colonnes(df),
+                # Le schéma de la table fait autorité : clé primaire et type booléen
+                # déclarés sont des faits, pas des déductions sur un échantillon.
+                "colonnes": decrire_colonnes(
+                    df, table.primary_key.columns.keys(), booleens_declares_bdd(table)
+                ),
                 "points_par_frequence": points_freq,
             }
     finally:
@@ -754,7 +988,9 @@ def _profiler_csv(imp: ImportDonnee, source: SourceDonnee, selection: dict, echa
             points_freq = {}
     return {nom_table: {
         "lignes": int(total),
-        "colonnes": _decrire_colonnes(df),
+        # Un CSV ne porte aucun schéma : seuls le nom et la forme des valeurs peuvent
+        # révéler un identifiant.
+        "colonnes": decrire_colonnes(df),
         "points_par_frequence": points_freq,
     }}
 
@@ -799,7 +1035,10 @@ def _profiler_sql(imp: ImportDonnee, source: SourceDonnee, selection: dict, echa
 
         profil[table] = {
             "lignes": len(lignes),
-            "colonnes": _decrire_colonnes(df),
+            # Le CREATE TABLE du fichier joue le rôle du schéma pour une source SQL.
+            "colonnes": decrire_colonnes(
+                df, _cles_primaires_sql(sql_text, table), booleens_declares_sql(sql_text, table)
+            ),
             "points_par_frequence": points_freq,
         }
     return profil

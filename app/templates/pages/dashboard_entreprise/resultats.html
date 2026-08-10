@@ -1,0 +1,492 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Résultats & prévisions — StockVision AI{% endblock %}
+
+{# Icônes d'objectif — DOIVENT rester identiques à celles du wizard et de la liste des
+   configurations : une configuration se reconnaît à l'identique partout. #}
+{% macro obj_icon(icon, size=15) %}
+{% if icon == 'trending-up' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+{% elif icon == 'chart-line' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+{% elif icon == 'alert-triangle' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+{% else %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><line x1="7" y1="5" x2="7" y2="19"/><path d="M21 15l-4 4-4-4"/><line x1="17" y1="19" x2="17" y2="5"/></svg>
+{% endif %}
+{% endmacro %}
+
+{% block dash_content %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">{{ title }}</h1>
+    <p class="dash-page-guide">{{ guide }}</p>
+</div>
+
+{% if total %}
+<div class="cfg-filters">
+    <div class="cfg-filter-row">
+        <a href="?criticite=tous{{ '&config=' ~ config_filtre if config_filtre }}"
+           class="cfg-filter-chip {{ 'active' if criticite_filtre == 'tous' }}"
+           style="border-color: rgba(148,163,184,0.3); color: {{ '#fff' if criticite_filtre == 'tous' else 'var(--text-muted)' }};">
+            Tous <span class="res-chip-compte">{{ total }}</span>
+        </a>
+        {# Un niveau sans résultat reste affiché, grisé : son absence est une information. #}
+        {% for niv in niveaux %}
+        <a href="?criticite={{ 'tous' if criticite_filtre == niv.code else niv.code }}{{ '&config=' ~ config_filtre if config_filtre }}"
+           class="cfg-filter-chip res-chip--{{ niv.code }} {{ 'active' if criticite_filtre == niv.code }} {{ 'is-vide' if not comptes[niv.code] }}">
+            <span class="res-crit-point res-crit-point--{{ niv.code }}"></span>
+            {{ niv.libelle }} <span class="res-chip-compte">{{ comptes[niv.code] }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% if config_filtre %}
+    <div class="cfg-filter-row">
+        <a href="?criticite={{ criticite_filtre }}" class="cfg-filter-chip active" style="border-color: var(--border-glow); color: var(--accent);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Configuration n°{{ config_filtre }} — retirer ce filtre
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if not cartes %}
+<div class="imh-empty">
+    <div class="imh-empty-icon">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </div>
+    {% if total %}
+    <p class="imh-empty-text">Aucun résultat ne correspond à ce filtre.</p>
+    <a href="?criticite=tous" class="imp-btn-ghost">Réinitialiser les filtres</a>
+    {% else %}
+    <p class="imh-empty-text">Aucune analyse n'a encore été exécutée.</p>
+    <p class="imh-empty-sub">Lancez une de vos configurations : ses résultats, sa prévision et son interprétation apparaîtront ici.</p>
+    <a href="/dashboard/entreprise/configurations" class="imp-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Lancer une analyse
+    </a>
+    {% endif %}
+</div>
+{% else %}
+
+<div class="res-liste">
+{% for c in cartes %}
+{# La plus récente est dépliée, les autres repliées : l'entreprise arrive sur son dernier
+   résultat sans avoir à chercher. #}
+<article class="res-carte {{ 'is-ouverte' if loop.first }} res-carte--{{ c.criticite }}" id="res-{{ c.id }}">
+
+    <header class="res-entete" role="button" tabindex="0" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="res-corps-{{ c.id }}">
+        <span class="res-obj-icone" style="background:{{ c.objectif.color }}26; color:{{ c.objectif.color }};">
+            {{ obj_icon(c.objectif.icon, 17) }}
+        </span>
+        <span class="res-entete-texte">
+            <span class="res-obj-nom {{ 'res-obj-nom--libre' if c.objectif.libre }}"
+                  {% if c.objectif.titre %}title="{{ c.objectif.titre }}"{% endif %}>{{ c.objectif.label }}</span>
+            <span class="res-entete-meta">
+                <span>{{ c.date }}</span>
+                <span class="res-meta-sep">·</span>
+                <span class="res-freq" style="color:{{ c.frequence_color }};">{{ c.frequence }}</span>
+                {% if c.total_lignee > 1 %}
+                <span class="res-meta-sep">·</span>
+                <span class="res-lignee">Exécution {{ c.rang_lignee }} sur {{ c.total_lignee }}</span>
+                {% endif %}
+            </span>
+        </span>
+
+        {% if c.evolution and not c.evolution.bloque %}
+        <span class="res-evolution res-evolution--{{ c.evolution.sens }}" title="Par rapport à l'exécution du {{ c.evolution.depuis }}">
+            {% if c.evolution.sens == 'hausse' %}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            {% elif c.evolution.sens == 'baisse' %}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            {% else %}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            {% endif %}
+            {{ c.evolution.texte }}
+        </span>
+        {% endif %}
+
+        {# Badge de criticité — toujours accompagné de son libellé, jamais la couleur seule. #}
+        <span class="res-crit res-crit--{{ c.criticite }}" title="{{ c.criticite_motif }}">
+            <span class="res-crit-point res-crit-point--{{ c.criticite }}"></span>
+            {{ c.criticite_libelle }}
+        </span>
+        <span class="res-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+    </header>
+
+    <div class="res-corps" id="res-corps-{{ c.id }}">
+
+        {# 2. Rappel de la demande — second emplacement du garde-fou : l'entreprise vérifie
+           que le résultat répond bien à la question qu'elle a posée. #}
+        {% if c.demande %}
+        <div class="res-demande">
+            <span class="res-demande-label">{{ 'Votre question' if c.demande_source == 'besoin' else 'Ce que nous avons compris' }}</span>
+            <p class="res-demande-texte">{{ c.demande }}</p>
+        </div>
+        {% endif %}
+
+        {# Un résultat non concluant l'annonce en clair, avant tout chiffre. #}
+        {% if not c.concluant %}
+        <div class="res-bandeau res-bandeau--incertain">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>{{ c.criticite_motif or "Ce résultat ne permet pas de conclure." }}
+                  Les chiffres ci-dessous restent exacts, mais ils ne soutiennent aucune conclusion.</span>
+        </div>
+        {% endif %}
+
+        {% if c.evolution and c.evolution.bloque %}
+        <div class="res-bandeau res-bandeau--neutre">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 0l3-3m-3 3L9 5"/><circle cx="12" cy="16" r="6"/></svg>
+            <span>{{ c.evolution.bloque }}</span>
+        </div>
+        {% endif %}
+
+        {# 3. Indicateurs clés — les chiffres avant le graphique. #}
+        <div class="res-kpis">
+            {% for k in c.indicateurs_cles %}
+            <div class="res-kpi {{ 'res-kpi--fiab-' ~ k.ton if k.ton }}">
+                <span class="res-kpi-label">{{ k.libelle }}</span>
+                <span class="res-kpi-valeur" title="{{ k.valeur }}">{{ k.valeur }}</span>
+                {% if k.detail %}<span class="res-kpi-detail">{{ k.detail }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {# 4. Visualisation — construite en SVG à partir des séries produites par le moteur. #}
+        <figure class="res-graphique" data-graphique='{{ c.graphique | tojson }}'>
+            <figcaption class="res-graphique-legende"></figcaption>
+            <div class="res-graphique-hote"></div>
+        </figure>
+
+        {# 5. Interprétation — bloc visuellement distinct : ce qui suit est un commentaire,
+           pas un calcul. #}
+        {% if c.interpretation %}
+        <section class="res-interpretation">
+            <div class="res-interp-entete">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Ce que cela signifie</span>
+                {% if c.interpretation.niveau_confiance %}
+                <span class="res-confiance res-confiance--{{ c.interpretation.niveau_confiance }}">
+                    Confiance {{ {'eleve': 'élevée', 'modere': 'modérée', 'faible': 'faible'}.get(c.interpretation.niveau_confiance, c.interpretation.niveau_confiance) }}
+                </span>
+                {% endif %}
+            </div>
+            <p class="res-synthese">{{ c.interpretation.synthese }}</p>
+            {% if c.interpretation.lecture %}
+            <p class="res-lecture">{{ c.interpretation.lecture }}</p>
+            {% endif %}
+            {% if c.interpretation.points_cles %}
+            <ul class="res-points">
+                {% for p in c.interpretation.points_cles %}<li>{{ p }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            <div class="res-interp-bas">
+                {% if c.interpretation.recommandation %}
+                <div class="res-encart res-encart--action">
+                    <span class="res-encart-titre">Ce que vous pouvez faire</span>
+                    <p>{{ c.interpretation.recommandation }}</p>
+                </div>
+                {% endif %}
+                {% if c.interpretation.limite %}
+                <div class="res-encart res-encart--limite">
+                    <span class="res-encart-titre">Ce que cette analyse ne dit pas</span>
+                    <p>{{ c.interpretation.limite }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% else %}
+        {# Interprétation absente : les chiffres restent, la mention est discrète. #}
+        <p class="res-interp-absente">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+            Commentaire indisponible pour cette exécution — les chiffres ci-dessus restent exacts.
+            {% if c.interpretation_erreur %}<span class="res-interp-motif">{{ c.interpretation_erreur }}</span>{% endif %}
+        </p>
+        {% endif %}
+
+        {# 6. Pied de carte — détails techniques, volontairement discrets. #}
+        <footer class="res-pied">
+            <span>Méthode : <strong>{{ c.modele }}</strong></span>
+            <span class="res-meta-sep">·</span>
+            <span>{{ c.fiabilite.label or 'Fiabilité' }}{% if c.fiabilite.points %} — {{ c.fiabilite.points }} points{% endif %}</span>
+            {% if c.criticite_plafonnements %}
+            <span class="res-meta-sep">·</span>
+            <span title="{{ c.criticite_plafonnements | join(' ; ') }}">Niveau plafonné</span>
+            {% endif %}
+            <span class="res-pied-espace"></span>
+            {% if c.total_lignee > 1 and not config_filtre %}
+            <a href="?criticite={{ criticite_filtre }}&config={{ c.id_configuration }}" class="res-lien-lignee">
+                Voir les {{ c.total_lignee }} exécutions
+            </a>
+            {% endif %}
+        </footer>
+    </div>
+</article>
+{% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function () {
+    /* ── Dépliage des cartes ────────────────────────────────────────────────── */
+    document.querySelectorAll('.res-entete').forEach(entete => {
+        const basculer = () => {
+            const carte = entete.closest('.res-carte');
+            const ouverte = carte.classList.toggle('is-ouverte');
+            entete.setAttribute('aria-expanded', ouverte ? 'true' : 'false');
+            // Le graphique se dessine à l'ouverture : mesurer un conteneur replié
+            // donnerait une largeur de zéro et un SVG vide.
+            if (ouverte) dessinerCarte(carte);
+        };
+        entete.addEventListener('click', basculer);
+        entete.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); }
+        });
+    });
+
+    /* ── Graphiques ─────────────────────────────────────────────────────────────
+       SVG écrit à la main : aucune bibliothèque, conformément aux règles du projet.
+       Les séries viennent telles quelles du moteur (resultat_json), sans retraitement. */
+
+    const SERIE      = '#22d3ee';   // observé — accent du design system
+    const PROJECTION = '#818cf8';   // projeté — distingué AUSSI par le pointillé, jamais
+                                    // par la seule couleur
+    const ALERTE     = '#f87171';   // observation aberrante (couleur de statut réservée)
+    const GRILLE     = 'rgba(148,163,184,0.13)';
+    const AXE        = '#7c8ba8';
+
+    const M = { haut: 14, droite: 14, bas: 26, gauche: 52 };
+    const H = 210;
+
+    const svgEl = (nom, attrs) => {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', nom);
+        for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+        return el;
+    };
+    const fmt = n => {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        const a = Math.abs(n);
+        if (a >= 1000000) return (n / 1000000).toFixed(1).replace('.', ',') + ' M';
+        if (a >= 1000) return (n / 1000).toFixed(1).replace('.', ',') + ' k';
+        return (Math.round(n * 100) / 100).toString().replace('.', ',');
+    };
+    const jour = iso => {
+        const d = new Date(iso);
+        return isNaN(d) ? String(iso).slice(0, 10)
+                        : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    };
+    /* Cible de survol plus large que la marque elle-même, avec un libellé natif :
+       une couche d'interaction sans une ligne de dépendance. */
+    const survol = (parent, x, y, texte) => {
+        const zone = svgEl('circle', { cx: x, cy: y, r: 12, fill: 'transparent' });
+        const t = svgEl('title', {});
+        t.textContent = texte;
+        zone.appendChild(t);
+        parent.appendChild(zone);
+    };
+
+    function cadre(largeur) {
+        const svg = svgEl('svg', {
+            viewBox: `0 0 ${largeur} ${H}`, width: '100%', height: H,
+            preserveAspectRatio: 'none', class: 'res-svg', role: 'img',
+        });
+        return svg;
+    }
+
+    function axes(svg, largeur, min, max, etiquettes) {
+        const y = v => M.haut + (H - M.haut - M.bas) * (1 - (v - min) / ((max - min) || 1));
+        // Grille horizontale récessive : elle situe, elle ne se regarde pas.
+        for (let i = 0; i <= 3; i++) {
+            const valeur = min + (max - min) * i / 3;
+            const py = y(valeur);
+            svg.appendChild(svgEl('line', {
+                x1: M.gauche, x2: largeur - M.droite, y1: py, y2: py,
+                stroke: GRILLE, 'stroke-width': 1,
+            }));
+            const t = svgEl('text', {
+                x: M.gauche - 8, y: py + 4, 'text-anchor': 'end',
+                fill: AXE, 'font-size': 10,
+            });
+            t.textContent = fmt(valeur);
+            svg.appendChild(t);
+        }
+        (etiquettes || []).forEach(({ x, texte }) => {
+            const t = svgEl('text', {
+                x, y: H - 8, 'text-anchor': 'middle', fill: AXE, 'font-size': 10,
+            });
+            t.textContent = texte;
+            svg.appendChild(t);
+        });
+        return y;
+    }
+
+    function courbe(hote, legende, data) {
+        const histo = (data.historique || []).filter(p => p.valeur !== null);
+        const prev = (data.prevue || []).filter(p => p.valeur !== null);
+        if (!histo.length) return false;
+
+        const largeur = Math.max(hote.clientWidth || 640, 320);
+        const svg = cadre(largeur);
+        const tous = histo.concat(prev);
+        let min = Math.min(...tous.map(p => Math.min(p.valeur, p.bas ?? p.valeur)));
+        let max = Math.max(...tous.map(p => Math.max(p.valeur, p.haut ?? p.valeur)));
+        const marge = (max - min) * 0.12 || Math.abs(max) * 0.12 || 1;
+        min -= marge; max += marge;
+
+        const n = tous.length;
+        const x = i => M.gauche + (largeur - M.gauche - M.droite) * (n > 1 ? i / (n - 1) : 0.5);
+        const etiquettes = [
+            { x: x(0), texte: jour(tous[0].date) },
+            { x: x(n - 1), texte: jour(tous[n - 1].date) },
+        ];
+        const y = axes(svg, largeur, min, max, etiquettes);
+
+        // Bande d'intervalle d'abord : elle est un fond, pas une marque.
+        if (prev.length && prev[0].bas !== undefined) {
+            const haut = prev.map((p, i) => `${x(histo.length + i)},${y(p.haut)}`);
+            const bas = prev.map((p, i) => `${x(histo.length + i)},${y(p.bas)}`).reverse();
+            svg.appendChild(svgEl('polygon', {
+                points: haut.concat(bas).join(' '),
+                fill: PROJECTION, 'fill-opacity': 0.14, stroke: 'none',
+            }));
+        }
+
+        const trace = (points, decalage, couleur, pointille) => {
+            if (points.length < 2) return;
+            svg.appendChild(svgEl('polyline', {
+                points: points.map((p, i) => `${x(decalage + i)},${y(p.valeur)}`).join(' '),
+                fill: 'none', stroke: couleur, 'stroke-width': 2,
+                'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+                ...(pointille ? { 'stroke-dasharray': '5 4' } : {}),
+            }));
+        };
+        // Raccord visuel entre observé et projeté : sans lui la courbe paraît coupée.
+        if (histo.length && prev.length) {
+            trace([histo[histo.length - 1], prev[0]], histo.length - 1, PROJECTION, true);
+        }
+        trace(histo, 0, SERIE, false);
+        trace(prev, histo.length, PROJECTION, true);
+
+        // Anomalies : marque plus grosse, anneau de surface, couleur de statut ET libellé.
+        const aberrantes = new Map((data.aberrantes || []).map(o => [String(o.date), o]));
+        histo.forEach((p, i) => {
+            const anormale = aberrantes.get(String(p.date));
+            if (anormale) {
+                svg.appendChild(svgEl('circle', {
+                    cx: x(i), cy: y(p.valeur), r: 5.5, fill: ALERTE,
+                    stroke: '#0c1322', 'stroke-width': 2,
+                }));
+            }
+            survol(svg, x(i), y(p.valeur),
+                   `${jour(p.date)} — ${fmt(p.valeur)}${anormale ? ' (inhabituelle, ' + anormale.sens + ')' : ''}`);
+        });
+        prev.forEach((p, i) => {
+            svg.appendChild(svgEl('circle', {
+                cx: x(histo.length + i), cy: y(p.valeur), r: 3.5,
+                fill: PROJECTION, stroke: '#0c1322', 'stroke-width': 1.5,
+            }));
+            survol(svg, x(histo.length + i), y(p.valeur),
+                   `${jour(p.date)} — prévu ${fmt(p.valeur)}` +
+                   (p.bas !== undefined ? ` (entre ${fmt(p.bas)} et ${fmt(p.haut)})` : ''));
+        });
+
+        hote.appendChild(svg);
+        const entrees = [{ c: SERIE, t: 'Observé', d: false }];
+        if (prev.length) entrees.push({ c: PROJECTION, t: 'Prévu', d: true });
+        if (aberrantes.size) entrees.push({ c: ALERTE, t: 'Observation inhabituelle', d: false });
+        legende.innerHTML = entrees.map(e =>
+            `<span class="res-leg"><span class="res-leg-marque ${e.d ? 'res-leg-marque--tirets' : ''}"
+             style="--m:${e.c}"></span>${e.t}</span>`).join('');
+        return true;
+    }
+
+    function barres(hote, legende, data) {
+        const elements = (data.elements || []).slice(0, 10);
+        if (!elements.length) return false;
+
+        const hauteurBarre = 26, ecart = 10;
+        const largeur = Math.max(hote.clientWidth || 640, 320);
+        const hauteur = elements.length * (hauteurBarre + ecart) + 12;
+        const gaucheLabel = Math.min(170, Math.max(90, largeur * 0.28));
+        const svg = svgEl('svg', {
+            viewBox: `0 0 ${largeur} ${hauteur}`, width: '100%', height: hauteur,
+            preserveAspectRatio: 'none', class: 'res-svg', role: 'img',
+        });
+
+        const max = Math.max(...elements.map(e => Math.abs(e.valeur))) || 1;
+        const dispo = largeur - gaucheLabel - 70;
+
+        elements.forEach((e, i) => {
+            const y = i * (hauteurBarre + ecart) + 6;
+            const l = Math.max(2, (Math.abs(e.valeur) / max) * dispo);
+            const nom = svgEl('text', {
+                x: gaucheLabel - 12, y: y + hauteurBarre / 2 + 4, 'text-anchor': 'end',
+                fill: 'var(--text-muted)', 'font-size': 12,
+            });
+            nom.textContent = String(e.element).length > 22
+                ? String(e.element).slice(0, 21) + '…' : String(e.element);
+            svg.appendChild(nom);
+
+            // Extrémité arrondie côté donnée, ancrée à la ligne de base.
+            const barre = svgEl('rect', {
+                x: gaucheLabel, y, width: l, height: hauteurBarre, rx: 4,
+                fill: SERIE, 'fill-opacity': i === 0 ? 0.95 : 0.55,
+            });
+            const t = svgEl('title', {});
+            t.textContent = `${e.element} — ${fmt(e.valeur)} ${data.unite || ''}`.trim();
+            barre.appendChild(t);
+            svg.appendChild(barre);
+
+            const val = svgEl('text', {
+                x: gaucheLabel + l + 10, y: y + hauteurBarre / 2 + 4,
+                fill: 'var(--text)', 'font-size': 12, 'font-weight': 600,
+            });
+            val.textContent = fmt(e.valeur);
+            svg.appendChild(val);
+        });
+
+        hote.appendChild(svg);
+        legende.textContent = elements.length < (data.elements || []).length
+            ? `${elements.length} premiers éléments sur ${data.elements.length}` : '';
+        return true;
+    }
+
+    function dessiner(figure) {
+        const hote = figure.querySelector('.res-graphique-hote');
+        const legende = figure.querySelector('.res-graphique-legende');
+        if (!hote || hote.dataset.fait === '1') return;
+        let data;
+        try { data = JSON.parse(figure.dataset.graphique || '{}'); } catch { return; }
+        hote.innerHTML = '';
+        const ok = data.type === 'classement' ? barres(hote, legende, data)
+                                              : courbe(hote, legende, data);
+        if (!ok) {
+            figure.classList.add('is-vide');
+            hote.innerHTML = '<p class="res-graphique-absent">Aucune série exploitable à représenter pour ce résultat.</p>';
+        }
+        hote.dataset.fait = '1';
+    }
+
+    function dessinerCarte(carte) {
+        carte.querySelectorAll('.res-graphique').forEach(dessiner);
+    }
+
+    document.querySelectorAll('.res-carte.is-ouverte').forEach(dessinerCarte);
+
+    // Un redimensionnement change la largeur disponible : on redessine plutôt que
+    // d'étirer un SVG calculé pour une autre largeur.
+    let minuteur;
+    window.addEventListener('resize', () => {
+        clearTimeout(minuteur);
+        minuteur = setTimeout(() => {
+            document.querySelectorAll('.res-carte.is-ouverte .res-graphique-hote').forEach(h => {
+                h.dataset.fait = '0';
+            });
+            document.querySelectorAll('.res-carte.is-ouverte').forEach(dessinerCarte);
+        }, 200);
+    });
+})();
+</script>
+{% endblock %}

@@ -12,7 +12,6 @@
     </span>
     <div class="wiz-guide-body">
         <p class="wiz-guide-text">{{ texte }}</p>
-        <ul class="wiz-guide-list"></ul>
     </div>
 </div>
 {% endmacro %}
@@ -144,7 +143,10 @@
             </span>
             <span class="wiz-obj-title">{{ obj.label }}</span>
             <span class="wiz-obj-desc">{{ obj.desc }}</span>
+            {# Ce qui bloque, puis comment le débloquer : nommer la contrainte sans dire
+               quoi faire laisse l'entreprise dans l'impasse. #}
             <span class="wiz-obj-reason" hidden></span>
+            <span class="wiz-obj-fix" hidden></span>
         </div>
         {% endfor %}
     </div>
@@ -160,8 +162,19 @@
     </div>
     <p class="wiz-freq-note" id="wizFreqNote" hidden></p>
 
-    <span class="wiz-field-label" style="margin-top:1.5rem;">Précision complémentaire <span class="wiz-field-optional">(optionnel)</span></span>
-    <textarea id="wizPrecision" class="wiz-textarea" rows="3" maxlength="2000" placeholder="Décrivez un contexte ou une contrainte particulière pour affiner l'analyse (ex. saisonnalité, événement exceptionnel à ignorer...)."></textarea>
+    <span class="wiz-field-label" style="margin-top:1.5rem;">Que souhaitez-vous savoir précisément ?</span>
+    <textarea id="wizBesoin" class="wiz-textarea" rows="3" maxlength="2000"
+        placeholder="Décrivez votre question avec vos mots, comme vous la poseriez à un collègue."></textarea>
+    <div class="wiz-besoin-exemples">
+        <span class="wiz-besoin-exemples-titre">Par exemple</span>
+        <div class="wiz-besoin-liste">
+            <button type="button" class="wiz-besoin-exemple">Quels sont mes produits les plus vendus ?</button>
+            <button type="button" class="wiz-besoin-exemple">Quels articles devrais-je mettre en promotion ?</button>
+            <button type="button" class="wiz-besoin-exemple">Quels produits génèrent le plus de commandes ?</button>
+            <button type="button" class="wiz-besoin-exemple">Comment vont évoluer mes ventes le mois prochain ?</button>
+        </div>
+        <p class="wiz-besoin-note" id="wizBesoinNote"></p>
+    </div>
 
     <div class="wiz-nav">
         <button type="button" class="imp-btn-ghost" id="wizStep3Back">
@@ -249,18 +262,14 @@
         {% endfor %}
     };
 
-    /* ── Bandeau de guidage (composant unique des trois étapes) ── */
-    function majGuide(id, { variant = 'info', texte = '', points = [] } = {}) {
+    /* ── Bandeau de guidage (composant unique des trois étapes) ──
+       Une phrase, pas de liste : le bandeau se lit d'un coup d'œil ou il ne sert à rien.
+       Le détail du profil vit dans les logs serveur, pas ici. */
+    function majGuide(id, { variant = 'info', texte = '' } = {}) {
         const el = document.getElementById(id);
         if (!el) return;
         el.className = `wiz-guide wiz-guide--${variant}`;
         el.querySelector('.wiz-guide-text').textContent = texte;
-        const liste = el.querySelector('.wiz-guide-list');
-        liste.replaceChildren(...points.map(p => {
-            const li = document.createElement('li');
-            li.textContent = p;
-            return li;
-        }));
     }
 
     /* ── Transition entre panneaux ── */
@@ -525,43 +534,58 @@
         }
     }
 
+    /* Une phrase, jamais un inventaire. L'entreprise a besoin de savoir si elle peut
+       continuer et, sinon, quoi faire — pas de la liste des colonnes détectées. Le détail
+       du profil reste journalisé côté serveur pour le diagnostic. */
     function majGuideSelection(resume) {
         const bloques = (state.profil.objectifs || []).filter(o => o.etat === 'indisponible');
-        const detail = bloques.map(o => `${o.label} — ${o.raison}`);
+        const vides = resume.tables_vides || [];
+        const sansGrandeur = (resume.colonnes_identifiants || []).length
+                          || (resume.colonnes_booleennes || []).length;
+
+        // Une table vide fait échouer l'extraction au lancement : on le dit tant que la
+        // sélection est encore modifiable.
+        if (vides.length) {
+            majGuide('wizGuide2', {
+                variant: 'warn',
+                texte: vides.length > 1
+                    ? `${vides.length} des tables sélectionnées sont vides : retirez-les de votre sélection, ou importez leurs données avant de continuer.`
+                    : `La table « ${vides[0]} » est vide : retirez-la de votre sélection, ou importez ses données avant de continuer.`,
+            });
+            return;
+        }
 
         if (!bloques.length) {
             majGuide('wizGuide2', {
                 variant: 'ok',
-                texte: `Votre sélection contient une colonne de date (${resume.colonnes_date.join(', ')}) `
-                     + `et une mesure numérique (${resume.colonnes_mesure.join(', ')}) : tous les objectifs seront disponibles.`,
-                points: [`${resume.lignes} ligne${resume.lignes > 1 ? 's' : ''} de données détectée${resume.lignes > 1 ? 's' : ''}.`],
+                texte: 'Votre sélection permet toutes les analyses proposées.',
             });
-        } else if (!resume.a_date && !resume.a_mesure) {
-            majGuide('wizGuide2', {
-                variant: 'warn',
-                texte: "Votre sélection ne contient ni colonne de date ni mesure numérique — les objectifs de prévision et de tendance ne seront pas disponibles.",
-                points: detail,
-            });
-        } else if (!resume.a_date) {
-            majGuide('wizGuide2', {
-                variant: 'warn',
-                texte: "Aucune colonne de date détectée : les objectifs de prévision et de tendance seront indisponibles.",
-                points: detail,
-            });
-        } else if (!resume.analysable) {
-            majGuide('wizGuide2', {
-                variant: 'warn',
-                texte: `Votre sélection contient une colonne de date (${resume.colonnes_date.join(', ')}) `
-                     + "mais aucune mesure numérique — les objectifs de prévision et de tendance ne seront pas disponibles.",
-                points: detail.concat("Ajoutez une colonne chiffrée (quantité, montant, total…) à analyser dans le temps."),
-            });
-        } else {
-            majGuide('wizGuide2', {
-                variant: 'warn',
-                texte: `Colonne de date détectée (${resume.colonnes_date.join(', ')}), mais l'historique est trop court pour certains objectifs.`,
-                points: detail,
-            });
+            return;
         }
+
+        /* Ce qui manque, et l'action qui le débloque — toujours en une phrase. Les cartes
+           objectif portent déjà le détail : le bandeau ne le répète pas. */
+        const DEBLOQUE = 'pour débloquer la prévision et la tendance.';
+        let texte;
+        if (!resume.a_mesure && sansGrandeur) {
+            // Il y a bien des colonnes chiffrées, mais ce sont des identifiants ou des
+            // indicateurs oui/non : le dire, sinon l'entreprise croit à une erreur.
+            texte = `Vos colonnes chiffrées ne mesurent aucune quantité : ajoutez une quantité, un montant ou un total ${DEBLOQUE}`;
+        } else if (!resume.a_date && !resume.a_mesure) {
+            texte = `Votre sélection ne contient ni date ni valeur chiffrée : ajoutez-en ${DEBLOQUE}`;
+        } else if (!resume.a_date) {
+            texte = `Votre sélection ne contient aucune date : ajoutez une colonne de date ${DEBLOQUE}`;
+        } else if (!resume.a_mesure) {
+            texte = `Votre sélection ne contient aucune valeur chiffrée : ajoutez une quantité, un montant ou un total ${DEBLOQUE}`;
+        } else if (!resume.analysable) {
+            // Date et mesure existent, mais pas dans la même table : sans les deux au même
+            // endroit, il n'y a pas de série à tracer.
+            texte = `Votre date et vos valeurs chiffrées sont dans des tables différentes : sélectionnez-les dans une même table ${DEBLOQUE}`;
+        } else {
+            texte = `${bloques.length} objectif${bloques.length > 1 ? 's ne sont' : ' n’est'} `
+                  + "pas réalisable avec ces données — chaque carte indique quoi faire.";
+        }
+        majGuide('wizGuide2', { variant: 'warn', texte });
     }
 
     selectAllBox.addEventListener('change', () => {
@@ -631,9 +655,36 @@
     /* ── Étape 3 : objectif & fréquence ── */
     const step3Save = document.getElementById('wizStep3Save');
 
+    const besoinEl = document.getElementById('wizBesoin');
+    const besoinNote = document.getElementById('wizBesoinNote');
+
+    /* Un objectif OU un besoin suffit — mais il en faut au moins un, sinon il n'y a
+       rien à traduire en analyse. Même règle côté serveur à la finalisation. */
     function checkStep3Ready() {
-        step3Save.disabled = !(state.objectif && state.frequence);
+        const besoin = besoinEl.value.trim();
+        const pret = Boolean(state.frequence) && Boolean(state.objectif || besoin);
+        step3Save.disabled = !pret;
+
+        if (state.objectif || besoin) {
+            besoinNote.textContent = state.objectif && besoin
+                ? 'Votre description précisera l’objectif choisi.'
+                : (besoin ? 'Votre description sera interprétée pour choisir l’analyse adaptée.'
+                          : 'Vous pouvez aussi décrire votre besoin pour affiner l’objectif choisi.');
+            besoinNote.className = 'wiz-besoin-note';
+        } else {
+            besoinNote.textContent = 'Choisissez un objectif ci-dessus, ou décrivez votre besoin ici — au moins l’un des deux.';
+            besoinNote.className = 'wiz-besoin-note wiz-besoin-note--requis';
+        }
     }
+
+    besoinEl.addEventListener('input', checkStep3Ready);
+    document.querySelectorAll('.wiz-besoin-exemple').forEach(btn => {
+        btn.addEventListener('click', () => {
+            besoinEl.value = btn.textContent.trim();
+            besoinEl.focus();
+            checkStep3Ready();
+        });
+    });
 
     const ETAT_CLASSES = {
         recommande: 'is-recommended',
@@ -655,22 +706,21 @@
             card.classList.remove('is-recommended', 'is-compatible', 'is-unavailable');
             const flag = card.querySelector('.wiz-obj-flag');
             const reason = card.querySelector('.wiz-obj-reason');
-            if (!o) { flag.hidden = true; reason.hidden = true; return; }
+            const fix = card.querySelector('.wiz-obj-fix');
+            if (!o) { flag.hidden = true; reason.hidden = true; fix.hidden = true; return; }
 
             card.classList.add(ETAT_CLASSES[o.etat]);
             flag.textContent = ETAT_LABELS[o.etat];
             flag.hidden = false;
 
-            /* La carte ne porte que sa compatibilité. Pas de fiabilité ici : elle dépend de
-               la fréquence, pas de l'objectif — l'afficher sur les quatre cartes la rendrait
-               fausse dès le premier clic sur une fréquence. Elle vit sur les boutons de
-               fréquence et dans le bandeau, là où elle se décide. */
-            if (o.raison) {
-                reason.textContent = o.raison;
-                reason.hidden = false;
-            } else {
-                reason.hidden = true;
-            }
+            /* La carte dit ce qui bloque et l'action qui débloque — jamais une métrique.
+               Aucune fiabilité ici : elle dépend de la fréquence, pas de l'objectif, et
+               l'afficher sur les quatre cartes la rendrait fausse au premier clic sur une
+               fréquence. */
+            reason.textContent = o.raison || '';
+            reason.hidden = !o.raison;
+            fix.textContent = o.resolution || '';
+            fix.hidden = !o.resolution;
 
             // Un objectif devenu indisponible ne doit pas rester sélectionné (retour arrière)
             if (o.etat === 'indisponible' && state.objectif === o.val) {
@@ -683,64 +733,138 @@
         });
     }
 
-    /* Chaque pas de temps annonce les points qu'il produirait et la fiabilité qui en
-       découle. Purement informatif : aucune fréquence n'est jamais désactivée. */
+    /* Un pas de temps n'est commenté que lorsqu'il pose un problème réel. Les points et
+       la fiabilité restent calculés et stockés côté serveur — ils servent au diagnostic
+       et à l'interprétation — mais « 20 pts · bonne » ne se lit pas sans bagage
+       statistique, et une fréquence qui convient n'a rien à dire. */
+    const MARQUEUR_ADEQUATION = {
+        peu_adaptee: 'peu précis',
+        impossible:  'non réalisable',
+    };
+
+    /* L'agrégation par fréquence ne s'applique qu'aux objectifs temporels : sur un
+       classement, le pas de temps ne réduit rien, et annoncer « une seule période »
+       serait une fausse alerte. Sans objectif choisi (besoin libre), on avertit — la
+       traduction peut produire une analyse temporelle. */
+    function analyseTemporelle() {
+        if (!state.objectif) return true;
+        const o = (state.profil?.objectifs || []).find(x => x.val === state.objectif);
+        return o ? Boolean(o.temporel) : true;
+    }
+
+    /* Renvoie l'adéquation à signaler pour une fréquence, ou null s'il n'y a rien à dire. */
+    function adequationDe(freq) {
+        if (!analyseTemporelle()) return null;
+        const a = state.profil?.resume?.par_frequence?.[freq]?.adequation;
+        return (a && a.code !== 'adaptee') ? a : null;
+    }
+
     function majFrequences() {
-        const par = state.profil?.resume?.par_frequence;
-        const note = document.getElementById('wizFreqNote');
         document.querySelectorAll('.wiz-freq-btn').forEach(btn => {
-            const info = par ? par[btn.dataset.val] : null;
             const hint = btn.querySelector('.wiz-freq-hint');
             if (!hint) return;
-            if (info) {
-                hint.textContent = `${info.points} pt${info.points > 1 ? 's' : ''} · ${info.fiabilite.label.replace('Fiabilité ', '')}`;
-                hint.className = `wiz-freq-hint wiz-freq-hint--${info.fiabilite.code}`;
+            const a = adequationDe(btn.dataset.val);
+            if (a) {
+                /* Marqueur court sur le bouton : la phrase entière sous quatre boutons
+                   côte à côte serait illisible. Elle est affichée par majFreqNote()
+                   pour la fréquence effectivement choisie. */
+                hint.textContent = MARQUEUR_ADEQUATION[a.code];
+                hint.className = `wiz-freq-hint wiz-freq-hint--${a.code}`;
                 hint.hidden = false;
             } else {
-                hint.hidden = true;
+                hint.hidden = true;   // fréquence adaptée : aucun bruit visuel
             }
         });
-        if (par) {
-            note.textContent = "Le pas de temps change le nombre de points analysés — et donc la fiabilité. Toutes les fréquences restent disponibles.";
+        majFreqNote();
+    }
+
+    /* Le message complet porte sur la fréquence sélectionnée — c'est le choix en cours,
+       et c'est là que l'entreprise doit être avertie, avant de valider la configuration.
+
+       Quand l'objectif n'est pas temporel, les mentions des boutons disparaissent : sans
+       explication, l'interface se transformerait sans raison visible. La phrase prend leur
+       place et dit ce que la fréquence fait *alors* — elle enseigne plutôt que de laisser
+       un vide. */
+    const NOTE_FREQ_NON_TEMPORELLE =
+        "Pour cet objectif, la fréquence détermine seulement le rythme de mise à jour, "
+        + "pas la précision du résultat.";
+
+    function majFreqNote() {
+        const note = document.getElementById('wizFreqNote');
+        if (!analyseTemporelle()) {
+            note.textContent = NOTE_FREQ_NON_TEMPORELLE;
+            note.className = 'wiz-freq-note';
+            note.hidden = false;
+            return;
+        }
+        const a = adequationDe(state.frequence);
+        if (a) {
+            note.textContent = a.message;
+            note.className = `wiz-freq-note wiz-freq-note--${a.code}`;
             note.hidden = false;
         } else {
             note.hidden = true;
         }
     }
 
+    /* Du pas le plus large au plus fin. Le plus large qui reste adapté donne le résultat
+       le plus lisible : agréger au mois parle davantage à une entreprise qu'agréger au
+       jour, tant qu'il reste assez de périodes porteuses. */
+    const ORDRE_FREQUENCES = ['mensuelle', 'hebdomadaire', 'quotidienne', 'ponctuelle'];
+
+    function frequenceConseillee() {
+        const par = state.profil?.resume?.par_frequence;
+        if (!par) return null;
+        const adaptee = ORDRE_FREQUENCES.find(f => par[f] && par[f].adequation
+                                                 && par[f].adequation.code === 'adaptee');
+        if (adaptee) return adaptee;
+        // Aucune n'est pleinement adaptée : on conseille la plus fine encore réalisable,
+        // c'est elle qui laisse le plus de points au calcul.
+        return [...ORDRE_FREQUENCES].reverse()
+            .find(f => par[f] && par[f].adequation && !par[f].adequation.bloquant) || null;
+    }
+
+    /* Le bandeau ORIENTE : quel objectif et quel rythme conviennent à cette sélection.
+       Le détail vit sur les cartes et sous les boutons — une phrase suffit ici. */
     function majGuideReglages() {
         const r = state.profil?.resume;
         if (!r) {
             majGuide('wizGuide3', { variant: 'info', texte: "Profil des données indisponible : tous les objectifs restent proposés." });
             return;
         }
-        const points = [
-            r.a_date
-                ? `Colonne temporelle : ${r.colonnes_date.join(', ')}`
-                : 'Colonne temporelle : aucune détectée',
-            r.a_mesure
-                ? `Mesure(s) numérique(s) : ${r.colonnes_mesure.join(', ')}`
-                : 'Mesure numérique : aucune détectée',
-            `Lignes disponibles : ${r.lignes}`,
-        ];
-        /* La fiabilité dépend du pas de temps : on annonce celle de la fréquence
-           actuellement sélectionnée, pas celle des données brutes. */
-        const choisie = r.par_frequence ? r.par_frequence[state.frequence] : null;
-        if (choisie) {
-            const libelle = (FREQ_LABELS[state.frequence] || state.frequence).toLowerCase();
-            points.push(
-                `Fiabilité attendue en ${libelle} : ${choisie.fiabilite.label.toLowerCase()} `
-                + `(${choisie.points} point${choisie.points > 1 ? 's' : ''})`
-            );
+        /* Un rythme qui rend l'analyse irréalisable prime sur tout conseil : c'est le
+           blocage à lever en premier. */
+        const cadence = adequationDe(state.frequence);
+        if (cadence && cadence.bloquant) {
+            majGuide('wizGuide3', { variant: 'warn', texte: cadence.message });
+            return;
         }
-        const bloques = (state.profil.objectifs || []).filter(o => o.etat === 'indisponible').length;
-        majGuide('wizGuide3', {
-            variant: bloques ? 'warn' : 'ok',
-            texte: bloques
-                ? `${bloques} objectif${bloques > 1 ? 's sont' : ' est'} indisponible${bloques > 1 ? 's' : ''} avec ces données — la raison est indiquée sur chaque carte.`
-                : 'Vos données permettent tous les objectifs proposés.',
-            points,
-        });
+
+        const objectifs = state.profil.objectifs || [];
+        const conseille = objectifs.find(o => o.etat === 'recommande');
+        const bloques = objectifs.filter(o => o.etat === 'indisponible').length;
+
+        if (!conseille) {
+            majGuide('wizGuide3', {
+                variant: 'warn',
+                texte: "Aucun objectif n'est réalisable avec ces données — chaque carte indique quoi faire.",
+            });
+            return;
+        }
+
+        let texte = `Avec ces données, « ${conseille.label} » est l'objectif le plus adapté`;
+        if (conseille.temporel) {
+            const freq = frequenceConseillee();
+            texte += freq ? `, au rythme ${(FREQ_LABELS[freq] || freq).toLowerCase()}.` : '.';
+        } else {
+            // Sur un objectif non temporel, la fréquence ne change pas le résultat : le
+            // dire évite qu'on cherche « la bonne » fréquence sans raison.
+            texte += ' ; la fréquence ne fait qu\'y rythmer la mise à jour.';
+        }
+        if (bloques) {
+            texte += ` ${bloques} autre${bloques > 1 ? 's ne sont' : ' n’est'} pas réalisable ici.`;
+        }
+        majGuide('wizGuide3', { variant: bloques ? 'info' : 'ok', texte });
     }
 
     document.querySelectorAll('.wiz-obj-card').forEach(card => {
@@ -757,6 +881,10 @@
             card.style.boxShadow = `0 0 24px ${color}33`;
             state.objectif = card.dataset.val;
             checkStep3Ready();
+            /* Un objectif non temporel n'agrège pas par période : le signalement de
+               fréquence doit disparaître, pas rester affiché à tort. */
+            majFrequences();
+            majGuideReglages();
         });
     });
 
@@ -766,7 +894,8 @@
             btn.classList.add('selected');
             state.frequence = btn.dataset.val;
             checkStep3Ready();
-            majGuideReglages();  // la fiabilité annoncée suit le pas de temps choisi
+            majFreqNote();       // le message suit le pas de temps choisi
+            majGuideReglages();
         });
     });
 
@@ -784,7 +913,7 @@
                 body: JSON.stringify({
                     objectif: state.objectif,
                     frequence: state.frequence,
-                    precision: document.getElementById('wizPrecision').value.trim(),
+                    besoin: document.getElementById('wizBesoin').value.trim(),
                 }),
             });
             const data = await res.json().catch(() => ({}));
@@ -809,7 +938,8 @@
     if (editData) {
         document.querySelector(`.wiz-obj-card[data-val="${editData.objectif}"]`)?.click();
         document.querySelector(`.wiz-freq-btn[data-val="${editData.frequence}"]`)?.click();
-        document.getElementById('wizPrecision').value = editData.precision || '';
+        document.getElementById('wizBesoin').value = editData.besoin || '';
+        checkStep3Ready();  // réévalue « objectif ou besoin » avec la valeur préchargée
     }
 })();
 </script>
