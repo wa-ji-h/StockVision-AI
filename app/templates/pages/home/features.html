@@ -29,27 +29,27 @@
         <p class="text-muted">Naviguez entre les composants clés de la solution StockVision AI</p>
     </div>
 
-    <div class="simulator-box p-4 p-md-5 rounded-4 border border-secondary border-opacity-20 bg-card">
+    <div class="simulator-box glow-panel p-4 p-md-5 rounded-4">
         <!-- TABS NAV -->
         <ul class="nav nav-pills justify-content-center gap-2 mb-4" id="simTabs" role="tablist">
             <li class="nav-item">
                 <button class="nav-link active px-4 py-2 rounded-3" id="tab-ingest-tab" data-bs-toggle="pill" data-bs-target="#tab-ingest" type="button">
-                    📥 1. Ingestion & Connecteurs
+                    <span class="sim-tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>1. Ingestion & Connecteurs
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link px-4 py-2 rounded-3" id="tab-config-tab" data-bs-toggle="pill" data-bs-target="#tab-config" type="button">
-                    ⚙️ 2. Configuration IA
+                    <span class="sim-tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>2. Configuration IA
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link px-4 py-2 rounded-3" id="tab-alerts-tab" data-bs-toggle="pill" data-bs-target="#tab-alerts" type="button">
-                    🔔 3. Détection & Alertes
+                    <span class="sim-tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>3. Détection & Alertes
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link px-4 py-2 rounded-3" id="tab-bi-tab" data-bs-toggle="pill" data-bs-target="#tab-bi" type="button">
-                    📊 4. Visualisation Power BI
+                    <span class="sim-tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>4. Visualisation Power BI
                 </button>
             </li>
         </ul>
@@ -73,7 +73,7 @@
                     </div>
                     <div class="col-lg-6">
                         <div class="p-4 rounded-3 border border-dashed border-info border-opacity-30 bg-dark text-center">
-                            <div class="fs-1 text-cyan mb-2">📂</div>
+                            <div class="sv-icon-badge mb-2"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
                             <span class="d-block text-white fw-bold small mb-1">Zone de Glisser-Déposer de Fichiers Métier</span>
                             <span class="text-muted extra-small d-block mb-3">Glissez vos fichiers CSV / SQL (max 100 Mo) ou configurez l'URL SGBD</span>
                             <span class="btn btn-outline-light btn-sm px-3">Parcourir les fichiers</span>
@@ -174,22 +174,22 @@
 
     <div class="row g-4">
         <div class="col-md-4">
-            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
-                <div class="text-cyan mb-3 fs-3">🔑</div>
+            <div class="sv-card p-4 rounded-4 h-100">
+                <div class="sv-icon-badge"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
                 <h3 class="h5 fw-bold mb-2">Un Accès Simple et Sécurisé</h3>
                 <p class="text-muted small mb-0">Inscription en quelques étapes, validation par un administrateur, puis accès rapide à votre espace dès approbation. Pas de complexité, pas de délais inutiles.</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
-                <div class="text-blue mb-3 fs-3">🛡️</div>
+            <div class="sv-card p-4 rounded-4 h-100">
+                <div class="sv-icon-badge sv-icon-badge--blue"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
                 <h3 class="h5 fw-bold mb-2">Sécurité & Confidentialité Strictes</h3>
                 <p class="text-muted small mb-0">Chaque demande d'entreprise est vérifiée par un Administrateur. Vos données d'entreprise ne sont jamais réutilisées ni altérées.</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card h-100">
-                <div class="text-indigo mb-3 fs-3">📈</div>
+            <div class="sv-card p-4 rounded-4 h-100">
+                <div class="sv-icon-badge sv-icon-badge--indigo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
                 <h3 class="h5 fw-bold mb-2">Des Décisions Basées sur vos Données</h3>
                 <p class="text-muted small mb-0">Importez vos données — ventes, stock, clients ou autre — et laissez l'IA les analyser pour anticiper les tendances et éclairer vos prises de décision.</p>
             </div>

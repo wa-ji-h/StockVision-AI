@@ -29,11 +29,11 @@
         <thead>
             <tr>
                 <th>Entreprise</th>
-                <th>Secteur</th>
+                <th class="text-center">Secteur</th>
                 <th>Email</th>
                 <th>Date</th>
-                <th>Statut</th>
-                <th></th>
+                <th class="text-center">Statut</th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -45,10 +45,10 @@
                         <span>{{ entreprise.nom }}</span>
                     </div>
                 </td>
-                <td><span class="dash-pill">{{ entreprise.secteur_activite }}</span></td>
+                <td class="text-center"><span class="dash-pill">{{ entreprise.secteur_activite }}</span></td>
                 <td>{{ utilisateur.email }}</td>
-                <td>{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
-                <td>
+                <td class="dash-cell-muted">{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+                <td class="text-center">
                     {% if entreprise.statut_demande.value == 'en_attente' %}
                     <span class="dash-status dash-status-pending">En attente</span>
                     {% elif entreprise.statut_demande.value == 'validee' %}
@@ -60,10 +60,14 @@
                 <td class="dash-table-actions">
                     {% if entreprise.statut_demande.value == 'en_attente' %}
                     <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/approuver">
-                        <button type="submit" class="btn btn-gradient btn-sm">Approuver</button>
+                        <button type="submit" class="dash-icon-btn dash-icon-btn--success" title="Approuver" aria-label="Approuver">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </button>
                     </form>
                     <form method="post" action="/dashboard/admin/demandes/{{ entreprise.idEntreprise }}/refuser">
-                        <button type="submit" class="btn btn-outline-light btn-sm">Refuser</button>
+                        <button type="submit" class="dash-icon-btn dash-icon-btn--danger" title="Refuser" aria-label="Refuser">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
                     </form>
                     {% elif entreprise.statut_demande.value == 'validee' %}
                     <span class="dash-action-done dash-action-done--ok">

@@ -1,0 +1,817 @@
+{% extends "pages/dashboard/base.html" %}
+{% block title %}Paramétrer une analyse — StockVision AI{% endblock %}
+{% block dash_content %}
+
+{# Bandeau de guidage — composant unique réutilisé aux trois étapes.
+   Variantes : info (cyan, neutre) · ok (vert, tout est possible) · warn (ambre, limitation).
+   Le contenu des étapes 2 et 3 est réécrit en direct par majGuide(). #}
+{% macro wiz_guide(id, variant='info', texte='') %}
+<div class="wiz-guide wiz-guide--{{ variant }}" id="{{ id }}">
+    <span class="wiz-guide-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    </span>
+    <div class="wiz-guide-body">
+        <p class="wiz-guide-text">{{ texte }}</p>
+        <ul class="wiz-guide-list"></ul>
+    </div>
+</div>
+{% endmacro %}
+
+<div class="dash-intro-card">
+    <h1 class="dash-page-title">{{ title }}</h1>
+    <p class="dash-page-guide">{{ guide }}</p>
+</div>
+
+{% if sources %}
+<div class="wiz-progress" id="wizProgress">
+    <div class="wiz-step active" data-step="1">
+        <div class="wiz-step-circle"><span class="wiz-step-num">1</span><span class="wiz-step-check" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span></div>
+        <span class="wiz-step-label">Source</span>
+    </div>
+    <div class="wiz-step-line" data-line="1"></div>
+    <div class="wiz-step" data-step="2">
+        <div class="wiz-step-circle"><span class="wiz-step-num">2</span><span class="wiz-step-check" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span></div>
+        <span class="wiz-step-label">Données</span>
+    </div>
+    <div class="wiz-step-line" data-line="2"></div>
+    <div class="wiz-step" data-step="3">
+        <div class="wiz-step-circle"><span class="wiz-step-num">3</span><span class="wiz-step-check" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span></div>
+        <span class="wiz-step-label">Réglages</span>
+    </div>
+</div>
+
+<!-- ── ÉTAPE 1 : choix de la source ── -->
+<div class="wiz-panel" id="wizStep1">
+    <h3 class="wiz-panel-title">Quelle source souhaitez-vous analyser ?</h3>
+    <p class="wiz-panel-sub">Sélectionnez le fichier ou la connexion base de données à partir de laquelle l'IA générera ses prévisions.</p>
+    {{ wiz_guide('wizGuide1', 'info', "Une configuration analyse une seule source à la fois. Pour croiser plusieurs sources, créez une configuration distincte pour chacune.") }}
+
+    <div class="imh-grid" id="wizSourceGrid">
+        {% for s in sources %}
+        <div class="wiz-source-card" data-source-id="{{ s.id_source }}" data-source-nom="{{ s.nom }}">
+            <span class="wiz-check-badge">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            {% if s.kind == 'db' %}
+            <div class="imh-icon imh-icon--db">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            {% elif s.type_format == 'SQL' %}
+            <div class="imh-icon imh-icon--sql">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+            </div>
+            {% else %}
+            <div class="imh-icon imh-icon--csv">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            {% endif %}
+            <div>
+                <span class="wiz-source-name">{{ s.nom }}</span>
+                <span class="wiz-source-sub">
+                    {% if s.kind == 'db' %}{{ s.type_sgbd | upper }} · {{ s.table_count }} table{{ 's' if s.table_count != 1 else '' }}{% else %}{{ s.type_format }}{% endif %}
+                    {% if s.statut == 'erreur' %} · <span style="color:#f87171;">Erreur</span>{% endif %}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="wiz-nav">
+        <span></span>
+        <button type="button" class="imp-btn-primary" id="wizStep1Continue" disabled>
+            Continuer
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ── ÉTAPE 2 : sélection des données ── -->
+<div class="wiz-panel" id="wizStep2" hidden>
+    <h3 class="wiz-panel-title">Quelles données voulez-vous inclure ?</h3>
+    <p class="wiz-panel-sub" id="wizStep2Sub">Sélectionnez une ou plusieurs colonnes/tables à intégrer dans l'analyse.</p>
+    {{ wiz_guide('wizGuide2', 'info', "Sélectionnez vos données : nous vous dirons aussitôt quels objectifs elles permettront.") }}
+
+    <div class="wiz-toolbar">
+        <label class="wiz-select-all">
+            <input type="checkbox" id="wizSelectAll">
+            Tout sélectionner
+        </label>
+        <span class="wiz-counter" id="wizCounter">0 élément sélectionné</span>
+    </div>
+
+    <div class="wiz-item-grid" id="wizItemGrid"></div>
+
+    <div class="wiz-nav">
+        <button type="button" class="imp-btn-ghost" id="wizStep2Back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Retour
+        </button>
+        <button type="button" class="imp-btn-primary" id="wizStep2Continue" disabled>
+            Continuer
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ── ÉTAPE 3 : objectif & fréquence ── -->
+<div class="wiz-panel" id="wizStep3" hidden>
+    <h3 class="wiz-panel-title">Définissez votre objectif</h3>
+    <p class="wiz-panel-sub">Choisissez ce que l'IA doit analyser et à quelle fréquence.</p>
+    {{ wiz_guide('wizGuide3', 'info', "Analyse du profil de vos données…") }}
+
+    <span class="wiz-field-label">Objectif de l'analyse</span>
+    <div class="wiz-obj-grid">
+        {% for obj in objectifs %}
+        <div class="wiz-obj-card" data-val="{{ obj.val }}" data-color="{{ obj.color }}">
+            <span class="wiz-obj-flag" hidden></span>
+            <span class="wiz-obj-icon" style="background:{{ obj.color }}26; color:{{ obj.color }};">
+                {% if obj.icon == 'trending-up' %}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                {% elif obj.icon == 'chart-line' %}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                {% elif obj.icon == 'alert-triangle' %}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                {% else %}
+                {# arrows-sort — comparer et classer #}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><line x1="7" y1="5" x2="7" y2="19"/><path d="M21 15l-4 4-4-4"/><line x1="17" y1="19" x2="17" y2="5"/></svg>
+                {% endif %}
+            </span>
+            <span class="wiz-obj-title">{{ obj.label }}</span>
+            <span class="wiz-obj-desc">{{ obj.desc }}</span>
+            <span class="wiz-obj-reason" hidden></span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <span class="wiz-field-label" style="margin-top:1.5rem;">Fréquence d'exécution</span>
+    <div class="wiz-freq-row">
+        {% for val, label in frequences %}
+        <button type="button" class="wiz-freq-btn {{ 'selected' if val == 'ponctuelle' }}" data-val="{{ val }}">
+            <span class="wiz-freq-label">{{ label }}</span>
+            <span class="wiz-freq-hint" hidden></span>
+        </button>
+        {% endfor %}
+    </div>
+    <p class="wiz-freq-note" id="wizFreqNote" hidden></p>
+
+    <span class="wiz-field-label" style="margin-top:1.5rem;">Précision complémentaire <span class="wiz-field-optional">(optionnel)</span></span>
+    <textarea id="wizPrecision" class="wiz-textarea" rows="3" maxlength="2000" placeholder="Décrivez un contexte ou une contrainte particulière pour affiner l'analyse (ex. saisonnalité, événement exceptionnel à ignorer...)."></textarea>
+
+    <div class="wiz-nav">
+        <button type="button" class="imp-btn-ghost" id="wizStep3Back">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Retour
+        </button>
+        <button type="button" class="imp-btn-primary" id="wizStep3Save" disabled>
+            Enregistrer la configuration
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- ── SUCCÈS ── -->
+<div class="wiz-panel" id="wizSuccess" hidden>
+    <div class="wiz-success">
+        <div class="wiz-success-icon">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3 class="wiz-panel-title">Configuration enregistrée !</h3>
+        <p class="wiz-panel-sub" style="max-width:480px;margin-left:auto;margin-right:auto;">Votre analyse est prête à être exécutée par l'IA selon la fréquence choisie.</p>
+        <div class="imp-actions" style="justify-content:center;">
+            <a href="/dashboard/entreprise/configurations" class="imp-btn-primary">Voir mes configurations</a>
+            <button type="button" class="imp-btn-ghost" id="wizRestart">Créer une autre analyse</button>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="imh-empty">
+    <div class="imh-empty-icon">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    </div>
+    <p class="imh-empty-text">Vous devez d'abord importer un fichier ou connecter une base de données avant de créer une configuration d'analyse.</p>
+    <a href="/dashboard/entreprise/import" class="imp-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        Importer des données
+    </a>
+</div>
+{% endif %}
+
+{% if edit_config %}
+<script id="wizEditData" type="application/json">{{ edit_config | tojson }}</script>
+{% endif %}
+
+<script>
+(function () {
+    'use strict';
+    if (!document.getElementById('wizProgress')) return;
+
+    const editDataEl = document.getElementById('wizEditData');
+    const editData = editDataEl ? JSON.parse(editDataEl.textContent) : null;
+
+    const state = {
+        sourceId: null,
+        sourceNom: null,
+        sourceKind: null,
+        items: new Map(),      // key -> label
+        selectedItems: new Set(),
+        configId: null,
+        objectif: null,
+        frequence: 'ponctuelle', // présélectionnée pour ne pas laisser le formulaire paraître vide
+        editing: false,
+        originalEditSourceId: null,
+        profil: null,          // réponse de /profil : { resume, objectifs, profil }
+    };
+
+    if (editData) {
+        state.configId = editData.id;
+        state.editing = true;
+        state.selectedItems = new Set(editData.items || []);
+        state.originalEditSourceId = String(editData.source_id);
+
+        document.getElementById('wizStep3Save').innerHTML =
+            'Mettre à jour la configuration' + document.getElementById('wizStep3Save').querySelector('svg').outerHTML;
+        document.getElementById('wizRestart').style.display = 'none';
+        const successSub = document.querySelector('#wizSuccess .wiz-panel-sub');
+        document.querySelector('#wizSuccess .wiz-panel-title').textContent = 'Configuration mise à jour !';
+        if (successSub) successSub.textContent = 'Les modifications ont bien été enregistrées.';
+    }
+
+    /* Libellés de fréquence, rendus par le serveur : une seule source, pas de recopie. */
+    const FREQ_LABELS = {
+        {% for val, label in frequences %}{{ val | tojson }}: {{ label | tojson }},
+        {% endfor %}
+    };
+
+    /* ── Bandeau de guidage (composant unique des trois étapes) ── */
+    function majGuide(id, { variant = 'info', texte = '', points = [] } = {}) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.className = `wiz-guide wiz-guide--${variant}`;
+        el.querySelector('.wiz-guide-text').textContent = texte;
+        const liste = el.querySelector('.wiz-guide-list');
+        liste.replaceChildren(...points.map(p => {
+            const li = document.createElement('li');
+            li.textContent = p;
+            return li;
+        }));
+    }
+
+    /* ── Transition entre panneaux ── */
+    const panels = {
+        1: document.getElementById('wizStep1'),
+        2: document.getElementById('wizStep2'),
+        3: document.getElementById('wizStep3'),
+        success: document.getElementById('wizSuccess'),
+    };
+
+    function goToPanel(name) {
+        const current = Object.values(panels).find(p => p && !p.hidden);
+        if (current) {
+            current.classList.add('wiz-panel--leaving');
+            setTimeout(() => {
+                current.hidden = true;
+                current.classList.remove('wiz-panel--leaving');
+                showTarget();
+            }, 180);
+        } else {
+            showTarget();
+        }
+        function showTarget() {
+            const target = panels[name];
+            if (!target) return;
+            target.hidden = false;
+            target.style.opacity = '0';
+            requestAnimationFrame(() => {
+                target.style.transition = 'opacity 0.28s ease';
+                target.style.opacity = '1';
+            });
+        }
+    }
+
+    function updateProgress(stepIndex) {
+        document.querySelectorAll('.wiz-step').forEach(el => {
+            const n = parseInt(el.dataset.step);
+            el.classList.remove('active', 'done');
+            const numEl = el.querySelector('.wiz-step-num');
+            const checkEl = el.querySelector('.wiz-step-check');
+            if (n < stepIndex) {
+                el.classList.add('done');
+                numEl.style.display = 'none';
+                checkEl.style.display = '';
+            } else {
+                numEl.style.display = '';
+                checkEl.style.display = 'none';
+                if (n === stepIndex) el.classList.add('active');
+            }
+        });
+        document.querySelectorAll('.wiz-step-line').forEach(el => {
+            const n = parseInt(el.dataset.line);
+            el.classList.toggle('done', n < stepIndex);
+        });
+    }
+
+    /* ── Étape 1 : choix de la source ── */
+    const step1Continue = document.getElementById('wizStep1Continue');
+    document.querySelectorAll('.wiz-source-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.wiz-source-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            state.sourceId = card.dataset.sourceId;
+            state.sourceNom = card.dataset.sourceNom;
+            step1Continue.disabled = false;
+        });
+    });
+
+    if (editData) {
+        const preselected = document.querySelector(`.wiz-source-card[data-source-id="${editData.source_id}"]`);
+        preselected?.click();
+    }
+
+    step1Continue.addEventListener('click', async () => {
+        step1Continue.disabled = true;
+        try {
+            const res = await fetch(`/dashboard/entreprise/configurations/source/${state.sourceId}/items`);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { svNotify(data.detail || "Impossible de charger les données de cette source.", 'ko'); step1Continue.disabled = false; return; }
+
+            state.sourceKind = data.kind;
+            state.items = new Map((data.items || []).map(it => [it.key, it]));
+            // En édition, on garde la sélection préchargée tant que la source n'a pas changé
+            if (!(state.editing && state.sourceId === state.originalEditSourceId)) {
+                state.selectedItems = new Set();
+            }
+
+            document.getElementById('wizStep2Sub').textContent =
+                data.kind === 'columns'
+                    ? `Sélectionnez les colonnes de « ${data.source_nom} » à inclure dans l'analyse.`
+                    : `Sélectionnez les tables de « ${data.source_nom} » à inclure dans l'analyse.`;
+
+            renderItemGrid();
+            goToPanel(2);
+            updateProgress(2);
+        } catch {
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+        }
+        step1Continue.disabled = false;
+    });
+
+    /* ── Étape 2 : sélection des données ── */
+    const itemGrid = document.getElementById('wizItemGrid');
+    const counterEl = document.getElementById('wizCounter');
+    const selectAllBox = document.getElementById('wizSelectAll');
+    const step2Continue = document.getElementById('wizStep2Continue');
+
+    function renderItemGrid() {
+        itemGrid.innerHTML = '';
+        state.items.forEach((item, key) => {
+            const card = document.createElement('div');
+            card.className = 'wiz-item-card';
+            card.dataset.key = key;
+            card.innerHTML = `
+                <span class="wiz-check-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <div class="wiz-item-head">
+                    <span class="wiz-item-name">${item.label}</span>
+                    ${item.expandable ? `
+                    <button type="button" class="wiz-expand-btn" title="Voir les colonnes en temps réel" aria-label="Voir les colonnes">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>` : ''}
+                </div>
+                ${item.desc ? `<span class="wiz-item-desc">${item.desc}</span>` : ''}
+                ${item.expandable ? `<div class="wiz-columns-panel" hidden></div>` : ''}
+            `;
+            card.querySelector('.wiz-item-name').addEventListener('click', () => toggleItem(key, card));
+            card.querySelector('.wiz-item-desc')?.addEventListener('click', () => toggleItem(key, card));
+            card.querySelector('.wiz-check-badge').addEventListener('click', () => toggleItem(key, card));
+
+            const expandBtn = card.querySelector('.wiz-expand-btn');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleColumnsPanel(key, card, expandBtn);
+                });
+            }
+
+            // Restaure l'état visuel d'une sélection préchargée (mode édition)
+            if (state.selectedItems.has(key)) card.classList.add('selected');
+            if ([...state.selectedItems].some(k => k.startsWith(key + '.'))) card.classList.add('partial');
+
+            itemGrid.appendChild(card);
+        });
+        updateCounter();
+        selectAllBox.checked = false;
+    }
+
+    function toggleItem(key, card) {
+        if (state.selectedItems.has(key)) {
+            state.selectedItems.delete(key);
+            card.classList.remove('selected');
+        } else {
+            state.selectedItems.add(key);
+            card.classList.add('selected');
+        }
+        updateCounter();
+        selectAllBox.checked = state.selectedItems.size === state.items.size && state.items.size > 0;
+    }
+
+    /* ── Drill-down : colonnes réelles d'une table, interrogées en direct ── */
+    async function toggleColumnsPanel(tableKey, card, expandBtn) {
+        const panel = card.querySelector('.wiz-columns-panel');
+        const isOpen = !panel.hidden;
+        if (isOpen) {
+            panel.hidden = true;
+            expandBtn.classList.remove('open');
+            card.classList.remove('expanded');
+            return;
+        }
+        expandBtn.classList.add('open');
+        card.classList.add('expanded');
+        panel.hidden = false;
+
+        if (panel.dataset.loaded === 'true') return;
+        panel.innerHTML = '<span class="wiz-columns-loading">Chargement des colonnes en direct…</span>';
+
+        try {
+            const res = await fetch(`/dashboard/entreprise/configurations/source/${state.sourceId}/table/${encodeURIComponent(tableKey)}/columns`);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                panel.innerHTML = `<span class="wiz-columns-error">Impossible de charger les colonnes : ${data.error || 'erreur inconnue'}.</span>`;
+                return;
+            }
+            panel.dataset.loaded = 'true';
+            panel.innerHTML = '';
+            (data.columns || []).forEach(col => {
+                const colKey = `${tableKey}.${col.name}`;
+                const chip = document.createElement('span');
+                chip.className = 'wiz-col-chip' + (state.selectedItems.has(colKey) ? ' selected' : '');
+                chip.textContent = col.name;
+                chip.title = col.type || '';
+                chip.dataset.col = col.name;
+                chip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (state.selectedItems.has(colKey)) {
+                        state.selectedItems.delete(colKey);
+                        chip.classList.remove('selected');
+                    } else {
+                        state.selectedItems.add(colKey);
+                        chip.classList.add('selected');
+                    }
+                    card.classList.toggle('partial', [...state.selectedItems].some(k => k.startsWith(tableKey + '.')));
+                    updateCounter();
+                });
+                panel.appendChild(chip);
+            });
+            if (!data.columns || !data.columns.length) {
+                panel.innerHTML = '<span class="wiz-columns-error">Aucune colonne détectée pour cette table.</span>';
+            }
+        } catch {
+            panel.innerHTML = '<span class="wiz-columns-error">Erreur réseau — impossible de charger les colonnes.</span>';
+        }
+    }
+
+    function updateCounter() {
+        const n = state.selectedItems.size;
+        counterEl.textContent = `${n} élément${n > 1 ? 's' : ''} sélectionné${n > 1 ? 's' : ''}`;
+        step2Continue.disabled = n === 0;
+        planifierProfil();
+    }
+
+    /* Profil des données sélectionnées — sert au guidage de l'étape 2 et aux cartes de
+       l'étape 3. Débounce : la sélection change à chaque clic, on ne veut pas une requête
+       par clic. */
+    let profilTimer = null;
+    let profilJeton = 0;
+
+    function planifierProfil() {
+        clearTimeout(profilTimer);
+        if (!state.selectedItems.size) {
+            state.profil = null;
+            majGuide('wizGuide2', { variant: 'info', texte: "Sélectionnez vos données : nous vous dirons aussitôt quels objectifs elles permettront." });
+            return;
+        }
+        majGuide('wizGuide2', { variant: 'info', texte: 'Analyse de votre sélection…' });
+        profilTimer = setTimeout(chargerProfil, 400);
+    }
+
+    async function chargerProfil() {
+        const jeton = ++profilJeton;
+        try {
+            const res = await fetch(`/dashboard/entreprise/configurations/source/${state.sourceId}/profil`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: Array.from(state.selectedItems) }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (jeton !== profilJeton) return;  // une sélection plus récente a pris la main
+            if (!res.ok || !data.ok) {
+                state.profil = null;
+                majGuide('wizGuide2', { variant: 'warn', texte: data.error || "Impossible d'analyser cette sélection pour l'instant." });
+                return;
+            }
+            state.profil = data;
+            majGuideSelection(data.resume);
+        } catch {
+            if (jeton !== profilJeton) return;
+            state.profil = null;
+            majGuide('wizGuide2', { variant: 'warn', texte: 'Analyse indisponible — vérifiez votre connexion.' });
+        }
+    }
+
+    function majGuideSelection(resume) {
+        const bloques = (state.profil.objectifs || []).filter(o => o.etat === 'indisponible');
+        const detail = bloques.map(o => `${o.label} — ${o.raison}`);
+
+        if (!bloques.length) {
+            majGuide('wizGuide2', {
+                variant: 'ok',
+                texte: `Votre sélection contient une colonne de date (${resume.colonnes_date.join(', ')}) `
+                     + `et une mesure numérique (${resume.colonnes_mesure.join(', ')}) : tous les objectifs seront disponibles.`,
+                points: [`${resume.lignes} ligne${resume.lignes > 1 ? 's' : ''} de données détectée${resume.lignes > 1 ? 's' : ''}.`],
+            });
+        } else if (!resume.a_date && !resume.a_mesure) {
+            majGuide('wizGuide2', {
+                variant: 'warn',
+                texte: "Votre sélection ne contient ni colonne de date ni mesure numérique — les objectifs de prévision et de tendance ne seront pas disponibles.",
+                points: detail,
+            });
+        } else if (!resume.a_date) {
+            majGuide('wizGuide2', {
+                variant: 'warn',
+                texte: "Aucune colonne de date détectée : les objectifs de prévision et de tendance seront indisponibles.",
+                points: detail,
+            });
+        } else if (!resume.analysable) {
+            majGuide('wizGuide2', {
+                variant: 'warn',
+                texte: `Votre sélection contient une colonne de date (${resume.colonnes_date.join(', ')}) `
+                     + "mais aucune mesure numérique — les objectifs de prévision et de tendance ne seront pas disponibles.",
+                points: detail.concat("Ajoutez une colonne chiffrée (quantité, montant, total…) à analyser dans le temps."),
+            });
+        } else {
+            majGuide('wizGuide2', {
+                variant: 'warn',
+                texte: `Colonne de date détectée (${resume.colonnes_date.join(', ')}), mais l'historique est trop court pour certains objectifs.`,
+                points: detail,
+            });
+        }
+    }
+
+    selectAllBox.addEventListener('change', () => {
+        const cards = itemGrid.querySelectorAll('.wiz-item-card');
+        state.selectedItems.clear();
+        cards.forEach(card => {
+            const key = card.dataset.key;
+            const panel = card.querySelector('.wiz-columns-panel');
+            card.classList.remove('selected', 'partial');
+            panel?.querySelectorAll('.wiz-col-chip').forEach(chip => chip.classList.remove('selected'));
+
+            if (!selectAllBox.checked) return;
+
+            if (panel && !panel.hidden && panel.dataset.loaded === 'true') {
+                // Colonnes déjà chargées pour cette table : sélection au niveau colonne
+                panel.querySelectorAll('.wiz-col-chip').forEach(chip => {
+                    state.selectedItems.add(`${key}.${chip.dataset.col}`);
+                    chip.classList.add('selected');
+                });
+                card.classList.add('partial');
+            } else {
+                state.selectedItems.add(key);
+                card.classList.add('selected');
+            }
+        });
+        updateCounter();
+    });
+
+    document.getElementById('wizStep2Back').addEventListener('click', () => {
+        goToPanel(1);
+        updateProgress(1);
+    });
+
+    step2Continue.addEventListener('click', async () => {
+        step2Continue.disabled = true;
+        try {
+            const url = state.editing
+                ? `/dashboard/entreprise/configurations/${state.configId}/update-selection`
+                : '/dashboard/entreprise/configurations/draft';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source_id: state.sourceId,
+                    items: Array.from(state.selectedItems),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                svNotify(data.detail || "Erreur lors de l'enregistrement de la sélection.", 'ko');
+                step2Continue.disabled = false;
+                return;
+            }
+            state.configId = data.id_configuration;
+            // Le profil est déjà chargé (étape 2) : on l'applique aux cartes avant d'afficher.
+            appliquerCompatibilite();
+            majFrequences();
+            majGuideReglages();
+            goToPanel(3);
+            updateProgress(3);
+        } catch {
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+        }
+        step2Continue.disabled = false;
+    });
+
+    /* ── Étape 3 : objectif & fréquence ── */
+    const step3Save = document.getElementById('wizStep3Save');
+
+    function checkStep3Ready() {
+        step3Save.disabled = !(state.objectif && state.frequence);
+    }
+
+    const ETAT_CLASSES = {
+        recommande: 'is-recommended',
+        compatible: 'is-compatible',
+        indisponible: 'is-unavailable',
+    };
+    const ETAT_LABELS = {
+        recommande: 'Recommandé',
+        compatible: 'Compatible',
+        indisponible: 'Indisponible',
+    };
+
+    /* Applique à chaque carte l'état calculé par le serveur d'après le profil réel.
+       Une carte indisponible reste visible et lisible : c'est la raison qui informe. */
+    function appliquerCompatibilite() {
+        const parVal = new Map((state.profil?.objectifs || []).map(o => [o.val, o]));
+        document.querySelectorAll('.wiz-obj-card').forEach(card => {
+            const o = parVal.get(card.dataset.val);
+            card.classList.remove('is-recommended', 'is-compatible', 'is-unavailable');
+            const flag = card.querySelector('.wiz-obj-flag');
+            const reason = card.querySelector('.wiz-obj-reason');
+            if (!o) { flag.hidden = true; reason.hidden = true; return; }
+
+            card.classList.add(ETAT_CLASSES[o.etat]);
+            flag.textContent = ETAT_LABELS[o.etat];
+            flag.hidden = false;
+
+            /* La carte ne porte que sa compatibilité. Pas de fiabilité ici : elle dépend de
+               la fréquence, pas de l'objectif — l'afficher sur les quatre cartes la rendrait
+               fausse dès le premier clic sur une fréquence. Elle vit sur les boutons de
+               fréquence et dans le bandeau, là où elle se décide. */
+            if (o.raison) {
+                reason.textContent = o.raison;
+                reason.hidden = false;
+            } else {
+                reason.hidden = true;
+            }
+
+            // Un objectif devenu indisponible ne doit pas rester sélectionné (retour arrière)
+            if (o.etat === 'indisponible' && state.objectif === o.val) {
+                state.objectif = null;
+                card.classList.remove('selected');
+                card.style.borderColor = '';
+                card.style.boxShadow = '';
+                checkStep3Ready();
+            }
+        });
+    }
+
+    /* Chaque pas de temps annonce les points qu'il produirait et la fiabilité qui en
+       découle. Purement informatif : aucune fréquence n'est jamais désactivée. */
+    function majFrequences() {
+        const par = state.profil?.resume?.par_frequence;
+        const note = document.getElementById('wizFreqNote');
+        document.querySelectorAll('.wiz-freq-btn').forEach(btn => {
+            const info = par ? par[btn.dataset.val] : null;
+            const hint = btn.querySelector('.wiz-freq-hint');
+            if (!hint) return;
+            if (info) {
+                hint.textContent = `${info.points} pt${info.points > 1 ? 's' : ''} · ${info.fiabilite.label.replace('Fiabilité ', '')}`;
+                hint.className = `wiz-freq-hint wiz-freq-hint--${info.fiabilite.code}`;
+                hint.hidden = false;
+            } else {
+                hint.hidden = true;
+            }
+        });
+        if (par) {
+            note.textContent = "Le pas de temps change le nombre de points analysés — et donc la fiabilité. Toutes les fréquences restent disponibles.";
+            note.hidden = false;
+        } else {
+            note.hidden = true;
+        }
+    }
+
+    function majGuideReglages() {
+        const r = state.profil?.resume;
+        if (!r) {
+            majGuide('wizGuide3', { variant: 'info', texte: "Profil des données indisponible : tous les objectifs restent proposés." });
+            return;
+        }
+        const points = [
+            r.a_date
+                ? `Colonne temporelle : ${r.colonnes_date.join(', ')}`
+                : 'Colonne temporelle : aucune détectée',
+            r.a_mesure
+                ? `Mesure(s) numérique(s) : ${r.colonnes_mesure.join(', ')}`
+                : 'Mesure numérique : aucune détectée',
+            `Lignes disponibles : ${r.lignes}`,
+        ];
+        /* La fiabilité dépend du pas de temps : on annonce celle de la fréquence
+           actuellement sélectionnée, pas celle des données brutes. */
+        const choisie = r.par_frequence ? r.par_frequence[state.frequence] : null;
+        if (choisie) {
+            const libelle = (FREQ_LABELS[state.frequence] || state.frequence).toLowerCase();
+            points.push(
+                `Fiabilité attendue en ${libelle} : ${choisie.fiabilite.label.toLowerCase()} `
+                + `(${choisie.points} point${choisie.points > 1 ? 's' : ''})`
+            );
+        }
+        const bloques = (state.profil.objectifs || []).filter(o => o.etat === 'indisponible').length;
+        majGuide('wizGuide3', {
+            variant: bloques ? 'warn' : 'ok',
+            texte: bloques
+                ? `${bloques} objectif${bloques > 1 ? 's sont' : ' est'} indisponible${bloques > 1 ? 's' : ''} avec ces données — la raison est indiquée sur chaque carte.`
+                : 'Vos données permettent tous les objectifs proposés.',
+            points,
+        });
+    }
+
+    document.querySelectorAll('.wiz-obj-card').forEach(card => {
+        card.addEventListener('click', () => {
+            if (card.classList.contains('is-unavailable')) return;  // non sélectionnable
+            document.querySelectorAll('.wiz-obj-card').forEach(c => {
+                c.classList.remove('selected');
+                c.style.borderColor = '';
+                c.style.boxShadow = '';
+            });
+            card.classList.add('selected');
+            const color = card.dataset.color;
+            card.style.borderColor = color;
+            card.style.boxShadow = `0 0 24px ${color}33`;
+            state.objectif = card.dataset.val;
+            checkStep3Ready();
+        });
+    });
+
+    document.querySelectorAll('.wiz-freq-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.wiz-freq-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            state.frequence = btn.dataset.val;
+            checkStep3Ready();
+            majGuideReglages();  // la fiabilité annoncée suit le pas de temps choisi
+        });
+    });
+
+    document.getElementById('wizStep3Back').addEventListener('click', () => {
+        goToPanel(2);
+        updateProgress(2);
+    });
+
+    step3Save.addEventListener('click', async () => {
+        step3Save.disabled = true;
+        try {
+            const res = await fetch(`/dashboard/entreprise/configurations/${state.configId}/finalize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    objectif: state.objectif,
+                    frequence: state.frequence,
+                    precision: document.getElementById('wizPrecision').value.trim(),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                svNotify(data.detail || "Erreur lors de l'enregistrement.", 'ko');
+                step3Save.disabled = false;
+                return;
+            }
+            goToPanel('success');
+            updateProgress(4);
+        } catch {
+            svNotify('Erreur réseau — vérifiez votre connexion.', 'ko');
+        }
+        step3Save.disabled = false;
+    });
+
+    document.getElementById('wizRestart').addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    /* ── Mode édition : pré-remplissage de l'étape 3 ── */
+    if (editData) {
+        document.querySelector(`.wiz-obj-card[data-val="${editData.objectif}"]`)?.click();
+        document.querySelector(`.wiz-freq-btn[data-val="${editData.frequence}"]`)?.click();
+        document.getElementById('wizPrecision').value = editData.precision || '';
+    }
+})();
+</script>
+
+{% endblock %}
