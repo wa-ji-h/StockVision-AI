@@ -1,48 +1,22 @@
 {% extends "pages/dashboard/base.html" %}
 {% block title %}Statistiques globales — StockVision AI{% endblock %}
 
+{% from "components/indicateurs.html" import carte %}
+
 {% block dash_content %}
 <div class="dash-intro-card">
     <h1 class="dash-page-title">Analyses en cours</h1>
     <p class="dash-page-guide">Consultez les configurations d'analyse créées par les entreprises et leur état d'exécution.</p>
 </div>
 
-<div class="dash-stats-grid">
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">En attente</span>
-            <span class="dash-stat-icon icon-amber"><i class="bi bi-hourglass-split"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ stats.en_attente }}</span>
-        <span class="dash-stat-trend">Demandes à traiter</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Validées</span>
-            <span class="dash-stat-icon icon-emerald"><i class="bi bi-check2-circle"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ stats.validees }}</span>
-        <span class="dash-stat-trend up">Entreprises approuvées</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Refusées</span>
-            <span class="dash-stat-icon icon-red"><i class="bi bi-x-circle"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ stats.refusees }}</span>
-        <span class="dash-stat-trend down">Demandes rejetées</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Utilisateurs</span>
-            <span class="dash-stat-icon icon-violet"><i class="bi bi-people"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ stats.utilisateurs }}</span>
-        <span class="dash-stat-trend">Tous rôles confondus</span>
-    </div>
+<div class="sv-stats">
+    {# « Refusées » n'est pas teintée : c'est une décision passée, pas un incident
+       en cours. Seule l'attente appelle une action. #}
+    {{ carte("En attente", stats.en_attente, "demandes à traiter",
+             icone="hourglass-split", ton="attention" if stats.en_attente else "") }}
+    {{ carte("Validées", stats.validees, "entreprises approuvées", icone="check2-circle") }}
+    {{ carte("Refusées", stats.refusees, "demandes rejetées", icone="x-circle") }}
+    {{ carte("Utilisateurs", stats.utilisateurs, "tous rôles confondus", icone="people") }}
 </div>
 
 <h2 class="dash-section-title">Entreprises actives par secteur</h2>

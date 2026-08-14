@@ -1,11 +1,33 @@
 {% extends "pages/dashboard/base.html" %}
-{% block title %}Liste d'entreprises — StockVision AI{% endblock %}
+{% from "components/indicateurs.html" import carte %}
+{% block title %}Entreprises partenaires — StockVision AI{% endblock %}
 
 {% block dash_content %}
 <div class="dash-intro-card">
     <h1 class="dash-page-title">Entreprises partenaires</h1>
-    <p class="dash-page-guide">Consultez la liste des entreprises validées et leur activité sur la plateforme.</p>
+    <p class="dash-page-guide">Suivez l'activité de chaque entreprise sur la plateforme : volumes de
+        données, analyses lancées et points nécessitant votre attention.</p>
 </div>
+
+{# ── Vue d'ensemble du parc ────────────────────────────────────────────────────
+   Quatre chiffres, quatre significations distinctes : combien d'entreprises
+   existent, combien vivent, ce qui est cassé, ce qui a été produit. Les volumes
+   sont calculés sur l'ensemble du parc, jamais sur le filtre courant — un
+   indicateur d'ensemble qui bougerait avec une recherche ne serait plus un repère. #}
+<section class="sv-stats">
+    {{ carte("Entreprises actives", tuiles.actives, "comptes validés sur la plateforme",
+             icone="buildings") }}
+    {{ carte("Actives ce mois", tuiles.actives_mois, "un import ou une analyse depuis le 1er",
+             icone="activity") }}
+    {# À zéro, la carte reste neutre : le vert dirait « bravo » là où il n'y a
+       qu'une absence de problème. #}
+    {{ carte("Sources en difficulté", tuiles.sources_erreur,
+             "aucune analyse ne peut s’exécuter dessus" if tuiles.sources_erreur
+             else "toutes les sources sont opérationnelles",
+             icone="database-exclamation", ton="eleve" if tuiles.sources_erreur else "") }}
+    {{ carte("Analyses ce mois", tuiles.analyses_mois, "exécutions lancées, tout le parc",
+             icone="graph-up") }}
+</section>
 
 <div class="dash-tabs">
     <a href="/dashboard/admin/entreprises?statut=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'tous' }}">Toutes</a>
@@ -26,45 +48,269 @@
     </a>
 </div>
 
-{% if not entreprises %}
-<p class="text-muted">Aucune entreprise ne correspond à cette recherche.</p>
+{% if not lignes %}
+<div class="imh-empty imh-empty--compact">
+    <div class="imh-empty-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+    </div>
+    <p class="imh-empty-text">Aucune entreprise ne correspond à cette recherche.</p>
+</div>
 {% else %}
 <div class="dash-table-wrap">
-    <table class="dash-table">
+    <table class="dash-table ent-table">
         <thead>
             <tr>
                 <th>Entreprise</th>
-                <th class="text-center">Secteur</th>
-                <th>Email</th>
+                <th class="text-center">Sources</th>
+                <th class="text-center">Analyses</th>
+                <th class="text-center">Alertes</th>
+                <th>Dernière activité</th>
                 <th class="text-center">Statut</th>
-                <th>Inscription</th>
+                <th class="text-center">Détail</th>
             </tr>
         </thead>
         <tbody>
-            {% for entreprise, utilisateur in entreprises %}
-            <tr>
+            {% for l in lignes %}
+            {# Le liseré ne porte que ce qui appelle un regard. Une entreprise dormante
+               n'en a aucun : l'inactivité n'est pas un incident. #}
+            <tr class="ent-row {{ 'ent-row--' ~ l.ton if l.ton }}">
                 <td>
                     <div class="dash-table-entity">
-                        <span class="dash-table-avatar">{{ entreprise.nom[0]|upper }}</span>
-                        <span>{{ entreprise.nom }}</span>
+                        <span class="dash-table-avatar">{{ l.initiale }}</span>
+                        <span class="ent-identite">
+                            <span class="ent-nom">{{ l.nom }}</span>
+                            <span class="ent-secteur">{{ l.secteur }}</span>
+                        </span>
                     </div>
                 </td>
-                <td class="text-center"><span class="dash-pill">{{ entreprise.secteur_activite or 'Non renseigné' }}</span></td>
-                <td>{{ utilisateur.email }}</td>
+
                 <td class="text-center">
-                    {% if entreprise.statut_demande.value == 'en_attente' %}
+                    <span class="ent-metrique">{{ l.sources }}</span>
+                    {% if l.sources_erreur %}
+                    <span class="ent-sous ent-sous--eleve">{{ l.sources_erreur }} en erreur</span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    <span class="ent-metrique {{ 'ent-metrique--nul' if not l.analyses }}">{{ l.analyses }}</span>
+                    {% if l.analyses_mois %}
+                    <span class="ent-sous">{{ l.analyses_mois }} ce mois</span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    {% if l.alertes %}
+                    <span class="ent-metrique {{ 'ent-metrique--critique' if l.alertes_critiques else 'ent-metrique--eleve' }}">{{ l.alertes }}</span>
+                    <span class="ent-sous">non traitée{{ 's' if l.alertes > 1 }}</span>
+                    {% else %}
+                    <span class="ent-metrique ent-metrique--nul">0</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <span class="ent-activite">{{ l.anciennete }}</span>
+                    {% if l.jamais_active %}
+                    <span class="ent-sous ent-sous--muet">Inscrite, jamais utilisée</span>
+                    {% elif l.dormante %}
+                    <span class="ent-sous ent-sous--muet">Dormante</span>
+                    {% else %}
+                    <span class="ent-sous ent-sous--muet">{{ l.derniere_activite }}</span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    {% if l.statut == 'en_attente' %}
                     <span class="dash-status dash-status-pending">En attente</span>
-                    {% elif entreprise.statut_demande.value == 'validee' %}
+                    {% elif l.statut == 'validee' %}
                     <span class="dash-status dash-status-ok">Active</span>
                     {% else %}
                     <span class="dash-status dash-status-ko">Refusée</span>
                     {% endif %}
                 </td>
-                <td class="dash-cell-muted">{{ entreprise.date_inscription.strftime('%d/%m/%Y') if entreprise.date_inscription else '—' }}</td>
+
+                {# Action unique : consulter. L'administrateur supervise, il n'intervient
+                   pas sur l'activité d'une entreprise depuis cette page. #}
+                <td class="text-center">
+                    <button type="button" class="dash-icon-btn entBtnDetail" title="Voir le détail" aria-label="Voir le détail de {{ l.nom }}"
+                        data-detail='{{ {
+                            "nom": l.nom, "secteur": l.secteur, "email": l.email,
+                            "statut": l.statut, "inscription": l.inscription,
+                            "activite": l.derniere_activite, "anciennete": l.anciennete,
+                            "sources": l.sources, "sources_erreur": l.sources_erreur,
+                            "analyses": l.analyses, "analyses_mois": l.analyses_mois,
+                            "alertes": l.alertes, "alertes_critiques": l.alertes_critiques,
+                            "dormante": l.dormante, "jamais": l.jamais_active
+                        } | tojson | forceescape }}'>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<p class="ent-note-perimetre">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Volumes uniquement — le contenu des analyses, les résultats et les messages d'alerte
+    appartiennent à l'entreprise qui les a produits.
+</p>
 {% endif %}
+
+{# ── Modal de supervision ──────────────────────────────────────────────────── #}
+<div class="sv-modal" id="entModal" style="display:none;">
+    <div class="sv-modal-card sv-modal-card--lg">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <span class="sv-modal-avatar" id="entModalInitiale">—</span>
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title" id="entModalNom">—</h3>
+                    <p class="sv-modal-sub">
+                        <span id="entModalSecteur">—</span>
+                        <span class="sv-modal-sep">·</span>
+                        <span id="entModalStatut" class="dash-status">—</span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" class="sv-modal-close" id="entModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            {# Le message d'état vient en premier : c'est lui qui dit s'il y a quelque chose
+               à regarder. Les volumes ne se lisent qu'ensuite. #}
+            <div class="sv-modal-section">
+                <div class="sv-modal-note" id="entModalNote" style="display:none;"></div>
+            </div>
+
+            <div class="sv-modal-section">
+                <h4 class="sv-modal-section-title">Activité sur la plateforme</h4>
+                {# Quatre tuiles, deux colonnes déclarées : jamais 3 + 1 orpheline. #}
+                <div class="sv-modal-tiles">
+                    <div class="sv-modal-tile">
+                        <span class="sv-modal-tile-valeur" id="entModalSources">—</span>
+                        <span class="sv-modal-tile-label">Sources de données</span>
+                        <span class="sv-modal-tile-sous" id="entModalSourcesSous"></span>
+                    </div>
+                    <div class="sv-modal-tile">
+                        <span class="sv-modal-tile-valeur" id="entModalAnalyses">—</span>
+                        <span class="sv-modal-tile-label">Analyses lancées</span>
+                        <span class="sv-modal-tile-sous" id="entModalAnalysesSous"></span>
+                    </div>
+                    <div class="sv-modal-tile" id="entModalAlertesTuile">
+                        <span class="sv-modal-tile-valeur" id="entModalAlertes">—</span>
+                        <span class="sv-modal-tile-label">Alertes non traitées</span>
+                        <span class="sv-modal-tile-sous" id="entModalAlertesSous"></span>
+                    </div>
+                    <div class="sv-modal-tile">
+                        <span class="sv-modal-tile-valeur sv-modal-tile-valeur--texte" id="entModalActivite">—</span>
+                        <span class="sv-modal-tile-label">Dernière activité</span>
+                        <span class="sv-modal-tile-sous" id="entModalActiviteSous"></span>
+                    </div>
+                </div>
+            </div>
+
+            {# Identité : reléguée ici, ce ne sont pas des critères de supervision.
+               En paires alignées, plus en texte au fil. #}
+            <div class="sv-modal-section">
+                <h4 class="sv-modal-section-title">Informations du compte</h4>
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Adresse e-mail</span>
+                        <span class="sv-modal-pair-value" id="entModalEmail">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Inscription</span>
+                        <span class="sv-modal-pair-value" id="entModalInscription">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="sv-modal-foot">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Cette vue ne donne accès à aucun résultat d'analyse ni au contenu des alertes.
+        </p>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const modal = document.getElementById('entModal');
+    if (!modal) return;
+
+    const txt = (id, valeur) => { document.getElementById(id).textContent = valeur; };
+
+    function remplir(d) {
+        document.getElementById('entModalInitiale').textContent = (d.nom || '?').charAt(0).toUpperCase();
+        txt('entModalNom', d.nom || '—');
+        txt('entModalSecteur', d.secteur || 'Secteur non renseigné');
+        txt('entModalEmail', d.email || '—');
+        txt('entModalInscription', d.inscription || '—');
+
+        const statut = document.getElementById('entModalStatut');
+        const libelles = { validee: 'Active', en_attente: 'En attente', refusee: 'Refusée' };
+        const classes = { validee: 'dash-status-ok', en_attente: 'dash-status-pending', refusee: 'dash-status-ko' };
+        statut.className = 'dash-status ' + (classes[d.statut] || '');
+        statut.textContent = libelles[d.statut] || '—';
+
+        txt('entModalSources', d.sources);
+        txt('entModalSourcesSous', d.sources_erreur ? d.sources_erreur + ' en erreur ou suspendue(s)' : 'toutes opérationnelles');
+        txt('entModalAnalyses', d.analyses);
+        txt('entModalAnalysesSous', d.analyses_mois ? d.analyses_mois + ' ce mois-ci' : 'aucune ce mois-ci');
+        txt('entModalAlertes', d.alertes);
+        txt('entModalAlertesSous', d.alertes_critiques ? d.alertes_critiques + ' de niveau critique' : (d.alertes ? 'aucune critique' : 'rien à signaler'));
+        /* La tuile ne se teinte que si sa valeur signale — même règle que les
+           cartes d'indicateurs. */
+        const tuileAlertes = document.getElementById('entModalAlertesTuile');
+        tuileAlertes.className = 'sv-modal-tile' +
+            (d.alertes_critiques ? ' sv-modal-tile--critique' : (d.alertes ? ' sv-modal-tile--eleve' : ''));
+        txt('entModalActivite', d.anciennete || '—');
+        txt('entModalActiviteSous', d.jamais ? 'aucune trace d’utilisation' : (d.activite || '—'));
+
+        /* Un seul message, celui qui prime : ce qui appelle une action passe avant
+           un simple constat d'inactivité. */
+        const note = document.getElementById('entModalNote');
+        let ton = '', message = '';
+        if (d.alertes_critiques) {
+            ton = 'sv-modal-note--ko';
+            message = d.alertes_critiques + ' alerte(s) critique(s) non traitée(s). Le traitement appartient à l’entreprise — vous en suivez le volume.';
+        } else if (d.sources_erreur) {
+            ton = 'sv-modal-note--ko';
+            message = d.sources_erreur + ' source(s) en erreur ou suspendue(s) : les analyses qui en dépendent ne peuvent plus s’exécuter.';
+        } else if (d.jamais) {
+            ton = 'sv-modal-note--info';
+            message = 'Cette entreprise s’est inscrite mais n’a encore rien importé ni analysé.';
+        } else if (d.dormante) {
+            ton = 'sv-modal-note--info';
+            message = 'Aucune activité récente (' + (d.anciennete || '').toLowerCase() + '). Une entreprise inactive n’est pas un incident.';
+        } else {
+            ton = 'sv-modal-note--ok';
+            message = 'Aucun point d’attention : sources opérationnelles et alertes traitées.';
+        }
+        note.className = 'sv-modal-note ' + ton;
+        note.textContent = message;
+        note.style.display = '';
+    }
+
+    document.querySelectorAll('.entBtnDetail').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let d = {};
+            try { d = JSON.parse(btn.dataset.detail || '{}'); } catch (e) { }
+            remplir(d);
+            modal.style.display = 'flex';
+        });
+    });
+
+    const fermer = () => { modal.style.display = 'none'; };
+    document.getElementById('entModalClose').addEventListener('click', fermer);
+    modal.addEventListener('click', e => { if (e.target === modal) fermer(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.style.display !== 'none') fermer();
+    });
+})();
+</script>
 {% endblock %}

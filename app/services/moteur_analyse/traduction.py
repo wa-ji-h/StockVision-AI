@@ -32,7 +32,11 @@ from app.services.moteur_analyse.schema_analyse import (
     valider_reponse,
 )
 
-DELAI_APPEL = 30.0          # secondes ; la traduction est courte, pas besoin de plus
+# 60 s et non 30 : la sortie est courte, mais les modèles à raisonnement passent un temps
+# variable à réfléchir avant d'écrire — `gemini-3.5-flash` mesuré entre 20 et 27 s sur cet
+# appel. À 30 s, une traduction parfaitement valide expirait et retombait sur le repli
+# déterministe sans qu'aucun problème réel ne se soit produit.
+DELAI_APPEL = 60.0
 # Les modèles à raisonnement dépensent une part du budget de sortie avant d'écrire :
 # la marge couvre la réflexion en plus de la spécification elle-même.
 MAX_TOKENS = 4000
@@ -85,8 +89,9 @@ Règles strictes :
   `mesure` : une clé, un numéro de ligne ou un drapeau ne sont pas des quantités, même
   écrits avec des chiffres. Ils font en revanche de bonnes `dimension`.
 - Si le besoin exprimé et l'objectif choisi divergent, le besoin exprimé prime.
-- `reformulation` est obligatoire : une phrase en français, à la deuxième personne, qui
-  redit à l'entreprise ce que tu as compris. Elle lui sert à repérer un contresens.
+- `reformulation` est obligatoire : une phrase en français, **au vouvoiement** (« vos
+  produits », jamais « tes produits » — toute l'application vouvoie), qui redit à
+  l'entreprise ce que tu as compris. Elle lui sert à repérer un contresens.
   Exemple : « Classer vos produits par chiffre d'affaires décroissant, les 10 premiers. »
   **220 caractères au maximum** — la validation coupe à 300, cette marge évite qu'un
   débordement ordinaire fasse rejeter toute la réponse."""

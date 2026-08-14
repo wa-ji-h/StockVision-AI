@@ -171,88 +171,110 @@
 {% endif %}
 
 <!-- Modal détail -->
-<div class="imh-modal-overlay" id="cfgDetailModal" style="display:none;">
-    <div class="imh-modal-card imh-modal-card--lg">
-        <button type="button" class="imh-modal-close" id="cfgDetailModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <div class="imh-modal-head">
-            <h3 class="imh-modal-title">Détail de la configuration</h3>
-            <span class="dash-status" id="cfgDetailExecBadge" style="display:none;">—</span>
-        </div>
-        <p class="imh-modal-subtitle">Source, données sélectionnées et réglages de cette analyse.</p>
-
-        <div class="imp-recap-grid">
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Source</span>
-                <span class="imp-recap-val" id="cfgDetailSource">—</span>
+<div class="sv-modal" id="cfgDetailModal" style="display:none;">
+    <div class="sv-modal-card sv-modal-card--lg">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <span class="sv-modal-avatar sv-modal-avatar--neutre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title">Détail de la configuration</h3>
+                    {# Le badge de statut est l'un des deux seuls éléments colorés
+                       autorisés dans l'en-tête : il porte une information. #}
+                    <p class="sv-modal-sub">
+                        <span>Source, sélection et réglages</span>
+                        <span class="sv-modal-sep">·</span>
+                        <span class="dash-status" id="cfgDetailExecBadge" style="display:none;">—</span>
+                    </p>
+                </div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Statut</span>
-                <span class="imp-recap-val" id="cfgDetailStatut">—</span>
-            </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label" id="cfgDetailObjectifLabel">Objectif</span>
-                <span class="imp-recap-val" id="cfgDetailObjectif">—</span>
-            </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Fréquence</span>
-                <span class="imp-recap-val" id="cfgDetailFrequence">—</span>
-            </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Créée le</span>
-                <span class="imp-recap-val" id="cfgDetailDate">—</span>
-            </div>
-            <div class="imp-recap-item" id="cfgDetailDerniereWrap" style="display:none;">
-                <span class="imp-recap-label">Dernier lancement</span>
-                <span class="imp-recap-val" id="cfgDetailDerniere">—</span>
-            </div>
-            <div class="imp-recap-item" id="cfgDetailProchaineWrap" style="display:none;">
-                <span class="imp-recap-label">Prochaine exécution</span>
-                <span class="imp-recap-val" id="cfgDetailProchaine">—</span>
-            </div>
-            <div class="imp-recap-item" id="cfgDetailFiabiliteWrap" style="display:none;">
-                <span class="imp-recap-label">Fiabilité de l'analyse</span>
-                <span class="imp-recap-val" id="cfgDetailFiabilite">—</span>
-            </div>
+            <button type="button" class="sv-modal-close" id="cfgDetailModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
 
-        <div class="imh-modal-note" id="cfgDetailMessageWrap" style="display:none;">
-            <span class="imh-modal-note-title" id="cfgDetailMessageLabel">Résultat</span>
+        <div class="sv-modal-body">
+        <div class="sv-modal-section"><div class="sv-modal-pairs">
+            <div class="sv-modal-pair">
+                <span class="sv-modal-pair-label">Source</span>
+                <span class="sv-modal-pair-value" id="cfgDetailSource">—</span>
+            </div>
+            <div class="sv-modal-pair">
+                <span class="sv-modal-pair-label">Statut</span>
+                <span class="sv-modal-pair-value" id="cfgDetailStatut">—</span>
+            </div>
+            <div class="sv-modal-pair">
+                <span class="sv-modal-pair-label" id="cfgDetailObjectifLabel">Objectif</span>
+                <span class="sv-modal-pair-value" id="cfgDetailObjectif">—</span>
+            </div>
+            <div class="sv-modal-pair">
+                <span class="sv-modal-pair-label">Fréquence</span>
+                <span class="sv-modal-pair-value" id="cfgDetailFrequence">—</span>
+            </div>
+            <div class="sv-modal-pair">
+                <span class="sv-modal-pair-label">Créée le</span>
+                <span class="sv-modal-pair-value" id="cfgDetailDate">—</span>
+            </div>
+            <div class="sv-modal-pair" id="cfgDetailDerniereWrap" style="display:none;">
+                <span class="sv-modal-pair-label">Dernier lancement</span>
+                <span class="sv-modal-pair-value" id="cfgDetailDerniere">—</span>
+            </div>
+            <div class="sv-modal-pair" id="cfgDetailProchaineWrap" style="display:none;">
+                <span class="sv-modal-pair-label">Prochaine exécution</span>
+                <span class="sv-modal-pair-value" id="cfgDetailProchaine">—</span>
+            </div>
+            <div class="sv-modal-pair" id="cfgDetailFiabiliteWrap" style="display:none;">
+                <span class="sv-modal-pair-label">Fiabilité de l'analyse</span>
+                <span class="sv-modal-pair-value" id="cfgDetailFiabilite">—</span>
+            </div>
+        </div></div>
+
+        <div class="sv-modal-note sv-modal-espace" id="cfgDetailMessageWrap" style="display:none;">
+            <span class="sv-modal-note-title" id="cfgDetailMessageLabel">Résultat</span>
             <span id="cfgDetailMessage">—</span>
         </div>
 
         {# Ordre voulu : ce qui exige une réaction d'abord — état d'exécution, besoin,
            reformulation — puis seulement le rappel de la sélection. Le détail technique
            poussait auparavant les messages sous la ligne de flottaison. #}
-        <div class="imh-modal-detail" id="cfgDetailBesoinBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Votre besoin</h4>
+        <div class="sv-modal-section" id="cfgDetailBesoinBlock" style="display:none;">
+            <h4 class="sv-modal-section-title">Votre besoin</h4>
             <p class="wiz-panel-sub" id="cfgDetailBesoin" style="margin:0;"></p>
         </div>
 
         {# Garde-fou : ce que le système a compris, affiché dès la traduction et avant
            tout calcul, pour qu'une mauvaise interprétation ne passe jamais inaperçue. #}
-        <div class="imh-modal-note imh-modal-note--info" id="cfgDetailIntentionWrap" style="display:none;">
-            <span class="imh-modal-note-title">Ce que nous avons compris</span>
+        <div class="sv-modal-note sv-modal-note--info sv-modal-espace" id="cfgDetailIntentionWrap" style="display:none;">
+            <span class="sv-modal-note-title">Ce que nous avons compris</span>
             <span id="cfgDetailIntention">—</span>
         </div>
 
-        <div class="imh-modal-detail">
-            <h4 class="imh-modal-detail-title">Données sélectionnées</h4>
-            <div id="cfgDetailTables" class="cfg-sel"></div>
+        <div class="sv-modal-section">
+            <h4 class="sv-modal-section-title">Données sélectionnées</h4>
+            <div id="cfgDetailTables" class="cfg-sel sv-modal-scroll"></div>
+        </div>
         </div>
     </div>
 </div>
 
 <!-- Modal confirmation suppression -->
-<div class="imh-modal-overlay" id="cfgDeleteModal" style="display:none;">
-    <div class="imh-modal-card">
-        <button type="button" class="imh-modal-close" id="cfgDeleteModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <h3 class="imh-modal-title">Supprimer cette configuration ?</h3>
-        <p class="imh-modal-subtitle" id="cfgDeleteText">Cette action est irréversible.</p>
-        <div class="imh-modal-actions">
+<div class="sv-modal" id="cfgDeleteModal" style="display:none;">
+    <div class="sv-modal-card">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title">Supprimer cette configuration ?</h3>
+                </div>
+            </div>
+            <button type="button" class="sv-modal-close" id="cfgDeleteModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <p class="sv-modal-sub" id="cfgDeleteText">Cette action est irréversible.</p>
+        </div>
+
+        <div class="sv-modal-actions">
             <button type="button" class="imh-btn" id="cfgDeleteCancel">Annuler</button>
             <button type="button" class="imh-btn imh-btn--danger-solid" id="cfgDeleteConfirm">Supprimer définitivement</button>
         </div>
@@ -351,13 +373,13 @@
                 : null;
             afficherChamp('cfgDetailFiabiliteWrap', 'cfgDetailFiabilite', fiab);
             const fiabEl = document.getElementById('cfgDetailFiabilite');
-            fiabEl.className = `imp-recap-val${d.fiabilite_code ? ` cfg-fiab--${d.fiabilite_code}` : ''}`;
+            fiabEl.className = `sv-modal-pair-value${d.fiabilite_code ? ` cfg-fiab--${d.fiabilite_code}` : ''}`;
 
             /* Message de la dernière exécution (erreur d'extraction, ou récapitulatif de succès) */
             const msgWrap = document.getElementById('cfgDetailMessageWrap');
             if (d.message_execution) {
                 const enErreur = d.statut_execution === 'erreur_donnees';
-                msgWrap.className = `imh-modal-note ${enErreur ? 'imh-modal-note--ko' : 'imh-modal-note--ok'}`;
+                msgWrap.className = `sv-modal-note ${enErreur ? 'sv-modal-note--ko' : 'sv-modal-note--ok'}`;
                 document.getElementById('cfgDetailMessageLabel').textContent =
                     enErreur ? 'Erreur — données indisponibles' : 'Données extraites';
                 document.getElementById('cfgDetailMessage').textContent = d.message_execution;
@@ -427,16 +449,16 @@
                muet — sinon rien ne distingue « pas encore traduit » de « mal compris ». */
             const intentionWrap = document.getElementById('cfgDetailIntentionWrap');
             const intentionEl = document.getElementById('cfgDetailIntention');
-            const intentionTitre = intentionWrap.querySelector('.imh-modal-note-title');
+            const intentionTitre = intentionWrap.querySelector('.sv-modal-note-title');
             if (d.intention_reformulee) {
-                intentionWrap.className = 'imh-modal-note imh-modal-note--info';
+                intentionWrap.className = 'sv-modal-note sv-modal-note--info';
                 intentionTitre.textContent = 'Ce que nous avons compris';
                 intentionEl.textContent = d.intention_reformulee;
                 intentionWrap.style.display = '';
             } else if (d.intention_erreur) {
                 /* Colonne dédiée : cette trace survit à un lancement réussi, contrairement
                    à message_execution qui appartient aux tâches 4.1/4.2. */
-                intentionWrap.className = 'imh-modal-note imh-modal-note--ko';
+                intentionWrap.className = 'sv-modal-note sv-modal-note--ko';
                 intentionTitre.textContent = 'Interprétation indisponible';
                 intentionEl.textContent = d.intention_erreur;
                 intentionWrap.style.display = '';

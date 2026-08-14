@@ -55,7 +55,89 @@ from app.services.moteur_analyse import (
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # app/
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+
+def _contexte_alertes(request: Request) -> dict:
+    """Alimente la cloche du topbar sur **toutes** les pages, en un seul endroit.
+
+    Passer par un context processor plutôt que par les ~15 routes : le badge doit être
+    juste partout, et le recopier dans chaque `TemplateResponse` garantissait qu'une
+    route oubliée afficherait un compteur faux.
+
+    Les deux rôles ont une cloche, mais elle ne dit pas la même chose :
+    - **entreprise** : ses alertes non traitées, chacune menant à son résultat ;
+    - **administrateur** : ce qui appelle son attention sur le parc, chacun menant à
+      l'écran où il agit. Jamais le détail métier d'une entreprise.
+
+    Ne lève jamais : une cloche indisponible n'empêche aucune page de s'afficher.
+    """
+    vide = {"cloche_total": 0, "cloche_role": None,
+            "alertes_recentes": [], "supervision": []}
+    try:
+        from app.core.security import decode_access_token
+        from app.database.connection import SessionLocal
+        from app.database.models.utilisateur import Utilisateur
+
+        jeton = request.cookies.get("access_token")
+        if not jeton:
+            return vide
+        charge = decode_access_token(jeton)
+        if not charge or not charge.get("sub"):
+            return vide
+
+        db = SessionLocal()
+        try:
+            user = db.get(Utilisateur, int(charge["sub"]))
+            if not user:
+                return vide
+            role = getattr(user.role, "value", user.role)
+
+            if role == "entreprise":
+                from app.services.alertes import alertes_recentes, compter_non_lues
+
+                return {
+                    "cloche_total": compter_non_lues(db, user.idUtilisateur),
+                    "cloche_role": "entreprise",
+                    "supervision": [],
+                    "alertes_recentes": [
+                        {
+                            "id": a.id_alerte,
+                            "niveau": a.niveau,
+                            "message": a.message or "",
+                            "type": a.type_alerte or "",
+                            "id_resultat": a.id_resultat,
+                            "id_configuration": a.id_configuration,
+                            "date": a.date_creation.strftime("%d/%m à %H:%M") if a.date_creation else "",
+                        }
+                        for a in alertes_recentes(db, user.idUtilisateur)
+                    ],
+                }
+
+            if role == "administrateur":
+                from app.services.supervision import NATURES, notifications_admin
+
+                items = notifications_admin(db)
+                return {
+                    "cloche_total": sum(i["nombre"] for i in items),
+                    "cloche_role": "administrateur",
+                    "alertes_recentes": [],
+                    "supervision": [
+                        {**i, "nature_libelle": NATURES[i["nature"]][0],
+                         "ton": NATURES[i["nature"]][1]}
+                        for i in items
+                    ],
+                }
+            return vide
+        finally:
+            db.close()
+    except Exception:
+        return vide
+
+
+templates = Jinja2Templates(
+    directory=os.path.join(BASE_DIR, "templates"),
+    context_processors=[_contexte_alertes],
+)
 templates.env.globals["asset_version"] = str(int(time.time()))
 
 router = APIRouter(tags=["dashboard"])
@@ -305,6 +387,37 @@ def admin_demandes(
     return _no_store(response)
 
 
+# Au-delà, une entreprise est dite « dormante ». C'est un constat, jamais une alerte :
+# ne pas utiliser la plateforme n'est pas un incident, et le liseré reste neutre.
+DELAI_DORMANCE = timedelta(days=30)
+
+
+def _fmt_date(valeur, avec_heure: bool = False) -> str:
+    if not valeur:
+        return "—"
+    return valeur.strftime("%d/%m/%Y à %H:%M" if avec_heure else "%d/%m/%Y")
+
+
+def _anciennete(valeur) -> str:
+    """« il y a 3 jours » — un délai se lit plus vite qu'une date à soustraire."""
+    if not valeur:
+        return "Aucune activité"
+    jours = (datetime.now() - valeur).days
+    if jours <= 0:
+        return "Aujourd'hui"
+    if jours == 1:
+        return "Hier"
+    if jours < 31:
+        return f"Il y a {jours} jours"
+    if jours < 365:
+        return f"Il y a {jours // 30} mois"
+    return "Il y a plus d'un an"
+
+
+def _est_dormante(valeur) -> bool:
+    return valeur is not None and (datetime.now() - valeur) > DELAI_DORMANCE
+
+
 @router.get("/dashboard/admin/entreprises")
 def admin_entreprises(
     request: Request,
@@ -313,8 +426,52 @@ def admin_entreprises(
     statut: str = "validee",
     q: str = "",
 ):
+    from app.services.supervision import activite_par_entreprise
+
     entreprises = entreprise_service.list_entreprises(db, statut=statut, q=q)
     pending_count = _pending_count(db)
+
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    volumes = activite_par_entreprise(db, debut_mois)
+    vide = volumes.get("_vide", {})
+
+    lignes = []
+    for entreprise, utilisateur in entreprises:
+        v = volumes.get(entreprise.idEntreprise, vide)
+        derniere = v.get("derniere_activite")
+        # Deux signalements de nature différente, à ne surtout pas confondre :
+        # « attention » appelle un regard (une source cassée, une alerte critique non
+        # traitée), « dormante » est un simple constat. Une entreprise qui n'utilise pas
+        # la plateforme n'est pas un incident — elle ne porte donc aucun liseré.
+        attention = bool(v.get("sources_erreur")) or bool(v.get("alertes_critiques"))
+        lignes.append({
+            "entreprise": entreprise,
+            "nom": entreprise.nom,
+            "initiale": (entreprise.nom or "?")[0].upper(),
+            "secteur": entreprise.secteur_activite or "Non renseigné",
+            "email": utilisateur.email,
+            "statut": entreprise.statut_demande.value,
+            "inscription": _fmt_date(entreprise.date_inscription),
+            "derniere_activite": _fmt_date(derniere, avec_heure=True),
+            "anciennete": _anciennete(derniere),
+            "jamais_active": derniere is None,
+            "dormante": _est_dormante(derniere),
+            "attention": attention,
+            "ton": "critique" if v.get("alertes_critiques") else ("eleve" if v.get("sources_erreur") else ""),
+            **{c: v.get(c, 0) for c in ("sources", "sources_erreur", "analyses",
+                                        "analyses_mois", "alertes", "alertes_critiques")},
+        })
+
+    reels = [v for cle, v in volumes.items() if cle != "_vide"]
+    tuiles = {
+        "actives": db.query(Entreprise).filter(
+            Entreprise.statut_demande == StatutDemandeEnum.validee).count(),
+        "actives_mois": sum(1 for v in reels
+                            if v["derniere_activite"] and v["derniere_activite"] >= debut_mois),
+        "sources_erreur": sum(v["sources_erreur"] for v in reels),
+        "analyses_mois": sum(v["analyses_mois"] for v in reels),
+    }
+
     response = templates.TemplateResponse(
         request,
         "pages/dashboard_admin/admin_entreprises.html",
@@ -324,6 +481,8 @@ def admin_entreprises(
             "pending_count": pending_count,
             "notifications_count": pending_count,
             "entreprises": entreprises,
+            "lignes": lignes,
+            "tuiles": tuiles,
             "statut_filtre": statut,
             "q": q,
         },
@@ -686,6 +845,84 @@ async def admin_parametres_test_smtp(
         return JSONResponse({"message": "Email de test envoyé avec succès."})
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Échec SMTP : {exc}")
+
+
+def _periode_activite(groupe: dict) -> str:
+    """Instant ou plage horaire d'un groupe d'actions.
+
+    Une plage n'est affichée que si elle en est une : sur la même minute, « de 09:14 à
+    09:14 » serait une lourdeur pour rien.
+    """
+    debut, fin = groupe.get("debut"), groupe.get("fin")
+    if not fin:
+        return "—"
+    if not debut or debut.strftime("%d/%m %H:%M") == fin.strftime("%d/%m %H:%M"):
+        return fin.strftime("%d/%m à %H:%M")
+    if debut.date() == fin.date():
+        return f"{fin.strftime('%d/%m')} de {debut.strftime('%H:%M')} à {fin.strftime('%H:%M')}"
+    return f"du {debut.strftime('%d/%m à %H:%M')} au {fin.strftime('%d/%m à %H:%M')}"
+
+
+@router.get("/dashboard/admin/alertes")
+def admin_alertes(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.administrateur)),
+):
+    """Supervision : volumes d'alertes par entreprise et par niveau.
+
+    ⚠️ **Aucun message, aucun motif, aucun lien vers un résultat.** L'administrateur
+    surveille la charge d'alertes du parc ; le détail métier appartient à l'entreprise,
+    et il n'agit pas à sa place.
+    """
+    from app.services.alertes import NIVEAUX_ALERTE, synthese_admin
+    from app.services.supervision import NATURES, activite_recente, notifications_admin
+
+    title, guide = ADMIN_SECTIONS["alertes"]
+    lignes = synthese_admin(db)
+    totaux = {
+        "entreprises": len(lignes),
+        "total": sum(l["total"] for l in lignes),
+        "non_traitees": sum(l["non_traitees"] for l in lignes),
+        **{niv["code"]: sum(l.get(niv["code"], 0) for l in lignes) for niv in NIVEAUX_ALERTE},
+    }
+    # Part de chaque niveau dans le total : c'est la ligne de contexte des tuiles.
+    totaux["parts"] = {
+        niv["code"]: round(totaux[niv["code"]] * 100 / totaux["total"]) if totaux["total"] else 0
+        for niv in NIVEAUX_ALERTE
+    }
+    # Part de chaque niveau, pour la barre de répartition. Calculée ici : un gabarit ne
+    # doit pas faire d'arithmétique.
+    for ligne in lignes:
+        ligne["parts"] = {
+            niv["code"]: round(ligne.get(niv["code"], 0) * 100 / ligne["total"], 1)
+            if ligne["total"] else 0
+            for niv in NIVEAUX_ALERTE
+        }
+
+    pending_count = db.query(Entreprise).filter(
+        Entreprise.statut_demande == StatutDemandeEnum.en_attente).count()
+
+    response = templates.TemplateResponse(
+        request,
+        "pages/dashboard_admin/admin_alertes.html",
+        {
+            "user": user, "active_page": "alertes",
+            "pending_count": pending_count, "notifications_count": pending_count,
+            "title": title, "guide": guide,
+            "lignes": lignes, "totaux": totaux, "niveaux": NIVEAUX_ALERTE,
+            # Ce qui appelle une action, et le fil de vie du parc : la page d'alertes est
+            # le poste de supervision, pas seulement un tableau de comptes.
+            "supervision": [
+                {**i, "nature_libelle": NATURES[i["nature"]][0], "ton": NATURES[i["nature"]][1]}
+                for i in notifications_admin(db)
+            ],
+            "activite": [
+                {**a, "periode": _periode_activite(a)} for a in activite_recente(db)
+            ],
+        },
+    )
+    return _no_store(response)
 
 
 @router.get("/dashboard/admin/{section}")
@@ -2943,6 +3180,105 @@ def entreprise_resultats(
         },
     )
     return _no_store(response)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Module 5 — alertes
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Déclarées AVANT `/{section}`, qui les absorberait sinon.
+
+@router.get("/dashboard/entreprise/alertes")
+def entreprise_alertes(
+    request: Request,
+    niveau: str = "tous",
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
+):
+    """Mes alertes — les plus récentes d'abord, avec accès au résultat qui les a produites."""
+    from app.services.alertes import (
+        NIVEAUX_ALERTE,
+        STATUT_TRAITEE,
+        compter_par_niveau,
+        lister_alertes,
+    )
+
+    title, guide = _ENTREPRISE_SECTIONS["alertes"]
+    alertes = lister_alertes(db, user.idUtilisateur, niveau)
+
+    # Objectif et fréquence de la configuration concernée : l'alerte doit dire de quelle
+    # analyse elle parle, pas seulement ce qui s'est passé.
+    ids_config = {a.id_configuration for a in alertes}
+    configs = {
+        c.id_configuration: c
+        for c in db.query(ConfigurationAnalyse).filter(
+            ConfigurationAnalyse.id_configuration.in_(ids_config)).all()
+    } if ids_config else {}
+    _FREQ_LABELS = dict(_FREQUENCES)
+
+    donnees = []
+    for a in alertes:
+        cfg = configs.get(a.id_configuration)
+        presentation = _presenter_objectif(cfg) if cfg else {
+            "label": "Configuration supprimée", "icon": "alert-triangle",
+            "color": "#64748b", "libre": False, "titre": "", "sous_ligne": "",
+        }
+        donnees.append({
+            "id": a.id_alerte,
+            "niveau": a.niveau or "eleve",
+            "libelle": LIBELLE_PAR_NIVEAU.get(a.niveau, a.niveau or "—"),
+            "message": a.message or "",
+            "type": a.type_alerte or "",
+            "id_resultat": a.id_resultat,
+            "id_configuration": a.id_configuration,
+            "objectif": presentation,
+            "frequence": _FREQ_LABELS.get(cfg.frequence, cfg.frequence or "—") if cfg else "—",
+            "date": a.date_creation.strftime("%d/%m/%Y à %H:%M") if a.date_creation else "—",
+            "traitee": a.statut == STATUT_TRAITEE,
+            "date_traitement": (a.date_traitement.strftime("%d/%m/%Y à %H:%M")
+                                if a.date_traitement else None),
+        })
+
+    comptes = compter_par_niveau(db, user.idUtilisateur)
+    response = templates.TemplateResponse(
+        request,
+        "pages/dashboard_entreprise/alertes.html",
+        {
+            "user": user, "active_page": "alertes", "notifications_count": 0,
+            "pending_count": 0, "title": title, "guide": guide,
+            "alertes": donnees,
+            "total": sum(comptes.values()),
+            "comptes": comptes,
+            "niveaux": NIVEAUX_ALERTE,
+            "niveau_filtre": niveau,
+        },
+    )
+    return _no_store(response)
+
+
+@router.post("/dashboard/entreprise/alertes/{id_alerte}/traiter")
+async def entreprise_alerte_traiter(
+    id_alerte: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
+):
+    """Marque une alerte traitée — ou la remet en attente. Elle reste consultable."""
+    from app.services.alertes import compter_non_lues, marquer_traitee
+
+    try:
+        corps = await request.json()
+    except Exception:
+        corps = {}
+    traitee = bool(corps.get("traitee", True))
+
+    if not marquer_traitee(db, id_alerte, user.idUtilisateur, traitee):
+        raise HTTPException(status_code=404, detail="Alerte introuvable.")
+    return JSONResponse({
+        "ok": True,
+        "traitee": traitee,
+        "non_lues": compter_non_lues(db, user.idUtilisateur),
+    })
 
 
 @router.get("/dashboard/entreprise/{section}")

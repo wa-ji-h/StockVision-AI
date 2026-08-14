@@ -1712,37 +1712,6 @@ main.main {
     margin-bottom: 2rem;
 }
 
-.dash-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
-}
-
-.dash-stat-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.dash-stat-label {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.dash-stat-value {
-    font-size: 2rem;
-    font-weight: 800;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
 .dash-table-wrap {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -2069,32 +2038,6 @@ main.main {
 .dash-logout-link { color: #f87171; }
 .dash-logout-link:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; }
 
-/* ===== DASHBOARD — STAT CARD ICON + TREND ===== */
-.dash-stat-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-.dash-stat-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: rgba(34, 211, 238, 0.1);
-    border: 1px solid var(--border-glow);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.15rem;
-}
-.dash-stat-trend {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
-}
-.dash-stat-trend.up { color: #34d399; }
-.dash-stat-trend.down { color: #f87171; }
-
 /* ===== DASHBOARD — PREMIUM ICON COLOR VARIANTS (nav + stat cards) ===== */
 .dash-nav-icon {
     display: flex;
@@ -2115,16 +2058,6 @@ main.main {
 .icon-violet { background: rgba(168, 85, 247, 0.14); color: #c084fc; }
 .icon-slate { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; }
 .icon-emerald { background: rgba(52, 211, 153, 0.14); color: #34d399; }
-
-.dash-stat-icon.icon-cyan,
-.dash-stat-icon.icon-blue,
-.dash-stat-icon.icon-indigo,
-.dash-stat-icon.icon-amber,
-.dash-stat-icon.icon-red,
-.dash-stat-icon.icon-violet,
-.dash-stat-icon.icon-slate {
-    border: none;
-}
 
 /* ===== DASHBOARD — SIDEBAR FOOTER (compte connecté) ===== */
 .dash-sidebar-footer {
@@ -2637,62 +2570,6 @@ main.main {
     color: #34d399;
 }
 
-/* Grille de stats */
-.profil-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-}
-
-.profil-stats-grid--3 {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-.profil-stat-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-glow);
-    border-radius: 14px;
-    transition: border-color 0.2s ease;
-}
-
-.profil-stat-card:hover {
-    border-color: rgba(34, 211, 238, 0.2);
-}
-
-.profil-stat-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
-.profil-stat-body {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.profil-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    line-height: 1;
-    color: var(--text);
-}
-
-.profil-stat-label {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 0.2rem;
-}
-
 /* Formulaires inline */
 .profil-form-card {
     background: var(--bg-card);
@@ -2782,15 +2659,11 @@ main.main {
 
 /* Responsive */
 @media (max-width: 900px) {
-    .profil-stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .profil-stats-grid--3 { grid-template-columns: repeat(2, 1fr); }
     .profil-header { flex-direction: column; align-items: flex-start; }
     .profil-header-actions { margin-left: 0; }
 }
 
 @media (max-width: 560px) {
-    .profil-stats-grid,
-    .profil-stats-grid--3 { grid-template-columns: 1fr; }
     .profil-meta-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     .profil-meta-sep { display: none; }
 }
@@ -2881,11 +2754,34 @@ main.main {
 }
 
 [data-theme="light"] .dash-profile-dropdown,
-[data-theme="light"] .dash-stat-card,
+[data-theme="light"] .sv-modal-card,
 [data-theme="light"] .dash-table-wrap {
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
+
+/* Carte d'indicateur en thème clair : les voiles blancs du thème sombre ne
+   produisent rien sur fond blanc. La teinte est reprise en lavis, la même
+   variable pilotant toujours l'ensemble. */
+[data-theme="light"] .sv-stat {
+    background:
+        radial-gradient(120% 140% at 100% 0%,
+                        color-mix(in srgb, var(--sv-teinte) 12%, transparent) 0%,
+                        transparent 58%),
+        #ffffff;
+    border-color: rgba(15, 23, 42, 0.09);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+}
+[data-theme="light"] .sv-stat:hover {
+    box-shadow: 0 10px 26px -18px rgba(15, 23, 42, 0.45);
+    border-color: color-mix(in srgb, var(--sv-teinte) 38%, transparent);
+}
+[data-theme="light"] .sv-stat::before { opacity: 0.75; }
+[data-theme="light"] .sv-stat::after { opacity: 0.10; }
+[data-theme="light"] .sv-stat-icone {
+    box-shadow: 0 0 16px -8px color-mix(in srgb, var(--sv-teinte) 55%, transparent);
+}
+[data-theme="light"] .sv-stat--compact { background: rgba(15, 23, 42, 0.03); }
 
 [data-theme="light"] .dash-bar-track,
 [data-theme="light"] .dash-pill,
@@ -2926,7 +2822,6 @@ main.main {
     color: #fff;
     background: rgba(255,255,255,0.12);
 }
-
 
 /* ===================================================================
    PAGE PARAMÈTRES — /dashboard/admin/parametres
@@ -3254,7 +3149,6 @@ main.main {
     flex-shrink: 0;
     margin-left: 0.25rem;
 }
-
 
 /* ===================================================================
    PAGE IMPORT — /dashboard/entreprise/import
@@ -3668,7 +3562,6 @@ main.main {
     margin-top: 0.5rem;
 }
 
-
 /* ── Layout 2 colonnes import ── */
 .imp-layout {
     display: grid;
@@ -3932,7 +3825,6 @@ main.main {
     padding: 0.9rem 1.25rem;
     border-top: 1px solid var(--border);
 }
-
 
 /* ══════════════════ DB Connection Panel ══════════════════ */
 
@@ -4358,126 +4250,6 @@ main.main {
     margin: 0;
     line-height: 1.6;
 }
-
-/* Modal détails (fichier) */
-.imh-modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: rgba(4, 10, 25, 0.72);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-}
-.imh-modal-card {
-    position: relative;
-    background: var(--bg-card);
-    border: 1px solid var(--border-glow);
-    border-radius: 16px;
-    padding: 1.5rem;
-    max-width: 420px;
-    width: 100%;
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
-    box-shadow: var(--shadow-glow);
-}
-/* Variante large : popups de détail (grille de méta + listes de colonnes).
-   Les popups de confirmation gardent la largeur étroite par défaut. */
-.imh-modal-card--lg { max-width: 620px; }
-
-.imh-modal-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin-bottom: 0.3rem;
-    padding-right: 2.25rem; /* réserve la place du bouton de fermeture */
-}
-.imh-modal-subtitle {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-    margin: 0 0 1rem;
-}
-/* Positionné, plus flottant : le titre reste aligné même sur deux lignes. */
-.imh-modal-close {
-    position: absolute;
-    top: 0.9rem;
-    right: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--text-dim);
-    cursor: pointer;
-    padding: 0;
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-}
-.imh-modal-close:hover {
-    color: var(--text);
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--border-light);
-}
-
-/* Bandeau d'en-tête : titre à gauche, badge de statut à droite */
-.imh-modal-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding-right: 2.25rem;
-}
-.imh-modal-head .imh-modal-title { padding-right: 0; }
-
-/* La grille de méta devient un panneau encadré : alignement lisible en 2 colonnes */
-.imh-modal-card .imp-recap-grid {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.95rem 1.1rem;
-    gap: 0.85rem 1.25rem;
-}
-
-/* Encart de message (résultat d'exécution, erreur…) — teinte selon l'issue */
-.imh-modal-note {
-    margin-top: 1.1rem;
-    padding: 0.8rem 0.95rem;
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--text-dim);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.02);
-    font-size: 0.82rem;
-    line-height: 1.55;
-    color: var(--text-muted);
-}
-.imh-modal-note--ok   { border-left-color: #34d399; background: rgba(52, 211, 153, 0.07); }
-.imh-modal-note--ko   { border-left-color: #f87171; background: rgba(239, 68, 68, 0.07); color: #fca5a5; }
-.imh-modal-note--info { border-left-color: #38bdf8; background: rgba(14, 165, 233, 0.07); }
-.imh-modal-note-title {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: 0.25rem;
-}
-.imh-modal-note--ko .imh-modal-note-title { color: #f87171; }
-
-.imh-modal-detail { margin-top: 1.1rem; }
-.imh-modal-detail-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 0.6rem;
-}
 .imh-columns-list {
     display: flex;
     flex-wrap: wrap;
@@ -4491,13 +4263,6 @@ main.main {
     max-height: 240px;
     overflow-y: auto;
     padding-right: 0.25rem;
-}
-
-.imh-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.6rem;
-    margin-top: 1.25rem;
 }
 
 /* ===== ASSISTANT DE CONFIGURATION D'ANALYSE (wizard) ===== */
@@ -4589,7 +4354,7 @@ main.main {
 .wiz-panel-sub:has(+ .wiz-guide) { margin-bottom: 0.75rem; }
 
 /* Bandeau de guidage — composant unique des trois étapes du wizard.
-   Même famille visuelle que .imh-modal-note : fond teinté + liseré gauche + icône. */
+   Même famille visuelle que .sv-modal-note : fond teinté + liseré gauche + icône. */
 .wiz-guide {
     display: flex;
     gap: 0.7rem;
@@ -5652,38 +5417,6 @@ button,
     color: var(--text-muted);
 }
 
-/* ── Indicateurs clés ──────────────────────────────────────────────────────── */
-.res-kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.7rem;
-    margin-bottom: 1.1rem;
-}
-.res-kpi {
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.75rem 0.85rem;
-    display: flex; flex-direction: column; gap: 0.22rem;
-    min-width: 0;
-}
-.res-kpi-label {
-    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.04em; color: var(--text-dim);
-}
-/* tabular-nums : les chiffres s'alignent d'une carte à l'autre. */
-.res-kpi-valeur {
-    font-size: 1.22rem; font-weight: 700; color: var(--text);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.res-kpi-detail { font-size: 0.72rem; color: var(--text-muted-subtle); }
-
-/* Teintes de fiabilité — les mêmes que partout ailleurs dans l'application. */
-.res-kpi--fiab-bonne .res-kpi-valeur      { color: #34d399; }
-.res-kpi--fiab-limitee .res-kpi-valeur    { color: #f59e0b; }
-.res-kpi--fiab-indicative .res-kpi-valeur { color: var(--text-muted); }
-
 /* ── Graphique ─────────────────────────────────────────────────────────────── */
 .res-graphique {
     margin: 0 0 1.1rem;
@@ -5799,8 +5532,7 @@ button,
 }
 
 @media (max-width: 720px) {
-    .res-evolution { display: none; }   /* l'en-tête doit rester lisible avant tout */
-    .res-kpis { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); }
+    .res-evolution { display: none; }
 }
 
 /* ── Modal de détail : sélection compacte ──────────────────────────────────────
@@ -5834,4 +5566,763 @@ button,
     color: var(--text-muted-subtle);
     font-size: 0.73rem; font-weight: 700;
     cursor: help;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MODULE 5 — ALERTES
+   Couleurs reprises telles quelles de criticite.py : orange pour « élevé », rouge
+   pour « critique » et lui seul. Le vert reste réservé aux confirmations de succès
+   et n'apparaît nulle part ici.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cloche et panneau du topbar ──────────────────────────────────────────────
+   Les styles vivent avec le composant refondu, plus bas (`.dash-cloche-*`).
+   L'ancien bloc `.dash-alertes-*` a été retiré : deux styles parallèles pour
+   le même composant est exactement ce que le design system interdit. */
+
+/* ── Page « Mes alertes » ──────────────────────────────────────────────────── */
+.alr-liste { display: flex; flex-direction: column; gap: 0.65rem; }
+
+.alr-carte {
+    display: flex; align-items: center; gap: 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    transition: border-color 0.18s ease, opacity 0.18s ease;
+}
+.alr-carte:hover { border-color: var(--border-light); }
+/* Le liseré porte l'intensité : « élevé » ne doit pas crier aussi fort que « critique ». */
+.alr-carte--eleve    { box-shadow: inset 3px 0 0 #fb923c; }
+.alr-carte--critique { box-shadow: inset 3px 0 0 #f87171; }
+
+/* Traitée : reste consultable, mais visuellement en retrait. */
+.alr-carte.is-traitee { opacity: 0.55; }
+.alr-carte.is-traitee .alr-message { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+.alr-niveau {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.28rem 0.65rem; border-radius: 999px;
+    font-size: 0.73rem; font-weight: 700;
+    white-space: nowrap;
+}
+.alr-niveau--eleve    { background: rgba(249, 115, 22, 0.14); color: #fb923c; }
+.alr-niveau--critique { background: rgba(248, 113, 113, 0.16); color: #f87171; }
+
+.alr-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.alr-message { margin: 0; font-size: 0.88rem; color: var(--text); line-height: 1.45; }
+.alr-meta {
+    display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+    font-size: 0.74rem; color: var(--text-muted-subtle);
+}
+.alr-obj { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; }
+.alr-obj-libre { font-style: italic; }
+.alr-traitee-le { font-style: italic; }
+
+.alr-actions { flex-shrink: 0; display: flex; align-items: center; gap: 0.4rem; }
+.alr-btn { padding: 0.35rem 0.7rem; font-size: 0.76rem; }
+
+/* ── Vue admin : volumes ───────────────────────────────────────────────────── */
+.alr-compte {
+    display: inline-block; min-width: 26px;
+    padding: 0.12rem 0.45rem; border-radius: 6px;
+    font-size: 0.78rem; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.alr-compte--eleve    { background: rgba(249, 115, 22, 0.14); color: #fb923c; }
+.alr-compte--critique { background: rgba(248, 113, 113, 0.16); color: #f87171; }
+.alr-compte--attente  { background: rgba(148, 163, 184, 0.14); color: var(--text-muted); }
+.alr-total--eleve     { color: #fb923c; }
+.alr-total--critique  { color: #f87171; }
+
+@media (max-width: 720px) {
+    .alr-carte { flex-wrap: wrap; }
+    .alr-corps { order: 3; flex-basis: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CLOCHE ET SUPERVISION — refonte visuelle
+   Aucune couleur nouvelle : accent cyan pour ce qui appelle une décision, orange
+   d'« élevé » pour ce qui peut être corrigé, rouge de « critique » pour ce qui
+   se surveille. Le vert reste réservé aux confirmations de succès.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.dash-cloche { position: relative; display: inline-flex; }
+.dash-cloche-btn { position: relative; }
+
+/* Badge chiffré, posé sur la cloche. L'anneau de surface le détache du fond quel
+   que soit ce qui passe derrière. */
+.dash-cloche-badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 999px;
+    background: #f87171; color: #04070f;
+    font-size: 0.64rem; font-weight: 800; line-height: 18px;
+    text-align: center; letter-spacing: -0.01em;
+    box-shadow: 0 0 0 2px var(--bg-dark), 0 2px 8px rgba(248, 113, 113, 0.45);
+    font-variant-numeric: tabular-nums;
+}
+/* Côté administrateur, la cloche annonce surtout des décisions à prendre, pas des
+   incidents : l'accent de la marque plutôt que le rouge d'alerte. */
+.dash-cloche-badge--admin {
+    background: var(--accent); color: #04070f;
+    box-shadow: 0 0 0 2px var(--bg-dark), 0 2px 8px rgba(34, 211, 238, 0.4);
+}
+
+.dash-cloche-panneau {
+    position: absolute; top: calc(100% + 0.65rem); right: 0;
+    width: min(400px, calc(100vw - 2rem));
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5);
+    z-index: 240;
+    overflow: hidden;
+    animation: clocheApparait 0.16s ease-out;
+}
+@keyframes clocheApparait {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.dash-cloche-entete {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.dash-cloche-titre {
+    font-size: 0.73rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-muted);
+}
+.dash-cloche-compte {
+    padding: 0.1rem 0.45rem; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08); color: var(--text);
+    font-size: 0.7rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.dash-cloche-liste { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.dash-cloche-item {
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+}
+.dash-cloche-item:hover { background: rgba(255, 255, 255, 0.04); }
+.dash-cloche-item:hover .dash-cloche-fleche { transform: translateX(2px); opacity: 1; }
+
+.dash-cloche-pastille {
+    flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.76rem; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.dash-cloche-pastille--accent   { background: rgba(34, 211, 238, 0.14); color: var(--accent); }
+.dash-cloche-pastille--eleve    { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.dash-cloche-pastille--critique { background: rgba(248, 113, 113, 0.16); color: #f87171; }
+
+.dash-cloche-corps { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.dash-cloche-nature {
+    font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+.dash-cloche-nature--accent   { color: var(--accent); }
+.dash-cloche-nature--eleve    { color: #fb923c; }
+.dash-cloche-nature--critique { color: #f87171; }
+.dash-cloche-message {
+    font-size: 0.82rem; color: var(--text); line-height: 1.45; font-weight: 500;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.dash-cloche-meta { font-size: 0.71rem; color: var(--text-dim); line-height: 1.4; }
+.dash-cloche-fleche {
+    flex-shrink: 0; color: var(--text-dim); opacity: 0.5; margin-top: 5px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.dash-cloche-vide {
+    margin: 0; padding: 1.7rem 1rem; text-align: center;
+    font-size: 0.82rem; color: var(--text-dim);
+}
+.dash-cloche-pied {
+    display: block; padding: 0.75rem 1rem; text-align: center;
+    font-size: 0.78rem; font-weight: 700; color: var(--accent);
+    text-decoration: none; border-top: 1px solid var(--border);
+    transition: background 0.15s ease;
+}
+.dash-cloche-pied:hover { background: rgba(34, 211, 238, 0.08); }
+
+/* ── Page admin : ce qui appelle une action ────────────────────────────────── */
+.sup-actions {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0.7rem; margin-bottom: 1.1rem;
+}
+.sup-carte {
+    display: flex; align-items: flex-start; gap: 0.85rem;
+    padding: 0.95rem 1.05rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    text-decoration: none;
+    transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.sup-carte:hover { transform: translateY(-1px); border-color: var(--border-light); }
+/* Le liseré porte la nature : décider, corriger, observer. */
+.sup-carte--accent   { box-shadow: inset 3px 0 0 var(--accent); }
+.sup-carte--eleve    { box-shadow: inset 3px 0 0 #fb923c; }
+.sup-carte--critique { box-shadow: inset 3px 0 0 #f87171; }
+
+.sup-carte-nombre {
+    flex-shrink: 0;
+    min-width: 40px; height: 40px; padding: 0 0.4rem;
+    border-radius: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums;
+    background: rgba(255, 255, 255, 0.05); color: var(--text);
+}
+.sup-carte--accent   .sup-carte-nombre { background: rgba(34, 211, 238, 0.13); color: var(--accent); }
+.sup-carte--eleve    .sup-carte-nombre { background: rgba(249, 115, 22, 0.14); color: #fb923c; }
+.sup-carte--critique .sup-carte-nombre { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+
+.sup-carte-corps { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; flex: 1; }
+.sup-carte-nature {
+    font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-dim);
+}
+.sup-carte-titre { font-size: 0.88rem; font-weight: 700; color: var(--text); line-height: 1.4; }
+.sup-carte-detail { font-size: 0.76rem; color: var(--text-muted-subtle); line-height: 1.45; }
+.sup-carte-action {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    align-self: flex-end; margin-top: 0.1rem;
+    font-size: 0.75rem; font-weight: 700; color: var(--accent); white-space: nowrap;
+}
+
+/* ── Deux colonnes : répartition et activité ───────────────────────────────── */
+.sup-colonnes {
+    display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 0.9rem;
+}
+@media (max-width: 980px) { .sup-colonnes { grid-template-columns: 1fr; } }
+
+.sup-bloc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1rem 1.1rem 1.1rem;
+}
+.sup-bloc-entete { margin-bottom: 0.85rem; }
+.sup-bloc-titre { margin: 0 0 0.15rem; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.sup-bloc-note { font-size: 0.73rem; color: var(--text-dim); }
+.sup-vide { margin: 0; padding: 1.4rem 0; text-align: center; font-size: 0.8rem; color: var(--text-dim); }
+
+.sup-entreprises { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.sup-entreprise { display: flex; flex-direction: column; gap: 0.4rem; }
+.sup-ent-tete { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.sup-ent-nom { font-size: 0.86rem; font-weight: 700; color: var(--text); }
+.sup-ent-compteurs { display: inline-flex; align-items: center; gap: 0.35rem; }
+.sup-ent-total { font-size: 0.72rem; color: var(--text-dim); margin-left: 0.15rem; }
+
+/* Barre de répartition : la proportion se lit d'un coup d'œil, deux nombres
+   côte à côte demandent un calcul mental. */
+.sup-barre {
+    display: flex; height: 7px; border-radius: 999px; overflow: hidden;
+    background: rgba(148, 163, 184, 0.12);
+}
+.sup-barre-part { height: 100%; }
+.sup-barre-part--eleve    { background: #fb923c; }
+.sup-barre-part--critique { background: #f87171; }
+
+.sup-ent-pied { font-size: 0.73rem; }
+.sup-ent-attente { color: var(--text-muted-subtle); }
+.sup-ent-ok { color: var(--text-dim); }
+
+/* ── Fil d'activité ────────────────────────────────────────────────────────── */
+.sup-fil { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sup-fil-item {
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.sup-fil-item:last-child { border-bottom: none; }
+.sup-fil-icone {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.sup-fil-icone--import        { background: rgba(14, 165, 233, 0.13); color: #7dd3fc; }
+.sup-fil-icone--configuration { background: rgba(127, 119, 221, 0.15); color: #afa9ec; }
+.sup-fil-corps { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.sup-fil-texte { font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; }
+.sup-fil-texte strong { color: var(--text); font-weight: 700; }
+.sup-fil-date { font-size: 0.71rem; color: var(--text-dim); }
+/* Compteur d'un groupe d'actions : discret, il precise sans concurrencer le texte. */
+.sup-fil-compte {
+    display: inline-block; margin-left: 0.25rem;
+    padding: 0.02rem 0.32rem; border-radius: 5px;
+    background: rgba(148, 163, 184, 0.16); color: var(--text-muted);
+    font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.imh-empty--compact { padding: 1.6rem 1rem; }
+
+/* ── Page entreprise : cartes d'alerte plus lisibles ───────────────────────── */
+.alr-carte {
+    padding: 0.95rem 1.05rem;
+    border-radius: 15px;
+    gap: 1rem;
+}
+.alr-niveau {
+    flex-direction: column; gap: 0.3rem;
+    min-width: 84px; padding: 0.55rem 0.5rem;
+    border-radius: 11px;
+    font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.alr-niveau .res-crit-point { width: 8px; height: 8px; }
+.alr-message { font-size: 0.92rem; font-weight: 600; }
+.alr-meta { margin-top: 0.1rem; }
+.alr-actions { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+.alr-btn { white-space: nowrap; text-align: center; }
+
+@media (max-width: 720px) {
+    .sup-carte { flex-wrap: wrap; }
+    .sup-carte-action { align-self: flex-start; }
+    .alr-niveau { flex-direction: row; min-width: 0; }
+    .alr-actions { flex-direction: row; }
+}
+
+/* ── Lignes du tableau ──────────────────────────────────────────────────── */
+.ent-table td { vertical-align: middle; }
+
+.ent-row { position: relative; }
+/* Lisere lateral : uniquement ce qui appelle un regard. Une entreprise dormante
+   n'en porte aucun — l'inactivite n'est pas un incident. */
+.ent-row--eleve td:first-child,
+.ent-row--critique td:first-child { position: relative; }
+.ent-row--eleve td:first-child::before,
+.ent-row--critique td:first-child::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 3px; border-radius: 0 3px 3px 0;
+}
+.ent-row--eleve td:first-child::before { background: #fb923c; }
+.ent-row--critique td:first-child::before { background: #f87171; }
+.ent-row--eleve:hover { background: rgba(251, 146, 60, 0.05); }
+.ent-row--critique:hover { background: rgba(248, 113, 113, 0.05); }
+
+.ent-identite { display: flex; flex-direction: column; min-width: 0; }
+.ent-nom {
+    font-weight: 650; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ent-secteur { font-size: 0.71rem; color: var(--text-dim); font-weight: 500; }
+
+/* Une metrique et sa precision : deux lignes centrees, jamais deux colonnes. */
+.ent-metrique {
+    display: block;
+    font-size: 1.05rem; font-weight: 700; line-height: 1.2;
+    color: var(--text); font-variant-numeric: tabular-nums;
+}
+.ent-metrique--nul { color: var(--text-dim); font-weight: 600; }
+.ent-metrique--eleve { color: #fb923c; }
+.ent-metrique--critique { color: #f87171; }
+
+.ent-sous { display: block; font-size: 0.68rem; color: var(--text-dim); line-height: 1.4; }
+.ent-sous--eleve { color: #fb923c; font-weight: 600; }
+.ent-sous--muet { color: var(--text-dim); }
+
+.ent-activite { display: block; font-size: 0.83rem; font-weight: 600; color: var(--text-muted); }
+
+.ent-note-perimetre {
+    display: flex; align-items: center; gap: 0.45rem;
+    margin: 0.9rem 0 0;
+    font-size: 0.73rem; color: var(--text-dim);
+}
+.ent-note-perimetre svg { flex-shrink: 0; opacity: 0.75; }
+.dash-table-avatar--lg { width: 46px; height: 46px; font-size: 1.15rem; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOCLE COMMUN — MODAL
+   Un seul composant pour les deux dashboards : détail d'import, de source, de
+   configuration, d'entreprise, et confirmations. Aucune variante parallèle :
+   les familles .imh-modal-* et .ent-modal-* ont été SUPPRIMÉES, pas doublées.
+
+   Règle de couleur : le fond reste neutre (--bg-card, comme les cartes du reste
+   de l'application). L'accent ne colore que ce qui porte une information — le
+   bandeau de message et le badge de statut.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sv-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(4, 10, 25, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.sv-modal-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 440px;
+    max-height: calc(100vh - 2rem);
+    border-radius: 16px;
+    border: 1px solid var(--border-glow);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-glow);
+    overflow: hidden;            /* l'en-tête ne doit pas déborder des coins */
+}
+.sv-modal-card--lg { max-width: 640px; }
+
+/* ── En-tête : identité à gauche, fermeture à droite, séparateur net ─────── */
+.sv-modal-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1.15rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.018);
+}
+.sv-modal-ident { display: flex; align-items: center; gap: 0.8rem; min-width: 0; flex: 1; }
+.sv-modal-avatar {
+    flex-shrink: 0;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    background: var(--accent-gradient);
+    color: #fff; font-weight: 700; font-size: 1.05rem;
+}
+/* Variante sobre : un pictogramme de section n'a pas à porter le dégradé de marque. */
+.sv-modal-avatar--neutre {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+}
+.sv-modal-titres { min-width: 0; }
+.sv-modal-title {
+    margin: 0;
+    font-size: 1.02rem; font-weight: 700; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-modal-sub {
+    margin: 0.15rem 0 0;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem;
+    font-size: 0.78rem; line-height: 1.45; color: var(--text-muted);
+}
+.sv-modal-sep { color: var(--text-dim); }
+
+.sv-modal-close {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    padding: 0;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.sv-modal-close:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-light);
+}
+
+/* ── Corps : la seule zone qui défile ────────────────────────────────────── */
+.sv-modal-body { padding: 1.25rem 1.4rem; overflow-y: auto; }
+
+.sv-modal-section { margin-top: 1.35rem; }
+.sv-modal-section:first-child { margin-top: 0; }
+/* Encart qui apparaît/disparaît : l'espacement lui appartient, sinon un conteneur
+   de section laisserait un blanc quand l'encart est masqué. */
+.sv-modal-espace { margin-top: 1.35rem; }
+.sv-modal-section-title {
+    margin: 0 0 0.65rem;
+    font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-dim);
+}
+
+/* ── Bandeau de message : le seul élément coloré du corps ─────────────────── */
+.sv-modal-note {
+    padding: 0.8rem 0.95rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-dim);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.82rem; line-height: 1.55;
+    color: var(--text-muted);
+}
+.sv-modal-note--ok   { border-left-color: #34d399; background: rgba(52, 211, 153, 0.07); }
+.sv-modal-note--ko   { border-left-color: #f87171; background: rgba(239, 68, 68, 0.07); color: #fca5a5; }
+.sv-modal-note--warn { border-left-color: #fb923c; background: rgba(251, 146, 60, 0.07); }
+.sv-modal-note--info { border-left-color: #38bdf8; background: rgba(14, 165, 233, 0.07); }
+.sv-modal-note-title {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+.sv-modal-note--ko .sv-modal-note-title { color: #f87171; }
+
+/* ── Grille de tuiles : un nombre de colonnes EXPLICITE ──────────────────────
+   `auto-fit` laissait 4 tuiles se poser en 3 + 1 orpheline selon la largeur.
+   Le nombre de colonnes est donc déclaré par le gabarit, qui connaît son
+   compte : la grille est équilibrée par construction, pas par chance. */
+.sv-modal-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+.sv-modal-tiles--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sv-modal-tile {
+    display: flex; flex-direction: column;
+    padding: 0.8rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.022);
+}
+.sv-modal-tile-valeur {
+    font-size: 1.4rem; font-weight: 800; line-height: 1.15;
+    color: var(--text); font-variant-numeric: tabular-nums;
+}
+/* « Il y a 3 jours » ne tient pas dans le corps d'un chiffre sans déborder. */
+.sv-modal-tile-valeur--texte { font-size: 0.92rem; font-weight: 700; padding: 0.28rem 0; }
+.sv-modal-tile-label { margin-top: 0.22rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+.sv-modal-tile-sous  { margin-top: 0.1rem; font-size: 0.67rem; color: var(--text-dim); }
+.sv-modal-tile--eleve    .sv-modal-tile-valeur { color: #fb923c; }
+.sv-modal-tile--critique .sv-modal-tile-valeur { color: #f87171; }
+
+/* ── Paires libellé / valeur : deux colonnes alignées, pas du texte au fil ── */
+.sv-modal-pairs {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+}
+.sv-modal-pair {
+    display: grid;
+    grid-template-columns: minmax(120px, 38%) 1fr;
+    gap: 0.9rem;
+    align-items: baseline;
+    padding: 0.6rem 0.95rem;
+    border-top: 1px solid var(--border);
+}
+.sv-modal-pair:first-child { border-top: none; }
+.sv-modal-pair-label { font-size: 0.73rem; color: var(--text-dim); }
+.sv-modal-pair-value {
+    font-size: 0.84rem; color: var(--text); font-weight: 500;
+    word-break: break-word; line-height: 1.45; min-width: 0;
+}
+.sv-modal-pair--bloc { grid-template-columns: 1fr; gap: 0.3rem; }
+
+/* Listes de jetons (colonnes détectées, tables retenues) : hauteur bornée. */
+.sv-modal-chips {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    max-height: 180px; overflow-y: auto;
+}
+.sv-modal-scroll { max-height: 240px; overflow-y: auto; padding-right: 0.25rem; }
+
+/* ── Pied : notes de périmètre et actions ────────────────────────────────── */
+.sv-modal-foot {
+    display: flex; align-items: center; gap: 0.45rem;
+    padding: 0.85rem 1.4rem;
+    border-top: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.014);
+    font-size: 0.71rem; color: var(--text-dim); line-height: 1.5;
+}
+.sv-modal-foot svg { flex-shrink: 0; opacity: 0.75; }
+.sv-modal-actions {
+    display: flex; justify-content: flex-end; gap: 0.6rem;
+    padding: 0.95rem 1.4rem;
+    border-top: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.014);
+}
+
+@media (max-width: 520px) {
+    .sv-modal-pair { grid-template-columns: 1fr; gap: 0.2rem; }
+    .sv-modal-tiles--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOCLE COMMUN — CARTE D'INDICATEUR
+   Modèle unique des deux dashboards : libellé court en CAPITALES, valeur en
+   grand, ligne de contexte dessous. Remplace .dash-stat-*, .sup-tuile-*,
+   .ent-tuile-*, .profil-stat-* et .res-kpi-*, toutes supprimées.
+
+   ⚠️ Une carte ne porte une couleur que si sa VALEUR signale quelque chose.
+   Les anciennes teintes (icon-blue, icon-violet…) étaient attribuées par
+   position et non par sens : une couleur qui ne veut rien dire apprend à
+   ignorer celles qui veulent dire quelque chose.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sv-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+/* La teinte par défaut est celle de la MARQUE, pas un code.
+   Nuance qui a manqué au premier passage : « pas de couleur décorative » voulait
+   dire « aucune couleur qui prétende signifier quelque chose », pas « pas de
+   couleur du tout ». Un accent identique sur toutes les cartes n'encode rien —
+   il ne distingue aucune carte d'une autre — et rend la rangée vivante. Seules
+   les teintes de signalement (--attention/--eleve/--critique) surchargent. */
+.sv-stat {
+    --sv-teinte: var(--accent);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    /* Surface à double couche : un dégradé de matière + un voile teinté très
+       faible. Le fond plat « tout noir » venait d'une seule couche à 3 %. */
+    background:
+        radial-gradient(120% 140% at 100% 0%,
+                        color-mix(in srgb, var(--sv-teinte) 9%, transparent) 0%,
+                        transparent 55%),
+        linear-gradient(158deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                0 8px 24px -18px rgba(2, 6, 23, 0.9);
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* Filet supérieur : la ligne de lumière qui donne le relief d'une carte posée. */
+.sv-stat::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 1.25rem; right: 1.25rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent,
+                color-mix(in srgb, var(--sv-teinte) 45%, transparent), transparent);
+    opacity: 0.5;
+}
+.sv-stat:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--sv-teinte) 32%, transparent);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+                0 14px 34px -20px rgba(2, 6, 23, 0.95),
+                0 0 0 1px color-mix(in srgb, var(--sv-teinte) 10%, transparent);
+}
+
+/* Halo d'ambiance, dans la teinte de la carte. */
+.sv-stat::after {
+    content: "";
+    position: absolute;
+    top: -55%; right: -25%;
+    width: 165px; height: 165px;
+    border-radius: 50%;
+    background: var(--sv-teinte);
+    opacity: 0.07;
+    filter: blur(26px);
+    pointer-events: none;
+}
+
+.sv-stat-icone {
+    position: relative;
+    flex-shrink: 0;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 15px;
+    background:
+        linear-gradient(150deg,
+                        color-mix(in srgb, var(--sv-teinte) 22%, transparent),
+                        color-mix(in srgb, var(--sv-teinte) 7%, transparent));
+    border: 1px solid color-mix(in srgb, var(--sv-teinte) 30%, transparent);
+    box-shadow: 0 0 18px -6px color-mix(in srgb, var(--sv-teinte) 45%, transparent),
+                0 1px 0 rgba(255, 255, 255, 0.07) inset;
+    color: var(--sv-teinte);
+    font-size: 1.3rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sv-stat:hover .sv-stat-icone {
+    transform: scale(1.05);
+    box-shadow: 0 0 24px -5px color-mix(in srgb, var(--sv-teinte) 60%, transparent),
+                0 1px 0 rgba(255, 255, 255, 0.09) inset;
+}
+.sv-stat-icone svg { width: 25px; height: 25px; }
+
+.sv-stat-corps { display: flex; flex-direction: column; min-width: 0; }
+.sv-stat-label {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-muted-subtle);
+}
+.sv-stat-valeur {
+    margin-top: 0.22rem;
+    font-size: 1.8rem; font-weight: 800; line-height: 1.02;
+    letter-spacing: -0.02em;
+    color: var(--text); font-variant-numeric: tabular-nums;
+}
+.sv-stat-sous { margin-top: 0.18rem; font-size: 0.7rem; color: var(--text-dim); line-height: 1.45; }
+
+/* ── Teintes de SIGNALEMENT — reprises de criticite.py, aucune créée ─────────
+   Elles ne font que redéfinir `--sv-teinte` : surface, filet, halo, icône et
+   survol suivent d'eux-mêmes. Une seule variable pilote toute la carte, donc
+   aucune teinte ne peut être appliquée à moitié.
+   Ce qu'elles ajoutent au-dessus du défaut : la VALEUR prend la couleur et le
+   halo monte — c'est ce qui distingue « ça signale » de « c'est la marque ». */
+.sv-stat--attention { --sv-teinte: #f59e0b; }
+.sv-stat--eleve     { --sv-teinte: #fb923c; }
+.sv-stat--critique  { --sv-teinte: #f87171; }
+.sv-stat--attention, .sv-stat--eleve, .sv-stat--critique {
+    border-color: color-mix(in srgb, var(--sv-teinte) 28%, transparent);
+}
+.sv-stat--attention::after, .sv-stat--eleve::after, .sv-stat--critique::after { opacity: 0.13; }
+.sv-stat--attention::before, .sv-stat--eleve::before, .sv-stat--critique::before { opacity: 0.9; }
+.sv-stat--attention .sv-stat-valeur,
+.sv-stat--eleve .sv-stat-valeur,
+.sv-stat--critique .sv-stat-valeur { color: var(--sv-teinte); }
+
+/* ── Variante compacte : indicateurs INTERNES à une carte (page résultats) ──
+   Même composant, même hiérarchie, taille réduite : ces tuiles vivent dans une
+   carte de résultat, pas en tête de page. La teinte de fiabilité est conservée
+   — elle porte une information, contrairement aux anciennes teintes décoratives. */
+.sv-stats--compact {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 0;
+}
+/* La variante compacte reste sobre : filet, halo et ombre appartiennent à une
+   carte de tête. Répétés quatre fois dans une carte de résultat, ils feraient
+   de la décoration là où on attend des chiffres. */
+.sv-stat--compact::before,
+.sv-stat--compact::after { display: none; }
+.sv-stat--compact {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    border-radius: 12px;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.022);
+}
+.sv-stat--compact:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+}
+.sv-stat--compact .sv-stat-label { font-size: 0.64rem; letter-spacing: 0.05em; }
+.sv-stat--compact .sv-stat-valeur {
+    font-size: 1.02rem; font-weight: 700;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sv-stat--compact .sv-stat-sous { font-size: 0.68rem; color: var(--text-muted-subtle); }
+
+.sv-stat--fiab-bonne .sv-stat-valeur      { color: #34d399; }
+.sv-stat--fiab-limitee .sv-stat-valeur    { color: #f59e0b; }
+.sv-stat--fiab-indicative .sv-stat-valeur { color: var(--text-muted); }
+
+@media (max-width: 640px) {
+    .sv-stats { grid-template-columns: 1fr; }
+    .sv-stat-icone { width: 44px; height: 44px; }
+    .sv-stat-valeur { font-size: 1.5rem; }
 }

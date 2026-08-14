@@ -1,5 +1,7 @@
 {% extends "pages/dashboard/base.html" %}
 {% block title %}Mon profil — StockVision AI{% endblock %}
+{% from "components/indicateurs.html" import carte %}
+
 {% block dash_content %}
 
 <div class="profil-wrap">
@@ -63,28 +65,15 @@
     <div id="profilSuccess" class="profil-alerte profil-alerte--ok" style="display:none;"></div>
 
     <!-- Cartes de stats -->
-    <div class="profil-stats-grid profil-stats-grid--3">
-        <div class="profil-stat-card">
-            <span class="profil-stat-icon icon-indigo"><i class="bi bi-cloud-arrow-up"></i></span>
-            <div class="profil-stat-body">
-                <span class="profil-stat-value">{{ stats.imports }}</span>
-                <span class="profil-stat-label">Imports réalisés</span>
-            </div>
-        </div>
-        <div class="profil-stat-card">
-            <span class="profil-stat-icon icon-cyan"><i class="bi bi-sliders2"></i></span>
-            <div class="profil-stat-body">
-                <span class="profil-stat-value">{{ stats.configurations }}</span>
-                <span class="profil-stat-label">Configurations d'analyse</span>
-            </div>
-        </div>
-        <div class="profil-stat-card">
-            <span class="profil-stat-icon icon-red"><i class="bi bi-bell"></i></span>
-            <div class="profil-stat-body">
-                <span class="profil-stat-value">{{ stats.alertes }}</span>
-                <span class="profil-stat-label">Alertes reçues</span>
-            </div>
-        </div>
+    <div class="sv-stats">
+        {{ carte("Imports réalisés", stats.imports, "fichiers et synchronisations",
+                 icone="cloud-arrow-up") }}
+        {{ carte("Configurations", stats.configurations, "analyses enregistrées", icone="sliders2") }}
+        {# Teintée seulement s'il y en a : « 0 alerte » est une bonne nouvelle,
+           pas un signal. #}
+        {{ carte("Alertes reçues", stats.alertes,
+                 "depuis la création du compte" if stats.alertes else "aucune à ce jour",
+                 icone="bell", ton="eleve" if stats.alertes else "") }}
     </div>
 
     <!-- Formulaire : modifier informations -->

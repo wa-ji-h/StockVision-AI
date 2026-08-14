@@ -717,6 +717,14 @@ def executer_et_stocker(db, config, intention: IntentionAnalysee, prepare) -> Re
     db.commit()
     resultat.id_resultat = ligne.id_resultat
 
+    # Module 5 — l'alerte est la projection de ce résultat. Branchée ici parce que c'est
+    # le seul point où un résultat naît : la placer dans la route laisserait sans alerte
+    # tout ce qui passe par un script (relance, recalcul). Import différé pour que le
+    # Module 4 ne dépende pas du Module 5 au chargement.
+    from app.services.alertes import enregistrer_alerte
+
+    enregistrer_alerte(db, ligne, config)
+
     _log.info(
         "[execution] cfg %s : OK (%s, modèle=%s) — valeur=%s prévue=%s | criticité=%s — %s",
         config.id_configuration, type_analyse, resultat.modele_applique,

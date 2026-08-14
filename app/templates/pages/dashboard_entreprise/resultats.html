@@ -144,12 +144,15 @@
         {% endif %}
 
         {# 3. Indicateurs clés — les chiffres avant le graphique. #}
-        <div class="res-kpis">
+        {# Même composant que les cartes de tête, en variante compacte : ces tuiles
+           vivent dans une carte de résultat, pas en tête de page. La teinte de
+           fiabilité est conservée — elle porte une information. #}
+        <div class="sv-stats sv-stats--compact">
             {% for k in c.indicateurs_cles %}
-            <div class="res-kpi {{ 'res-kpi--fiab-' ~ k.ton if k.ton }}">
-                <span class="res-kpi-label">{{ k.libelle }}</span>
-                <span class="res-kpi-valeur" title="{{ k.valeur }}">{{ k.valeur }}</span>
-                {% if k.detail %}<span class="res-kpi-detail">{{ k.detail }}</span>{% endif %}
+            <div class="sv-stat sv-stat--compact {{ 'sv-stat--fiab-' ~ k.ton if k.ton }}">
+                <span class="sv-stat-label">{{ k.libelle }}</span>
+                <span class="sv-stat-valeur" title="{{ k.valeur }}">{{ k.valeur }}</span>
+                <span class="sv-stat-sous">{{ k.detail or '' }}</span>
             </div>
             {% endfor %}
         </div>

@@ -36,10 +36,87 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="dashThemeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
 
-        <button class="dash-icon-btn" type="button" aria-label="Notifications" style="position:relative;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            {% if notifications_count %}<span class="dash-dot"></span>{% endif %}
-        </button>
+        {# Cloche — alimentée par le context processor `_contexte_alertes`, jamais par les
+           routes : le compteur doit être juste sur toutes les pages, y compris celles
+           qu'on ajoutera plus tard. Elle ne dit pas la même chose selon le rôle :
+           l'entreprise voit ses alertes, l'administrateur ce qui appelle son attention
+           sur le parc — jamais le détail métier d'une entreprise. #}
+        <div class="dash-cloche" id="dashAlertes">
+            <button class="dash-icon-btn dash-cloche-btn" type="button" id="dashAlertesBtn"
+                    aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {% if cloche_total %}
+                <span class="dash-cloche-badge {{ 'dash-cloche-badge--admin' if cloche_role == 'administrateur' }}">{{ cloche_total if cloche_total < 100 else '99+' }}</span>
+                {% endif %}
+            </button>
+
+            <div class="dash-cloche-panneau" id="dashAlertesPanneau" hidden role="dialog" aria-label="Notifications">
+                <div class="dash-cloche-entete">
+                    <span class="dash-cloche-titre">
+                        {{ 'Ce qui demande votre attention' if cloche_role == 'administrateur' else 'Vos alertes non traitées' }}
+                    </span>
+                    {% if cloche_total %}<span class="dash-cloche-compte">{{ cloche_total }}</span>{% endif %}
+                </div>
+
+                {% if cloche_role == 'administrateur' %}
+                    {% if supervision %}
+                    <ul class="dash-cloche-liste">
+                        {% for s in supervision %}
+                        {# Chaque entrée mène à l'écran où l'administrateur agit — et dit
+                           dans quel registre : trancher, corriger, ou seulement observer. #}
+                        <li>
+                            <a href="{{ s.lien }}" class="dash-cloche-item">
+                                <span class="dash-cloche-pastille dash-cloche-pastille--{{ s.ton }}">{{ s.nombre }}</span>
+                                <span class="dash-cloche-corps">
+                                    <span class="dash-cloche-nature dash-cloche-nature--{{ s.ton }}">{{ s.nature_libelle }}</span>
+                                    <span class="dash-cloche-message">{{ s.titre }}</span>
+                                    <span class="dash-cloche-meta">{{ s.detail }}</span>
+                                </span>
+                                <span class="dash-cloche-fleche" aria-hidden="true">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="dash-cloche-vide">Rien ne demande votre attention.</p>
+                    {% endif %}
+                    <a href="/dashboard/admin/alertes" class="dash-cloche-pied">Ouvrir le centre d'alertes</a>
+
+                {% else %}
+                    {% if alertes_recentes %}
+                    <ul class="dash-cloche-liste">
+                        {% for a in alertes_recentes %}
+                        {# Mène au résultat qui l'a produite : c'est tout l'intérêt d'avoir
+                           rattaché l'alerte au résultat et non à la configuration. #}
+                        <li>
+                            <a href="/dashboard/entreprise/resultats?config={{ a.id_configuration }}#res-{{ a.id_resultat }}"
+                               class="dash-cloche-item">
+                                <span class="dash-cloche-pastille dash-cloche-pastille--{{ a.niveau }}">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                </span>
+                                <span class="dash-cloche-corps">
+                                    <span class="dash-cloche-nature dash-cloche-nature--{{ a.niveau }}">
+                                        {{ 'Critique' if a.niveau == 'critique' else 'Élevé' }}
+                                    </span>
+                                    <span class="dash-cloche-message">{{ a.message }}</span>
+                                    <span class="dash-cloche-meta">{{ a.date }}</span>
+                                </span>
+                                <span class="dash-cloche-fleche" aria-hidden="true">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="dash-cloche-vide">Aucune alerte en attente.</p>
+                    {% endif %}
+                    <a href="/dashboard/entreprise/alertes" class="dash-cloche-pied">Voir toutes mes alertes</a>
+                {% endif %}
+            </div>
+        </div>
 
         <div class="dash-profile" id="dashProfile">
             <button class="dash-avatar-btn" id="dashProfileBtn" type="button">
@@ -271,7 +348,7 @@
     {% endif %}
 
     {# Notification partagée par tout le dashboard — remplace les alert() du navigateur.
-       Même famille visuelle que .dash-status et .imh-modal-note (teinte + liseré). #}
+       Même famille visuelle que .dash-status et .sv-modal-note (teinte + liseré). #}
     <div class="imh-toast" id="svToast" role="status" aria-live="polite">
         <span class="imh-toast-icon" id="svToastIcon"></span>
         <span id="svToastMsg"></span>
@@ -361,6 +438,34 @@
             if (profileDropdown && !profileDropdown.contains(e.target) && e.target !== profileBtn) {
                 profileDropdown.classList.remove('open');
             }
+        });
+
+        /* Panneau d'alertes — même mécanique que le menu profil, pour que les deux se
+           comportent pareil : clic pour ouvrir, clic ailleurs ou Échap pour fermer. */
+        const alertesBtn = document.getElementById('dashAlertesBtn');
+        const alertesPanneau = document.getElementById('dashAlertesPanneau');
+        const fermerAlertes = () => {
+            if (!alertesPanneau) return;
+            alertesPanneau.hidden = true;
+            alertesBtn?.setAttribute('aria-expanded', 'false');
+        };
+        alertesBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!alertesPanneau) return;
+            const ouvert = alertesPanneau.hidden;
+            alertesPanneau.hidden = !ouvert;
+            alertesBtn.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+            profileDropdown?.classList.remove('open');   // un seul panneau à la fois
+        });
+        document.addEventListener('click', (e) => {
+            if (alertesPanneau && !alertesPanneau.hidden
+                && !alertesPanneau.contains(e.target) && e.target !== alertesBtn
+                && !alertesBtn?.contains(e.target)) {
+                fermerAlertes();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fermerAlertes();
         });
     </script>
 

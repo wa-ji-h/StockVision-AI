@@ -117,62 +117,88 @@
 {% endif %}
 
 <!-- Modal détails fichier -->
-<div class="imh-modal-overlay" id="imhModal" style="display:none;">
-    <div class="imh-modal-card imh-modal-card--lg">
-        <button type="button" class="imh-modal-close" id="imhModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <h3 class="imh-modal-title">Détails de l'import</h3>
-        <p class="imh-modal-subtitle">Structure et métadonnées du fichier — le contenu brut des données n'est pas affiché ici.</p>
-        <div class="imp-recap-grid">
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Fichier</span>
-                <span class="imp-recap-val" id="imhModalNom">—</span>
+<div class="sv-modal" id="imhModal" style="display:none;">
+    <div class="sv-modal-card sv-modal-card--lg">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <span class="sv-modal-avatar sv-modal-avatar--neutre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title">Détails de l'import</h3>
+                    <p class="sv-modal-sub">Structure et métadonnées du fichier</p>
+                </div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Format</span>
-                <span class="imp-recap-val" id="imhModalFormat">—</span>
+            <button type="button" class="sv-modal-close" id="imhModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <div class="sv-modal-section">
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Fichier</span>
+                        <span class="sv-modal-pair-value" id="imhModalNom">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Format</span>
+                        <span class="sv-modal-pair-value" id="imhModalFormat">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Taille</span>
+                        <span class="sv-modal-pair-value" id="imhModalTaille">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Dernier import</span>
+                        <span class="sv-modal-pair-value" id="imhModalDate">—</span>
+                    </div>
+                </div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Taille</span>
-                <span class="imp-recap-val" id="imhModalTaille">—</span>
+
+            <div class="sv-modal-section" id="imhModalCsvBlock" style="display:none;">
+                <h4 class="sv-modal-section-title">Colonnes détectées</h4>
+                <div class="sv-modal-chips" id="imhModalColumns"></div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Dernier import</span>
-                <span class="imp-recap-val" id="imhModalDate">—</span>
+
+            <div class="sv-modal-section" id="imhModalSqlBlock" style="display:none;">
+                <h4 class="sv-modal-section-title">Instructions détectées</h4>
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">CREATE TABLE</span>
+                        <span class="sv-modal-pair-value" id="imhModalCreates">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">INSERT INTO</span>
+                        <span class="sv-modal-pair-value" id="imhModalInserts">—</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="imh-modal-detail" id="imhModalCsvBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Colonnes détectées</h4>
-            <div class="imh-columns-list" id="imhModalColumns"></div>
-        </div>
-
-        <div class="imh-modal-detail" id="imhModalSqlBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Instructions détectées</h4>
-            <div class="imp-recap-grid">
-                <div class="imp-recap-item">
-                    <span class="imp-recap-label">CREATE TABLE</span>
-                    <span class="imp-recap-val" id="imhModalCreates">—</span>
-                </div>
-                <div class="imp-recap-item">
-                    <span class="imp-recap-label">INSERT INTO</span>
-                    <span class="imp-recap-val" id="imhModalInserts">—</span>
-                </div>
-            </div>
-        </div>
+        <p class="sv-modal-foot">
+            Le contenu brut des données n'est jamais affiché ici.
+        </p>
     </div>
 </div>
 
 <!-- Modal confirmation suppression -->
-<div class="imh-modal-overlay" id="imhDeleteModal" style="display:none;">
-    <div class="imh-modal-card">
-        <button type="button" class="imh-modal-close" id="imhDeleteModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <h3 class="imh-modal-title">Supprimer cette source ?</h3>
-        <p class="imh-modal-subtitle" id="imhDeleteModalText">Voulez-vous vraiment supprimer cette source ? </p>
-        <div class="imh-modal-actions">
+<div class="sv-modal" id="imhDeleteModal" style="display:none;">
+    <div class="sv-modal-card">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title">Supprimer cette source ?</h3>
+                </div>
+            </div>
+            <button type="button" class="sv-modal-close" id="imhDeleteModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <p class="sv-modal-sub" id="imhDeleteModalText">Voulez-vous vraiment supprimer cette source ?</p>
+        </div>
+
+        <div class="sv-modal-actions">
             <button type="button" class="imh-btn" id="imhDeleteCancel">Annuler</button>
             <button type="button" class="imh-btn imh-btn--danger-solid" id="imhDeleteConfirm">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>

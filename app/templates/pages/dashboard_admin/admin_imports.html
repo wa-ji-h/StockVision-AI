@@ -1,5 +1,7 @@
 {% extends "pages/dashboard/base.html" %}
 {% block title %}Supervision des imports — StockVision AI{% endblock %}
+{% from "components/indicateurs.html" import carte %}
+
 {% block dash_content %}
 
 <div class="dash-intro-card">
@@ -7,33 +9,13 @@
     <p class="dash-page-guide">{{ guide }}</p>
 </div>
 
-<div class="dash-stats-grid mb-4">
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Total imports</span>
-            <span class="dash-stat-icon icon-blue"><i class="bi bi-archive-fill"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ total_imports }}</span>
-        <span class="dash-stat-trend">Toutes entreprises</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Sources actives</span>
-            <span class="dash-stat-icon icon-violet"><i class="bi bi-check-circle-fill"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ actives_count }}</span>
-        <span class="dash-stat-trend">Statut valide</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Sources en erreur</span>
-            <span class="dash-stat-icon icon-red"><i class="bi bi-exclamation-triangle-fill"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ erreurs_count }}</span>
-        <span class="dash-stat-trend">À surveiller</span>
-    </div>
+<div class="sv-stats">
+    {{ carte("Total imports", total_imports, "toutes entreprises", icone="archive-fill") }}
+    {{ carte("Sources actives", actives_count, "statut valide", icone="check-circle-fill") }}
+    {# À zéro la carte reste neutre : une absence de panne n'est pas un signal. #}
+    {{ carte("Sources en erreur", erreurs_count,
+             "aucune analyse ne peut s’exécuter dessus" if erreurs_count else "toutes les sources sont opérationnelles",
+             icone="exclamation-triangle-fill", ton="eleve" if erreurs_count else "") }}
 </div>
 
 <div class="dash-tabs" id="admImhTabs">
@@ -154,80 +136,106 @@
 {% endif %}
 
 <!-- Modal détails -->
-<div class="imh-modal-overlay" id="admImhModal" style="display:none;">
-    <div class="imh-modal-card imh-modal-card--lg">
-        <button type="button" class="imh-modal-close" id="admImhModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <h3 class="imh-modal-title">Détails de la source</h3>
-        <p class="imh-modal-subtitle">Structure et métadonnées — aucune donnée brute n'est affichée ici.</p>
-        <div class="imp-recap-grid">
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Entreprise</span>
-                <span class="imp-recap-val" id="admImhModalEntreprise">—</span>
+<div class="sv-modal" id="admImhModal" style="display:none;">
+    <div class="sv-modal-card sv-modal-card--lg">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <span class="sv-modal-avatar sv-modal-avatar--neutre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg></span>
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title">Détails de la source</h3>
+                    <p class="sv-modal-sub">Structure et métadonnées</p>
+                </div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Source</span>
-                <span class="imp-recap-val" id="admImhModalNom">—</span>
+            <button type="button" class="sv-modal-close" id="admImhModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <div class="sv-modal-section">
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Entreprise</span>
+                        <span class="sv-modal-pair-value" id="admImhModalEntreprise">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Source</span>
+                        <span class="sv-modal-pair-value" id="admImhModalNom">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Format / SGBD</span>
+                        <span class="sv-modal-pair-value" id="admImhModalFormat">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Dernière synchro</span>
+                        <span class="sv-modal-pair-value" id="admImhModalDate">—</span>
+                    </div>
+                    <div class="sv-modal-pair" id="admImhModalTailleWrap">
+                        <span class="sv-modal-pair-label">Taille</span>
+                        <span class="sv-modal-pair-value" id="admImhModalTaille">—</span>
+                    </div>
+                    <div class="sv-modal-pair" id="admImhModalHostWrap" style="display:none;">
+                        <span class="sv-modal-pair-label">Hôte / Base</span>
+                        <span class="sv-modal-pair-value" id="admImhModalHost">—</span>
+                    </div>
+                </div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Format / SGBD</span>
-                <span class="imp-recap-val" id="admImhModalFormat">—</span>
+
+            <div class="sv-modal-section" id="admImhModalCsvBlock" style="display:none;">
+                <h4 class="sv-modal-section-title">Colonnes détectées</h4>
+                <div class="sv-modal-chips" id="admImhModalColumns"></div>
             </div>
-            <div class="imp-recap-item">
-                <span class="imp-recap-label">Dernière synchro</span>
-                <span class="imp-recap-val" id="admImhModalDate">—</span>
+
+            <div class="sv-modal-section" id="admImhModalSqlBlock" style="display:none;">
+                <h4 class="sv-modal-section-title">Instructions détectées</h4>
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">CREATE TABLE</span>
+                        <span class="sv-modal-pair-value" id="admImhModalCreates">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">INSERT INTO</span>
+                        <span class="sv-modal-pair-value" id="admImhModalInserts">—</span>
+                    </div>
+                </div>
             </div>
-            <div class="imp-recap-item" id="admImhModalTailleWrap">
-                <span class="imp-recap-label">Taille</span>
-                <span class="imp-recap-val" id="admImhModalTaille">—</span>
-            </div>
-            <div class="imp-recap-item" id="admImhModalHostWrap" style="display:none;">
-                <span class="imp-recap-label">Hôte / Base</span>
-                <span class="imp-recap-val" id="admImhModalHost">—</span>
+
+            <div class="sv-modal-section" id="admImhModalDbBlock" style="display:none;">
+                <h4 class="sv-modal-section-title">Connexion base de données</h4>
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Tables détectées</span>
+                        <span class="sv-modal-pair-value" id="admImhModalTableCount">—</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="imh-modal-detail" id="admImhModalCsvBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Colonnes détectées</h4>
-            <div class="imh-columns-list" id="admImhModalColumns"></div>
-        </div>
-
-        <div class="imh-modal-detail" id="admImhModalSqlBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Instructions détectées</h4>
-            <div class="imp-recap-grid">
-                <div class="imp-recap-item">
-                    <span class="imp-recap-label">CREATE TABLE</span>
-                    <span class="imp-recap-val" id="admImhModalCreates">—</span>
-                </div>
-                <div class="imp-recap-item">
-                    <span class="imp-recap-label">INSERT INTO</span>
-                    <span class="imp-recap-val" id="admImhModalInserts">—</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="imh-modal-detail" id="admImhModalDbBlock" style="display:none;">
-            <h4 class="imh-modal-detail-title">Connexion base de données</h4>
-            <div class="imp-recap-grid">
-                <div class="imp-recap-item">
-                    <span class="imp-recap-label">Tables détectées</span>
-                    <span class="imp-recap-val" id="admImhModalTableCount">—</span>
-                </div>
-            </div>
-        </div>
+        <p class="sv-modal-foot">
+            Aucune donnée brute n'est affichée ici : seules la structure et les métadonnées le sont.
+        </p>
     </div>
 </div>
 
 <!-- Modal confirmation suspension -->
-<div class="imh-modal-overlay" id="admImhSuspendModal" style="display:none;">
-    <div class="imh-modal-card">
-        <button type="button" class="imh-modal-close" id="admImhSuspendModalClose" aria-label="Fermer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <h3 class="imh-modal-title" id="admImhSuspendModalTitle">Suspendre cette source ?</h3>
-        <p class="imh-modal-subtitle" id="admImhSuspendModalText">Voulez-vous vraiment suspendre cette source ? L'entreprise ne pourra plus l'utiliser dans une nouvelle configuration d'analyse tant qu'elle reste suspendue.</p>
-        <div class="imh-modal-actions">
+<div class="sv-modal" id="admImhSuspendModal" style="display:none;">
+    <div class="sv-modal-card">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title" id="admImhSuspendModalTitle">Suspendre cette source ?</h3>
+                </div>
+            </div>
+            <button type="button" class="sv-modal-close" id="admImhSuspendModalClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <p class="sv-modal-sub" id="admImhSuspendModalText">Voulez-vous vraiment suspendre cette source ? L'entreprise ne pourra plus l'utiliser dans une nouvelle configuration d'analyse tant qu'elle reste suspendue.</p>
+        </div>
+
+        <div class="sv-modal-actions">
             <button type="button" class="imh-btn" id="admImhSuspendCancel">Annuler</button>
             <button type="button" class="imh-btn imh-btn--danger-solid" id="admImhSuspendConfirm">Confirmer</button>
         </div>

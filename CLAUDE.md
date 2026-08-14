@@ -266,7 +266,7 @@ pour le détail de chaque variable :
 ```
 LLM_PROVIDER=gemini
 LLM_API_KEY=          # vide = repli déterministe, aucun appel réseau
-LLM_MODEL=gemini-3.5-flash
+LLM_MODEL=gemini-3.1-flash-lite
 LLM_BASE_URL=         # vide = URL par défaut du fournisseur
 ```
 `LLM_API_KEY` vide n'est pas une panne : le système reste **entièrement démontrable** sans clé.
@@ -300,7 +300,7 @@ traduisent `LLMIndisponible` dans leur propre vocabulaire d'erreurs. Vérifié :
 |---|---|
 | `LLM_PROVIDER` | `gemini` (défaut) ou `anthropic`. Un nom inconnu retombe sur le défaut. |
 | `LLM_API_KEY` | Vide = **repli déterministe, aucun appel réseau**. Le système reste démontrable. |
-| `LLM_MODEL` | `gemini-3.5-flash` par défaut ; `claude-opus-5` côté Anthropic. |
+| `LLM_MODEL` | `gemini-3.1-flash-lite` par défaut ; `claude-opus-5` côté Anthropic. |
 | `LLM_BASE_URL` | **Facultatif.** Vide, chaque fournisseur applique la sienne. |
 
 Différences d'API, mesurées contre l'API réelle et non déduites de la documentation :
@@ -328,9 +328,34 @@ vocabulaire fermé, rejeté de la même façon.
 
 ⚠️ **Le quota gratuit est par modèle et se compte en journée.** `gemini-2.5-flash` est plafonné
 à **20 requêtes/jour** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), en plus d'une
-limite par minute — bien trop peu pour développer. **Le défaut est donc `gemini-3.5-flash`**,
-dont le quota est distinct et confortable. Basculer de modèle = changer `LLM_MODEL`, rien
-d'autre. Le 429 est traité comme n'importe quel échec : repli déterministe, message conservé.
+limite par minute — bien trop peu pour développer. Basculer de modèle libère du quota, puisqu'il
+est compté séparément par modèle : changer `LLM_MODEL`, rien d'autre. Le 429 est traité comme
+n'importe quel échec : repli déterministe, message conservé.
+
+⚠️ **L'API ne renvoie aucun compteur de quota restant** — ni en-tête, ni endpoint. Deux moyens
+seulement : la page https://ai.dev/rate-limit, ou le 429 lui-même, qui nomme la limite atteinte
+et son `quotaId`. Inutile de chercher à l'afficher dans l'application.
+
+**Le défaut est `gemini-3.1-flash-lite`**, choisi sur mesure et non sur catalogue :
+
+| Modèle | Interprétation complète | Verdict |
+|---|---|---|
+| **`gemini-3.1-flash-lite`** | **2,5 s** | retenu |
+| `gemini-3-flash-preview` | 10,2 s | fonctionne |
+| `gemini-3.5-flash` | 20,4 s | fonctionne, mais lent en démonstration |
+| `gemini-2.5-flash` | 22,3 s | **échoue** — dépasse la longueur de `recommandation` deux fois de suite, reprise comprise |
+
+⚠️ **Un 503 n'est pas un dépassement de quota.** `This model is currently experiencing high
+demand` est une surcharge passagère côté Google : le même appel repasse quelques minutes plus
+tard. Ne pas le confondre avec le 429.
+
+**Délais d'appel portés à 60 s des deux côtés** (4.3 comme 4.5). À 30 s, une traduction valide
+expirait et retombait sur le repli déterministe alors que rien n'avait échoué : `gemini-3.5-flash`
+met 20 à 27 s, dont l'essentiel en raisonnement avant d'écrire.
+
+**Vouvoiement imposé explicitement dans les deux prompts.** « À la deuxième personne » ne
+tranchait pas entre `tu` et `vous` : `gemini-3.1-flash-lite` tutoyait (« Tu souhaites
+identifier… ») alors que toute l'application vouvoie.
 
 ### Longueurs : marge de sécurité et seconde tentative (08/08/2026)
 
@@ -928,6 +953,287 @@ Pièges rencontrés, à ne pas réintroduire :
 - un `ImportDonnee.chemin_fichier` à NULL (imports antérieurs à `migrate_import_donnee_chemin.py`)
   rend la source inanalysable : il faut réimporter le fichier.
 
+## Module 5 — Alertes (10/08/2026)
+
+### ⚠️ Correction du modèle de données — à répercuter dans le diagramme de classes
+
+```
+AVANT :  ConfigurationAnalyse  1 ──── 1     Alerte      (unique=True sur id_configuration)
+APRÈS :  ResultatAnalyse       1 ──── 0..1  Alerte      (unique=True sur id_resultat)
+         ConfigurationAnalyse  1 ──── 0..n  Alerte      (index simple, aucune unicité)
+```
+
+Deux défauts rendaient le modèle initial inutilisable :
+
+1. **`unique=True` sur `id_configuration`** interdisait plus d'une alerte par configuration
+   **à vie**. Or une analyse récurrente doit alerter à chaque exécution critique : la deuxième
+   insertion levait une `IntegrityError`.
+2. **L'alerte ne savait pas de quelle exécution elle parlait.** Rattachée à la configuration,
+   elle ne pouvait pas renvoyer vers le bon résultat — donc ni le bon graphique, ni le bon
+   intervalle, ni la bonne interprétation.
+
+`migrate_alerte_resultat.py` ajoute `id_resultat`, `criticite_rang`, `statut`,
+`date_traitement`, retire l'unicité sur `id_configuration` et pose l'unicité sur `id_resultat`.
+`type_alerte`, `message`, `niveau` et `date_creation` gardent leur rôle.
+
+⚠️ **Piège MySQL rencontré** : `DROP INDEX` échoue (erreur 1553) tant qu'une clé étrangère
+s'appuie sur l'index. La séquence est : retirer la contrainte → supprimer l'index unique →
+créer l'index simple → rétablir la contrainte.
+
+### Déclenchement
+
+`app/services/alertes.py` — Module 5, ne dépend que de `criticite.py` (module feuille, aucun
+cycle). **Seuil dérivé, jamais recopié** : `SEUIL_ALERTE = RANG_PAR_NIVEAU["eleve"]`. Déplacer
+« élevé » dans `criticite.py` déplace le déclenchement avec lui.
+
+Rangs 0 et 1 → rien. Alerter sur une variation mineure noierait l'entreprise, et une alerte
+qu'on n'ouvre plus ne vaut rien.
+
+**Aucune reformulation, aucun appel LLM** : `message` reçoit `criticite_motif` tel quel,
+`niveau` le code de criticité. Le motif a été produit de façon déterministe par 4.6, il est
+déjà l'explication du déclenchement.
+
+**Branché dans `executer_et_stocker`** (4.4), après le commit du résultat — le seul point où
+un résultat naît. Le placer dans la route laisserait sans alerte tout ce qui passe par un
+script (`recalculer_criticite.py --relancer`). Import différé pour que le Module 4 ne dépende
+pas du Module 5 au chargement.
+
+`enregistrer_alerte` **crée, met à jour ou retire** selon le rang courant : un résultat
+repassé sous le seuil voit son alerte disparaître, sans quoi l'interface afficherait un verdict
+que le calcul ne soutient plus. Ne lève jamais — une alerte manquante ne doit pas faire échouer
+une analyse par ailleurs réussie.
+
+### Interface
+
+**Cloche du topbar** — badge chiffré et panneau déroulant. Alimentés par un **context processor
+Starlette** (`_contexte_alertes`), pas par les routes : recopier le décompte dans ~15
+`TemplateResponse` garantissait qu'une route oubliée afficherait un compteur faux. Chaque entrée
+mène au résultat qui l'a produite — c'est tout l'intérêt du rattachement au résultat.
+
+**Page « Mes alertes »** (`/dashboard/entreprise/alertes`, déclarée avant le catch-all
+`{section}`) : filtres par niveau avec comptes calculés avant filtrage, marquage « traitée » en
+POST. Une alerte traitée **reste listée** mais sort du décompte — barrée et estompée, jamais
+masquée.
+
+**Vue admin** (`/dashboard/admin/alertes`) : volumes par entreprise et par niveau.
+⚠️ **Aucun message, aucun motif, aucun lien vers un résultat** — vérifié par un test dédié sur
+les champs exposés. L'administrateur supervise la charge du parc, il n'agit pas à la place des
+entreprises.
+
+### Supervision administrateur (12/08/2026)
+
+`app/services/supervision.py` — l'administrateur ne suit pas les analyses, il veille sur le
+parc. Le module n'agrège que des **faits déjà produits par l'application**, et chaque entrée
+mène à l'écran où il agit. Aucun nouvel événement n'est fabriqué, aucune table ajoutée.
+
+Trois natures, distinguées par ce que l'administrateur peut en faire — c'est cette distinction
+qui rend le flux lisible :
+
+| Nature | Source (déjà existante) | Rôle | Écran |
+|---|---|---|---|
+| **Action requise** | `Entreprise.statut_demande == en_attente` | il tranche | `/dashboard/admin/demandes` |
+| **Intervention possible** | `SourceDonnee.statut` ∈ erreur, suspendu | il peut corriger | `/dashboard/admin/imports` |
+| **À surveiller** | alertes de rang 3 non traitées | il observe | `/dashboard/admin/alertes` |
+
+⚠️ **« À surveiller » ne donne jamais accès au détail métier.** Une alerte critique se compte et
+se situe — quelle entreprise, combien — elle ne se lit pas. Le détail appartient à l'entreprise
+qui l'a produite, et le libellé le dit explicitement pour qu'aucun administrateur ne croie qu'on
+attend de lui une action sur l'analyse.
+
+`activite_recente()` complète par le fil de vie du parc : imports déposés, configurations créées.
+Qui a fait quoi et quand, jamais le contenu.
+
+**Une cloche, deux significations.** Le context processor sert les deux rôles : l'entreprise voit
+ses alertes non traitées (chacune menant à son résultat), l'administrateur ce qui appelle son
+attention (chacun menant à son écran d'action). Le badge admin porte l'accent de la marque et non
+le rouge : côté administrateur ce sont surtout des décisions à prendre, pas des incidents.
+
+**Page admin réorganisée** : ce sur quoi il peut agir en tête, puis les volumes, puis la
+répartition par entreprise (barre de proportion plutôt que deux nombres à comparer mentalement)
+et le fil d'activité. L'ancien tableau plat ne hiérarchisait rien.
+
+⚠️ **Styles `.dash-alertes-*` supprimés** au profit de `.dash-cloche-*` : deux styles parallèles
+pour le même composant est précisément ce que le design system interdit.
+
+### Page « Entreprises partenaires » — supervision par l'activité (12/08/2026)
+
+La page affichait l'identité (nom, secteur, email, inscription) et **rien sur l'usage** :
+impossible de distinguer une entreprise qui travaille d'une qui s'est inscrite et n'a jamais rien
+fait. Email et date d'inscription sont donc **descendus dans le modal** — ce ne sont pas des
+critères de supervision — et les colonnes portent désormais des volumes : sources (avec le nombre
+en erreur), analyses lancées (avec le nombre du mois), alertes non traitées, dernière activité.
+
+**Aucune table, aucune colonne ajoutée.** Tout se déduit de `SourceDonnee`, `ImportDonnee`,
+`ConfigurationAnalyse`, `ResultatAnalyse` et `Alerte`.
+
+**`activite_par_entreprise(db, debut_mois)`** dans `supervision.py` : **4 requêtes agrégées,
+quel que soit le nombre d'entreprises** — chaque décompte est un `GROUP BY idEntreprise` sur tout
+le parc, jamais une requête par ligne (ce qui aurait donné 4 × N). Vérifié en instrumentant le
+moteur SQLAlchemy : 4 requêtes exactement, et les volumes confrontés à un décompte naïf ligne à
+ligne (6 sources / 4 analyses / 2 alertes sur l'entreprise 7, identiques).
+
+⚠️ **Il n'existe aucune date de dernière connexion** sur `Utilisateur`. « Dernière activité » est
+donc `max(dernier import, dernière exécution d'analyse)` : une entreprise qui relance une analyse
+sans réimporter est active, et réciproquement. Affichée en ancienneté (« Il y a 3 jours »), la
+date exacte en sous-ligne — un délai se lit plus vite qu'une date à soustraire.
+
+**Le liseré latéral ne signale que ce qui appelle un regard** : orange `#fb923c` pour une source
+en erreur ou suspendue, rouge `#f87171` pour une alerte critique non traitée. **Une entreprise
+dormante n'en porte aucun** — `DELAI_DORMANCE = 30 jours` produit une mention grise (« Dormante »,
+« Inscrite, jamais utilisée »), jamais une couleur d'alerte. *L'inactivité n'est pas un incident*,
+et la traiter visuellement comme tel apprendrait à ignorer le liseré.
+
+Même raison pour la tuile « Sources en difficulté » : à zéro elle passe en gris (`--calme`), pas
+en vert. Le vert dirait « bravo » là où il n'y a qu'une absence de problème — il reste réservé aux
+confirmations de succès.
+
+**Action unique : l'œil.** Un seul bouton par ligne, ouvrant le modal de supervision. Aucune
+suspension, aucune modification : l'administrateur supervise, il n'intervient pas sur l'activité
+d'une entreprise depuis cette page.
+
+**Modal** — l'ordre reprend celui du modal de détail des configurations : le **message d'état
+d'abord** (un seul, celui qui prime : alerte critique > source en erreur > jamais utilisée >
+dormante > rien à signaler), puis les volumes, puis l'identité, puis le rappel de périmètre. Le
+détail de la sélection avant les messages d'état est exactement le défaut corrigé le 10/08.
+
+**Périmètre vérifié par un test**, pas seulement par relecture : le `data-detail` rendu ne contient
+ni motif, ni message, ni résultat, ni interprétation — uniquement des nombres. Une note en pied de
+tableau le rappelle, comme sur la page des alertes.
+
+### Socle commun : modal et carte d'indicateur (12/08/2026)
+
+Deux composants dupliqués dans les deux dashboards ont été **remplacés par un socle unique**.
+Aucune couche de compatibilité : les anciennes familles sont **supprimées**, pas doublées — deux
+styles parallèles finissent toujours par diverger.
+
+**`.sv-modal-*`** — 7 modals réécrits dessus : détail d'import, de source, de configuration,
+d'entreprise, et les 3 confirmations. Remplace `.imh-modal-*` (nommée d'après `imports_history`,
+la page qui l'avait vue naître) et `.ent-modal-*`.
+
+Structure imposée : `head` (identité à gauche, fermeture à droite, séparateur net) → `body` (la
+seule zone qui défile) → `foot` (note de périmètre) ou `actions`. Sections à titres discrets,
+`sv-modal-pairs` pour les paires libellé/valeur en deux colonnes, `sv-modal-tiles` pour les tuiles.
+
+⚠️ **Le fond de la carte est neutre** (`--bg-card`, comme toutes les cartes de l'application).
+L'accent ne colore que ce qui **porte une information** : le bandeau de message et le badge de
+statut. Un fond teinté fait tout crier à la même intensité.
+
+⚠️ **Le nombre de colonnes des tuiles est déclaré, pas déduit.** `auto-fit` posait 4 tuiles en
+3 + 1 orpheline selon la largeur : la grille est équilibrée par construction.
+
+⚠️ **`.imh-modal-meta-*` n'avait aucune règle CSS** — c'est ce qui produisait les « informations
+du compte en texte brut ». Un balisage sans style ne se voit pas à la relecture, seulement à
+l'écran.
+
+Piège corrigé : un encart masquable (`cfgDetailMessageWrap`) ne doit pas être enveloppé dans une
+`.sv-modal-section`, sinon le conteneur laisse un blanc quand l'encart est caché. L'espacement
+appartient à l'encart (`.sv-modal-espace`), donc il disparaît avec lui.
+
+**`.sv-stat-*`** — modèle unique des cartes d'indicateurs, appelé par la macro
+`components/indicateurs.html` (`carte(label, valeur, contexte, icone, ton)`). Remplace **quatre**
+familles : `.dash-stat-*` (4 pages), `.sup-tuile-*`, `.ent-tuile-*`, `.profil-stat-*` (2 pages).
+Référence retenue : la page « Entreprises partenaires » — libellé court en capitales, valeur en
+grand, ligne de contexte dessous.
+
+⚠️ **La ligne de contexte n'est pas optionnelle** : une carte qui en manque casse l'alignement de
+la rangée et laisse croire à un oubli. Les deux `profil.html` en ont donc gagné une.
+
+⚠️ **Aucune couleur ne doit prétendre signifier ce qu'elle ne signifie pas.** Les anciennes
+teintes (`icon-blue`, `icon-violet`, `icon-amber`) étaient attribuées **par position et non par
+sens** : « Utilisateurs » était violet sans raison. *Une couleur qui ne veut rien dire apprend à
+ignorer celles qui veulent dire quelque chose.*
+
+⚠️ **Corrigé le 12/08 — la règle ne veut pas dire « pas de couleur du tout ».** Appliquée au pied
+de la lettre (icône grise, halo à zéro), elle a produit des cartes plates et ternes. La nuance :
+**une teinte identique sur toutes les cartes n'encode rien** — elle ne distingue aucune carte
+d'une autre — donc elle ne peut pas induire en erreur. Le défaut est désormais l'accent de la
+marque (`--accent`), et seul le **signalement** (`attention`/`eleve`/`critique`, repris de
+`criticite.py`) s'en écarte.
+
+Ce qui distingue « ça signale » de « c'est la marque », et qui est le vrai porteur du sens :
+la **valeur** prend la couleur (elle reste en texte plein par défaut) et le halo monte.
+
+⚠️ **Une seule variable pilote toute la carte** : `--sv-teinte`. Surface, filet supérieur, halo,
+icône, bordure et survol en dérivent, donc une teinte ne peut pas être appliquée à moitié. Un
+modificateur de ton ne fait que redéfinir cette variable.
+
+⚠️ **Bug trouvé à cette occasion : `var(--text-light)` n'a jamais existé** dans le bloc `:root`
+(les tokens sont `--text`, `--text-muted`, `--text-muted-subtle`, `--text-dim`). Les valeurs des
+cartes et les titres de modals héritaient donc d'un gris terne — c'est la moitié de l'effet « tout
+noir ». 5 occurrences corrigées. **Un token inexistant ne lève rien en CSS**, il ne se voit qu'à
+l'écran : un audit `var(--x)` sans définition correspondante fait désormais partie des contrôles.
+
+**Variante compacte** `.sv-stat--compact` pour les indicateurs **internes** à une carte (page
+résultats) : même composant, même hiérarchie, taille réduite. La teinte de fiabilité y est
+conservée — elle porte une information, contrairement aux teintes décoratives supprimées.
+
+**Hors périmètre, volontairement** : `svPwdOverlay` (`base.html`) reste sur son propre style. C'est
+un blocage plein écran à l'ouverture de session, pas un détail consultable.
+
+Vérifié sur les 17 pages des deux dashboards rendues par l'application : `200` partout, **aucune
+trace des 8 familles retirées** dans le HTML servi, 7 modals tous pourvus d'un en-tête et d'un
+corps, 25 paires alignées, comptes de cartes exacts page par page (3/4/3/3/4/5/4/3) avec les
+quatre lignes sur chacune, et le thème clair couvert par le socle.
+
+### Couleurs
+
+Reprises de `criticite.py`, aucune créée : `eleve` → `#fb923c` (orange), `critique` → `#f87171`
+(rouge, réservé à ce seul niveau). Le liseré porte l'intensité — « élevé » ne crie pas aussi
+fort que « critique ». **Le vert n'apparaît nulle part** : il reste réservé aux confirmations de
+succès. Les rangs 0 et 1 ne créant pas d'alerte, seules deux teintes existent ici.
+
+### Vérification
+
+`test_alertes.py` — 26 contrôles sur une base **SQLite en mémoire** construite depuis les vrais
+modèles : mêmes contraintes qu'en production, sans toucher à MySQL. Couvre le seuil, la création,
+l'idempotence, la mise à jour sur changement de rang, le retrait sous le seuil, **plusieurs
+alertes pour une même configuration** (ce que l'ancienne unicité interdisait), le cloisonnement
+entre entreprises et l'absence de détail métier côté admin.
+
+`generer_alertes_existantes.py` rejoue la même fonction sur les résultats déjà en base — donc
+crée, met à jour et retire aussi. Relancer après un changement de seuils réaligne tout le parc.
+
+## Données de démonstration — à retirer avant la livraison
+
+### Jeu « DEMO-ALERTES » (10/08/2026) — Module 5
+
+`demo_alertes.py` crée deux analyses qui déclenchent chacune un niveau, sur deux types
+d'analyse différents. **Rien n'est inséré à la main dans `ResultatAnalyse` ni dans `Alerte`** :
+le script fait tourner la vraie chaîne 4.1 → 4.2 → 4.4 → Module 5, donc ce qui est montré est
+ce que produit l'application.
+
+| Analyse | Données | Criticité obtenue |
+|---|---|---|
+| Classement (`comparaison_classement`) | 5 produits, « Console Nova » à **78 %** du total | **élevé** (rang 2) |
+| Anomalie (`detection_anomalie`) | 30 relevés dont 4 à ×3,2 → **13,3 %** | **critique** (rang 3) |
+
+Valeurs **calibrées contre `criticite.py`**, pas devinées : seuil de concentration à 70 % pour
+« élevé », taux d'anomalies à 10 % pour « critique ». Le script vérifie le niveau obtenu et
+signale tout écart. Graine aléatoire fixe : la démonstration donne le même résultat à chaque
+exécution.
+
+⚠️ La spécification passe par `specification_par_defaut` (repli déterministe) : **aucun appel
+LLM, aucun quota consommé**, et un résultat reproductible.
+
+**Traçabilité et retrait.** Tout porte le marqueur `DEMO-ALERTES` — nom de source, fichiers CSV
+sous `app/uploads/`. Retrait intégral :
+
+```
+python demo_alertes.py --supprimer
+```
+
+La cascade emporte imports, configurations, résultats et alertes ; les deux CSV sont supprimés.
+`python demo_alertes.py` sans argument affiche ce qui serait créé et ce qui serait supprimé,
+sans rien écrire.
+
+Créé le 10/08/2026 sur l'entreprise 7 : sources 27-28, imports 33-34, configurations 78-79,
+résultats 30-31, 2 alertes.
+
+⚠️ **Défaut trouvé grâce à ce jeu** : `synthese_admin` lisait `Entreprise.nom_entreprise`, champ
+inexistant — le vrai nom est `Entreprise.nom`. La page admin renvoyait 200 tant qu'aucune alerte
+n'existait (`synthese_admin` sortait avant la lecture des noms) et serait passée à 500 dès la
+première. **Un test sur une table vide ne teste pas le chemin nominal.**
+
 ## État d'avancement
 
 - Module 0 (site vitrine) : terminé
@@ -958,7 +1264,10 @@ Pièges rencontrés, à ne pas réintroduire :
   - tâche 4.7 (stockage et restitution) : terminée le 10/08/2026 — `ResultatAnalyse` porte
     les chiffres, les séries, la criticité et l'interprétation ; la page
     « Résultats & prévisions » les rend visibles. **Module 4 complet.**
-- Module 5 (alertes) : non commencé
+- Module 5 (alertes) : terminé le 10/08/2026 — déclenchement sur `criticite_rang >= 2`,
+  cloche et panneau du topbar, page « Mes alertes » avec marquage traité, vue de supervision
+  admin. **Correction du modèle : la relation devient Résultat → Alerte** (voir la section
+  dédiée)
 - Module 6 (Power BI) : non commencé
 
 ## Journal des sessions

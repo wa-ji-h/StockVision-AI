@@ -38,9 +38,11 @@ class Settings:
     # LLM_BASE_URL est facultatif : vide, chaque fournisseur applique la sienne.
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-    # gemini-2.5-flash est plafonné à 20 requêtes/JOUR sur le palier gratuit : inutilisable
-    # en développement. Le quota est compté par modèle, d'où ce défaut.
-    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash")
+    # Le quota gratuit est compté PAR MODÈLE, d'où l'importance de ce défaut :
+    # gemini-2.5-flash est plafonné à 20 requêtes/JOUR, inutilisable en développement.
+    # gemini-3.1-flash-lite est retenu pour sa latence — 2,5 s mesurées sur une
+    # interprétation complète, contre 20 s pour gemini-3.5-flash à qualité comparable.
+    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.1-flash-lite")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL", "")
 
     # SMTP — laissé vide en dev : les emails sont alors juste loggés en console

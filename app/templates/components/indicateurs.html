@@ -1,0 +1,39 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Cartes d'indicateurs — modèle unique des deux dashboards.
+
+   Un seul gabarit, appelé partout : libellé court en capitales, valeur en
+   grand, ligne de contexte dessous. Aucun template ne redéfinit ce balisage,
+   sinon les pages recommencent à diverger — c'est exactement ce qui avait
+   produit trois familles parallèles (.dash-stat-*, .sup-tuile-*, .profil-stat-*).
+
+   ⚠️ `ton` n'est renseigné que lorsque la VALEUR signale quelque chose
+   (`attention`, `eleve`, `critique`). Une couleur décorative, attribuée par
+   position, apprend à ignorer celles qui veulent dire quelque chose.
+   ═══════════════════════════════════════════════════════════════════════════ #}
+
+{% macro carte(label, valeur, contexte, icone='', ton='') %}
+<div class="sv-stat {{ 'sv-stat--' ~ ton if ton }}">
+    {% if icone %}
+    <span class="sv-stat-icone"><i class="bi bi-{{ icone }}"></i></span>
+    {% endif %}
+    <span class="sv-stat-corps">
+        <span class="sv-stat-label">{{ label }}</span>
+        <span class="sv-stat-valeur">{{ valeur }}</span>
+        {# La ligne de contexte n'est pas optionnelle : une carte qui en manque
+           casse l'alignement de la rangée et laisse croire à un oubli. #}
+        <span class="sv-stat-sous">{{ contexte }}</span>
+    </span>
+</div>
+{% endmacro %}
+
+{# Variante SVG : même structure, pour les pages qui n'utilisent pas Bootstrap Icons. #}
+{% macro carte_svg(label, valeur, contexte, ton='') %}
+<div class="sv-stat {{ 'sv-stat--' ~ ton if ton }}">
+    <span class="sv-stat-icone">{{ caller() }}</span>
+    <span class="sv-stat-corps">
+        <span class="sv-stat-label">{{ label }}</span>
+        <span class="sv-stat-valeur">{{ valeur }}</span>
+        <span class="sv-stat-sous">{{ contexte }}</span>
+    </span>
+</div>
+{% endmacro %}

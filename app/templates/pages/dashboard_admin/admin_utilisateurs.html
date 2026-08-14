@@ -1,39 +1,19 @@
 {% extends "pages/dashboard/base.html" %}
 {% block title %}Utilisateurs — StockVision AI{% endblock %}
 
+{% from "components/indicateurs.html" import carte %}
+
 {% block dash_content %}
 <div class="dash-intro-card">
     <h1 class="dash-page-title">Gestion des comptes</h1>
     <p class="dash-page-guide">Gérez les accès et le statut de tous les utilisateurs de la plateforme, entreprises et administrateurs.</p>
 </div>
 
-<div class="dash-stats-grid">
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Total utilisateurs</span>
-            <span class="dash-stat-icon icon-violet"><i class="bi bi-people"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ compteurs.total }}</span>
-        <span class="dash-stat-trend">Tous rôles confondus</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Entreprises</span>
-            <span class="dash-stat-icon icon-blue"><i class="bi bi-buildings"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ compteurs.entreprises }}</span>
-        <span class="dash-stat-trend">Comptes entreprise</span>
-    </div>
-
-    <div class="dash-stat-card">
-        <div class="dash-stat-card-top">
-            <span class="dash-stat-label">Administrateurs</span>
-            <span class="dash-stat-icon icon-cyan"><i class="bi bi-shield-check"></i></span>
-        </div>
-        <span class="dash-stat-value">{{ compteurs.administrateurs }}</span>
-        <span class="dash-stat-trend">Accès complet</span>
-    </div>
+<div class="sv-stats">
+    {# Trois volumes, aucun signal : aucune carte n'est teintée. #}
+    {{ carte("Total utilisateurs", compteurs.total, "tous rôles confondus", icone="people") }}
+    {{ carte("Entreprises", compteurs.entreprises, "comptes entreprise", icone="buildings") }}
+    {{ carte("Administrateurs", compteurs.administrateurs, "accès complet", icone="shield-check") }}
 </div>
 
 <div class="dash-tabs" style="margin-top: 2rem;">
