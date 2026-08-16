@@ -1,10 +1,8 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Demandes en attente — StockVision AI{% endblock %}
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Gestion des inscriptions</h1>
-    <p class="dash-page-guide">Examinez les demandes d'accès soumises par les entreprises et décidez de les approuver ou de les refuser.</p>
-</div>
+{{ entete("Console d'administration", "Gestion des inscriptions", "Examinez les demandes d'accès soumises par les entreprises et décidez de les approuver ou de les refuser.") }}
 
 <div class="dash-tabs">
     <a href="/dashboard/admin/demandes?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'en_attente' }}">En attente</a>

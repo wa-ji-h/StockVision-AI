@@ -1,11 +1,9 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Paramètres — StockVision AI{% endblock %}
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Configuration de la plateforme</h1>
-    <p class="dash-page-guide">Ajustez les réglages globaux d'analyse, de sécurité et de notifications de StockVision AI.</p>
-</div>
+{{ entete("Console d'administration", "Configuration de la plateforme", "Ajustez les réglages globaux d'analyse, de sécurité et de notifications de StockVision AI.") }}
 
     <!-- Alertes globales -->
     <div id="paramAlerte"   class="param-alert param-alert--err" style="display:none;"></div>

@@ -30,6 +30,18 @@ NIVEAUX_CRITICITE: tuple[tuple[str, int, str], ...] = (
 )
 
 RANG_PAR_NIVEAU = {code: rang for code, rang, _ in NIVEAUX_CRITICITE}
+
+# Teinte de chaque niveau. Elle ne vivait jusqu'ici que dans la feuille de style
+# (`.res-crit-point--*`), donc un graphique qui devait la reprendre côté serveur
+# n'avait d'autre choix que de la recopier — et de diverger au premier changement.
+# Ces valeurs sont **celles du CSS**, pas de nouvelles : gris pour l'absence de
+# signal, ambre, orange, rouge. Le vert reste réservé aux confirmations de succès.
+COULEUR_PAR_NIVEAU = {
+    "normal": "#64748b",
+    "attention": "#f59e0b",
+    "eleve": "#fb923c",
+    "critique": "#f87171",
+}
 NIVEAU_PAR_RANG = {rang: code for code, rang, _ in NIVEAUX_CRITICITE}
 LIBELLE_PAR_NIVEAU = {code: libelle for code, _, libelle in NIVEAUX_CRITICITE}
 

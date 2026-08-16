@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from app.database.models.alerte import Alerte
 from app.database.models.configuration_analyse import ConfigurationAnalyse
@@ -207,6 +207,21 @@ def synthese_admin(db) -> list[dict]:
         .group_by(SourceDonnee.idEntreprise, Alerte.niveau, Alerte.statut)
         .all()
     )
+    # Les DATES, dans une seconde requête agrégée : deux horodatages suffisent à
+    # distinguer une entreprise réactive d'une qui ignore ses alertes. Ni message,
+    # ni motif, ni résultat n'est lu — seulement `date_creation` et `date_traitement`.
+    delais = (
+        db.query(SourceDonnee.idEntreprise, Alerte.statut,
+                 func.min(Alerte.date_creation), func.count(Alerte.id_alerte),
+                 func.sum(func.timestampdiff(
+                     text("SECOND"), Alerte.date_creation, Alerte.date_traitement)))
+        .join(ConfigurationAnalyse,
+              Alerte.id_configuration == ConfigurationAnalyse.id_configuration)
+        .join(ImportDonnee, ConfigurationAnalyse.id_import == ImportDonnee.id_import)
+        .join(SourceDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
+        .group_by(SourceDonnee.idEntreprise, Alerte.statut)
+        .all()
+    )
     if not lignes:
         return []
 
@@ -222,6 +237,9 @@ def synthese_admin(db) -> list[dict]:
             "id_entreprise": id_ent,
             "nom": noms.get(id_ent, f"Entreprise {id_ent}"),
             "total": 0, "non_traitees": 0,
+            # Renseignées plus bas si les dates le permettent ; jamais inventées.
+            "plus_ancienne": None, "anciennete_jours": None,
+            "delai_moyen_h": None, "nb_traitees": 0,
             **{niv["code"]: 0 for niv in NIVEAUX_ALERTE},
         })
         e["total"] += n
@@ -230,9 +248,30 @@ def synthese_admin(db) -> list[dict]:
         if niveau in e:
             e[niveau] += n
 
-    # Les plus sollicitées d'abord : c'est ce qu'un superviseur regarde en premier.
-    return sorted(par_entreprise.values(),
-                  key=lambda e: (-e["non_traitees"], -e["total"], e["nom"]))
+    maintenant = datetime.now()
+    for id_ent, statut, plus_ancienne, n, somme_secondes in delais:
+        e = par_entreprise.get(id_ent)
+        if e is None:
+            continue
+        if statut != STATUT_TRAITEE:
+            # Ancienneté de la plus ancienne alerte ENCORE ouverte : une alerte
+            # critique laissée trois semaines n'est pas un incident de même nature
+            # qu'une alerte ouverte il y a une heure.
+            e["plus_ancienne"] = plus_ancienne
+            e["anciennete_jours"] = ((maintenant - plus_ancienne).days
+                                     if plus_ancienne else None)
+        elif n:
+            # Délai moyen de traitement, sur les seules alertes effectivement traitées.
+            e["delai_moyen_h"] = round(float(somme_secondes or 0) / n / 3600, 1)
+            e["nb_traitees"] = n
+
+    # Trié par ce qui appelle le plus l'attention, jamais par ordre alphabétique :
+    # d'abord les critiques ouvertes, puis l'ancienneté du plus vieux dossier, puis
+    # le volume. Le nom ne sert qu'à départager deux situations identiques.
+    return sorted(
+        par_entreprise.values(),
+        key=lambda e: (-e.get("critique", 0), -(e.get("anciennete_jours") or -1),
+                       -e["non_traitees"], -e["total"], e["nom"]))
 
 
 def libelle_niveau(code: str) -> str:

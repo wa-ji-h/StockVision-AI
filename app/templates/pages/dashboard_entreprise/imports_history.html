@@ -1,11 +1,9 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Vos imports précédents — StockVision AI{% endblock %}
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">{{ title }}</h1>
-    <p class="dash-page-guide">{{ guide }}</p>
-</div>
+{{ entete("Espace entreprise", title, guide) }}
 
 {% if sources %}
 <div class="dash-tabs" id="imhTabs">
@@ -172,10 +170,29 @@
                     </div>
                 </div>
             </div>
+            {# ── Aperçu ──────────────────────────────────────────────────────
+               Ce sont les données de l'entreprise : elle a le droit de les
+               vérifier. Dix lignes suffisent à voir si les colonnes sont
+               alignées et les dates bien interprétées — c'est un contrôle
+               avant configuration, pas un explorateur. #}
+            <div class="sv-modal-section" id="imhModalApercuBlock" style="display:none;">
+                <div class="dash-rangee-tete" style="margin-bottom:0.55rem;">
+                    <h4 class="sv-modal-section-title" style="margin:0;">Aperçu des données</h4>
+                    <span class="dash-rangee-note" id="imhModalApercuMeta"></span>
+                </div>
+                <div class="imh-apercu-wrap">
+                    <table class="imh-apercu" id="imhModalApercu"></table>
+                </div>
+                <p class="imh-apercu-note" id="imhModalApercuAutres" style="display:none;"></p>
+            </div>
+
+            <div class="sv-modal-section" id="imhModalApercuEtat" style="display:none;">
+                <p class="sv-liste-vide" id="imhModalApercuMsg">Chargement de l'aperçu…</p>
+            </div>
         </div>
 
         <p class="sv-modal-foot">
-            Le contenu brut des données n'est jamais affiché ici.
+            Aperçu des premières lignes de votre fichier, tel que l'analyse le lira.
         </p>
     </div>
 </div>
@@ -275,9 +292,78 @@
                 sqlBlock.style.display = '';
             }
 
+            chargerApercu(btn.dataset.sourceId);
             modal.style.display = 'flex';
         });
     });
+
+    /* ── Aperçu des premières lignes ──────────────────────────────────────────
+       Chargé à l'ouverture du modal, jamais avec la page : dix listes de sources
+       déclencheraient dix lectures de fichier pour rien. Le serveur ne renvoie
+       que les premières lignes — rien n'est tronqué côté navigateur. */
+    function chargerApercu(sourceId) {
+        const bloc = document.getElementById('imhModalApercuBlock');
+        const etat = document.getElementById('imhModalApercuEtat');
+        const msg = document.getElementById('imhModalApercuMsg');
+        const table = document.getElementById('imhModalApercu');
+        const autres = document.getElementById('imhModalApercuAutres');
+        bloc.style.display = 'none';
+        autres.style.display = 'none';
+        table.innerHTML = '';
+        etat.style.display = '';
+        msg.textContent = 'Chargement de l’aperçu…';
+
+        if (!sourceId) { etat.style.display = 'none'; return; }
+
+        fetch(`/dashboard/entreprise/imports/${sourceId}/apercu`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.ok) {
+                    /* Le motif vient du serveur : il dit à l'entreprise quoi faire
+                       (réimporter, par exemple) plutôt qu'« erreur ». */
+                    msg.textContent = d.message || 'Aperçu indisponible.';
+                    return;
+                }
+                etat.style.display = 'none';
+                bloc.style.display = '';
+
+                const thead = document.createElement('thead');
+                const tr = document.createElement('tr');
+                d.colonnes.forEach(c => {
+                    const th = document.createElement('th');
+                    th.textContent = c;
+                    tr.appendChild(th);
+                });
+                thead.appendChild(tr);
+                const tbody = document.createElement('tbody');
+                d.lignes.forEach(ligne => {
+                    const l = document.createElement('tr');
+                    ligne.forEach(v => {
+                        const td = document.createElement('td');
+                        /* Une valeur absente se dit, elle ne se laisse pas vide :
+                           une cellule blanche se confond avec un décalage de colonnes. */
+                        td.textContent = v === '' ? '—' : v;
+                        if (v === '') td.className = 'imh-apercu-vide';
+                        l.appendChild(td);
+                    });
+                    tbody.appendChild(l);
+                });
+                table.append(thead, tbody);
+
+                const total = d.total_partiel
+                    ? `${d.affichees} premières lignes sur au moins ${d.total}`
+                    : `${d.affichees} premières lignes sur ${d.total}`;
+                document.getElementById('imhModalApercuMeta').textContent =
+                    `${d.table} · ${total}`;
+
+                if (d.autres_tables && d.autres_tables.length) {
+                    autres.textContent =
+                        `Ce fichier contient également : ${d.autres_tables.join(', ')}.`;
+                    autres.style.display = '';
+                }
+            })
+            .catch(() => { msg.textContent = 'Aperçu indisponible.'; });
+    }
     document.getElementById('imhModalClose').addEventListener('click', () => modal.style.display = 'none');
     modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
 

@@ -61,6 +61,7 @@ from app.services.moteur_analyse.schema_analyse import (
     valider_reponse,
 )
 from app.services.moteur_analyse.criticite import (
+    COULEUR_PAR_NIVEAU,
     LIBELLE_PAR_NIVEAU,
     NIVEAUX_CRITICITE,
     NIVEAU_PAR_RANG,
@@ -178,6 +179,7 @@ __all__ = [
     "NIVEAUX_CRITICITE",
     "RANG_PAR_NIVEAU",
     "NIVEAU_PAR_RANG",
+    "COULEUR_PAR_NIVEAU",
     "LIBELLE_PAR_NIVEAU",
     "SEUILS_VARIATION",
     "SEUILS_TAUX_ANOMALIE",

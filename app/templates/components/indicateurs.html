@@ -26,6 +26,29 @@
 </div>
 {% endmacro %}
 
+{# Variante à courbe : même carte, même sobriété, avec la tendance des 30 derniers
+   jours en pied. La courbe n'introduit aucune teinte — elle hérite de `--sv-teinte`,
+   donc de l'accent par défaut et du signalement quand il y en a un.
+
+   ⚠️ Une carte ne reçoit de courbe que si sa valeur a une HISTOIRE. « Dernière
+   activité » est une date, pas une série : lui en dessiner une serait inventer
+   une tendance qui n'existe pas. #}
+{% macro carte_serie(label, valeur, contexte, serie, icone='', ton='') %}
+<div class="sv-stat sv-stat--serie {{ 'sv-stat--' ~ ton if ton }}">
+    <span class="sv-stat-haut">
+        {% if icone %}
+        <span class="sv-stat-icone"><i class="bi bi-{{ icone }}"></i></span>
+        {% endif %}
+        <span class="sv-stat-corps">
+            <span class="sv-stat-label">{{ label }}</span>
+            <span class="sv-stat-valeur">{{ valeur }}</span>
+            <span class="sv-stat-sous">{{ contexte }}</span>
+        </span>
+    </span>
+    <span class="sv-stat-spark" data-graph="sparkline" data-serie='{{ serie | tojson }}'></span>
+</div>
+{% endmacro %}
+
 {# Variante SVG : même structure, pour les pages qui n'utilisent pas Bootstrap Icons. #}
 {% macro carte_svg(label, valeur, contexte, ton='') %}
 <div class="sv-stat {{ 'sv-stat--' ~ ton if ton }}">

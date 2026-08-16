@@ -1175,6 +1175,340 @@ trace des 8 familles retirées** dans le HTML servi, 7 modals tous pourvus d'un 
 corps, 25 paires alignées, comptes de cartes exacts page par page (3/4/3/3/4/5/4/3) avec les
 quatre lignes sur chacune, et le thème clair couvert par le socle.
 
+### Composition des deux dashboards (12/08/2026)
+
+Agencement uniquement : **la palette, la typographie et les composants existants
+(`.sv-stat`, `.sv-modal`, classes de tableaux) n'ont pas changé.** L'identité était déjà établie.
+
+**Le rythme vertical est déclaré une fois** — `--pas-bloc` (1,75 rem) et `--pas-section`
+(2,75 rem). Chaque page inventait auparavant son espacement (2 rem sur l'intro, 2,5 rem sur les
+titres, `mb-4` en utilitaire) : une page ne peut pas avoir de hiérarchie lisible si son unité
+d'espacement change d'un bloc à l'autre.
+
+⚠️ **`.dash-intro-card` supprimée des 16 pages** (hors profil). Elle portait une bordure d'accent
+et `box-shadow: var(--shadow-glow)` sur une phrase statique : **le traitement le plus fort de la
+page allait à son élément le moins important**, et écrasait la première rangée de cartes. Remplacée
+par `.sv-page` — surtitre, titre, guide, emplacement d'action — séparée du contenu par un simple
+filet. L'accent est rendu au contenu.
+
+**Le surtitre dit de quel poste on parle** (« Console d'administration » / « Espace entreprise »).
+Sur deux consoles qui partagent la même coque, savoir où l'on se trouve est la première information
+utile. Il est fixé par le rôle, jamais par la page.
+
+⚠️ **Exception assumée : les deux `profil.html`.** Leur bannière portrait *est* leur en-tête, et son
+badge nomme le rôle mieux qu'un surtitre. Leur imposer `.sv-page` aurait produit deux en-têtes.
+
+#### Deux signatures, parce que les deux postes ne font pas le même travail
+
+| | **Entreprise** — elle avance | **Admin** — il arbitre |
+|---|---|---|
+| Question | « où j'en suis, quoi ensuite ? » | « qu'attend-on de moi ? » |
+| Signature | **fil du pipeline** (`.sv-fil`) | **rail de triage** (`.sup-carte`, déjà en place) |
+| Ordre | pipeline → prochaine action → activité → résultats/alertes | à traiter → volumes du parc → activité |
+
+**Le fil du pipeline n'est pas un ornement** : c'est la chaîne du modèle de données
+(`SourceDonnee` → `ImportDonnee` → `ConfigurationAnalyse` → `ResultatAnalyse` → `Alerte`), où
+chaque maillon exige le précédent. C'est ce qui autorise un rang numéroté — il porte une
+information réelle, contrairement à un « 01 / 02 / 03 » décoratif.
+
+⚠️ **Un seul maillon est marqué « À faire » : le premier vide.** Au-delà, tout est vide *par
+conséquence*, pas par oubli — le signaler partout serait une fausse alerte. `etat_pipeline`
+(`app/services/tableau_bord.py`) en déduit **la prochaine action utile**, énoncée une fois en
+`.sv-suite`. Un tableau de bord qui constate sans dire quoi faire laisse dans l'impasse.
+
+**La page d'accueil entreprise était vide** — un titre et une phrase, sur la console du rôle qui
+*travaille*. Elle porte désormais le fil, la prochaine action, quatre indicateurs et les derniers
+résultats/alertes en deux colonnes inégales (les résultats portent le contenu, les alertes sont un
+appoint : les mettre à égalité laisserait croire qu'on les consulte autant).
+
+⚠️ **Aucun décompte n'est recalculé** : `activite_par_entreprise` gagne un paramètre
+`id_entreprise` et reste le **producteur unique** de ces volumes. Les deux consoles lisent les mêmes
+chiffres par les mêmes jointures ; `tableau_bord.py` n'ajoute que l'ordre des étapes et le maillon
+bloquant (2 requêtes de plus, pour les imports et les configurations).
+
+**Le périmètre admin est revérifié** : aucune des 8 pages admin n'expose motif, interprétation ni
+valeur d'analyse.
+
+Vérifié : `200` sur les 18 pages, 16 portant le nouvel en-tête et les 2 profils leur bannière, un
+seul `<h1>` par page, aucun surtitre croisé entre les deux consoles, le fil absent côté admin, et
+les 5 états du pipeline (neuve → complète) contrôlés un par un.
+
+### Graphiques des deux accueils (12/08/2026)
+
+`app/services/graphiques.py` (séries et répartitions) + `app/static/js/graphiques.js`
+(dessin SVG, ~11 ko). **Aucune dépendance, aucune table, aucune colonne ajoutée** : chaque série
+est un `GROUP BY` sur une date déjà au modèle.
+
+**Trois formes, trois métiers** : `sparkline` (tendance 30 j en pied de carte), `courbe` (une
+série à la fois, sélecteur + curseur + infobulle), `barres` (répartition).
+
+⚠️ **Une carte ne reçoit de courbe que si sa valeur a une HISTOIRE.** « Dernière activité » est
+une **date**, pas une série : lui dessiner une tendance serait en inventer une. Elle reste sur la
+carte simple — c'est le seul indicateur demandé qui n'était pas traçable.
+
+⚠️ **L'encours d'alertes est un ÉTAT, pas un flux.** « Non traitée le jour J » vaut `créée ≤ J` et
+(`jamais traitée` ou `traitée après J`). Compter les créations donnerait une courbe qui ne
+redescend jamais, alors que l'encours redescend. Reconstituable sans historique dédié **parce que
+`Alerte.date_traitement` existe** — sans cette colonne, l'indicateur aurait été abandonné.
+
+⚠️ **Les jours sans événement valent 0, ils ne sont jamais omis** : un trou dans une série
+temporelle se lit comme une rupture alors qu'il ne dit que « rien ce jour-là ».
+
+**Une seule série est visible à la fois** dans les graphiques à sélecteur. C'est ce qui autorise
+une couleur unique (l'accent) : superposer deux séries aurait exigé deux teintes distinguables,
+que le design system ne fournit pas pour cet usage.
+
+#### ⚠️ Barres et non anneau — décision mesurée, pas esthétique
+
+L'anneau demandé a été remplacé par des barres après avoir **passé la palette au validateur**
+(`dataviz/scripts/validate_palette.js`, mode sombre) plutôt que de l'estimer à l'œil :
+
+| Paire | ΔE vision normale | ΔE deutéranopie | Verdict |
+|---|---|---|---|
+| `#7F77DD` (classement) ↔ `#378ADD` (prévision) | **8,5** | **0,3** | échec — quasi identiques |
+| `#64748b` (besoin libre) ↔ `#7F77DD` | **13,4** | 12,3 | échec — sous le plancher de 15 |
+| `#fb923c` (élevé) ↔ `#f87171` (critique) | **10,6** | 7,9 | échec |
+
+Les couleurs d'objectif sont **imposées par le design system** et ne peuvent pas être re-échelonnées.
+Or dans un anneau, la couleur est le **seul** porteur d'identité. En barres, chaque part porte son
+libellé et son pourcentage : la couleur devient un renfort, plus un porteur — et un lecteur
+deutéranope lit la répartition sans effort. Sur les données réelles, les deux plus grosses parts
+sont précisément `#7F77DD` (44 %) et `#64748b` (33 %), la paire qui échoue : l'anneau aurait été
+illisible là où ça compte le plus.
+
+**Si l'anneau est malgré tout souhaité**, il faudra soit rouvrir les couleurs d'objectif, soit
+accepter que deux catégories sur quatre ne se distinguent pas.
+
+#### Couleurs de criticité — désormais déclarées en Python
+
+`COULEUR_PAR_NIVEAU` dans `criticite.py`, **valeurs reprises du CSS, aucune créée**. Elles ne
+vivaient que dans la feuille de style (`.res-crit-point--*`) : un graphique qui devait les reprendre
+côté serveur n'avait d'autre choix que de les recopier, et de diverger au premier changement.
+
+#### Ce qui n'était PAS calculable, et qui n'a pas été affiché
+
+| Demandé | Pourquoi non |
+|---|---|
+| Courbe sur « Dernière activité » | c'est une date, pas une série |
+| Variation en % vs période précédente | pas de période de comparaison — l'historique couvre 14 jours |
+| Dernière connexion | aucun champ sur `Utilisateur` (déjà constaté le 12/08) |
+
+**Piège corrigé** : `| tojson | forceescape` transformait chaque `"` en `&#34;` — six caractères
+pour un — soit une charge sextuplée sur 90 points de série. `tojson` seul échappe déjà l'apostrophe
+en `'` et suffit dans un attribut entre apostrophes.
+
+Vérifié en trois passes : les séries sur données réelles (30 points pleins, zéros compris), le
+rendu servi (couleurs uniquement issues des objectifs et de la criticité, aucun delta, périmètre
+admin intact), et **la géométrie des tracés rejouée hors navigateur** — tous les points dans le
+cadre, aucun sommet collé au plafond, aucune barre hors de [3, 100] %.
+
+### Densité des deux accueils — la collision `.sv-section` (12/08/2026)
+
+Symptôme : les accueils s'étalaient sur **trois écrans**, avec des vides de plusieurs centaines de
+pixels entre les rangées, et des colonnes de hauteurs très inégales.
+
+⚠️ **Cause principale : une collision de noms de classe.** `.sv-section` existait déjà pour le
+**site vitrine**, avec `padding: 5.5rem 0` — soit **176 px morts entre chaque rangée**. Le socle de
+composition du dashboard avait repris le même nom en n'ajoutant qu'un `margin-top` : le `--pas-section`
+n'a jamais été en charge de quoi que ce soit. Renommé en **`.dash-rangee`** (+ `-tete`, `-titre`,
+`-note`, `-lien`) ; le rythme du site vitrine est intact.
+
+**Le préfixe `sv-` est partagé avec le site vitrine.** Avant d'y créer une classe, vérifier qu'elle
+n'existe pas déjà en amont de la feuille — une redéfinition partielle ne lève rien, elle se voit
+seulement à l'écran. Les 22 classes `.sv-*` du site vitrine sont listables par un balayage des
+définitions antérieures au socle du dashboard.
+
+Trois autres corrections, chacune sur une cause identifiée :
+
+| Grief | Cause | Correction |
+|---|---|---|
+| Colonnes de hauteurs inégales | `.sv-colonnes { align-items: start }` | `stretch` + colonne en pile + `.sv-panneau { flex: 1 }` |
+| Le rail occupe toute la largeur pour une entrée | `repeat(auto-fit, …)` étire la carte unique | `auto-fill` : elle garde sa largeur de colonne |
+| En-tête = la moitié du premier écran | surtitre + séparateur + titre à 1,65 rem | surtitre retiré du rendu, séparateur supprimé, titre à 1,4 rem |
+
+⚠️ **Le surtitre n'est plus rendu.** Il répétait ce que la barre latérale dit déjà. Le paramètre
+reste dans la macro `entete()` — les appels existants restent valides et documentent le poste.
+
+**Contenus qui remplissent leur cadre** : `.sv-parts` et `.sv-classement` passent en
+`height: 100%; justify-content: center`. Deux lignes dans un panneau étiré s'entassaient en haut ;
+elles se centrent désormais dans la hauteur que la rangée leur donne.
+
+**Gouttière unique** : `--pas-section` (1,35 rem) sépare les rangées **et** les colonnes d'une
+rangée ; `--pas-bloc` (0,9 rem) sépare les cartes d'une même grille. Deux valeurs, pas plus.
+
+Mesuré après correction, en sommant les hauteurs déclarées : **~849 px pour l'accueil admin**
+(en-tête 70 · indicateurs 124 · rail 99 · graphique 278 · listes 278), contre ~1 640 px pour deux
+écrans utiles. L'accueil entreprise ajoute le fil du pipeline (~110 px).
+
+Vérifié par six suites : composition, densité (gouttière, hauteurs, en-tête, rail, total),
+graphiques, harmonisation, cartes, page entreprises.
+
+### Icône d'objectif : une définition, plus cinq (12/08/2026)
+
+`app/templates/components/objectifs.html` — macros `obj_icon(icon, size)` et
+`obj_pastille(icon, color, size)`.
+
+⚠️ Le jeu d'icônes vivait en **cinq copies** (liste des configurations, wizard, alertes, résultats,
+et une pastille générique sur l'accueil), avec pour seule garantie une note de ce fichier demandant
+de les tenir identiques. **Elles avaient déjà divergé** : la liste rendait encore l'ancienne icône
+« adjustments » là où le wizard affichait `arrows-sort`. *Une note ne remplace pas une source
+unique.* Les cinq gabarits consomment désormais le composant ; il ne reste aucune macro locale.
+
+L'icône vient de `_presenter_objectif(...)["icon"]`, comme la couleur et le libellé : le nom, la
+teinte et le pictogramme d'un objectif ont la même origine.
+
+### Le badge de criticité est un composant, pas un jeton générique (12/08/2026)
+
+L'accueil entreprise affichait la criticité avec `.dash-status-pending` — **le jeton qui affiche
+aussi « En attente » ailleurs dans l'application**. Le libellé était pourtant le bon (« À
+surveiller », issu de `LIBELLE_PAR_NIVEAU`) : c'est le *vêtement* qui faisait lire un niveau de
+criticité comme un statut de traitement.
+
+Remplacé par `.res-crit` / `.res-crit-point`, le badge de la page des résultats. Le libellé et la
+teinte viennent tous deux de `criticite.py`, donc **l'accueil et la page des résultats ne peuvent
+plus diverger**. Vérifié niveau par niveau sur les deux pages.
+
+⚠️ **`attention` est un code, « À surveiller » est le libellé.** Le code apparaît en base, dans les
+noms de classes CSS et dans les paramètres d'URL ; le libellé est ce qu'on montre. Afficher
+`attention` dans un badge reviendrait à exposer un identifiant interne.
+
+**Les listes remplissent leur panneau** : `.sv-liste` passe en `height: 100%; justify-content:
+center`, et `.sv-liste-vide` en `flex: 1`. Deux entrées dans un bloc étiré par sa rangée
+laissaient un vide en bas — même correction que `.sv-parts` et `.sv-classement`.
+
+### Section admin « Analyses » (12/08/2026)
+
+`app/services/supervision_analyses.py` + `admin_configurations.html`. Remplace le placeholder.
+
+⚠️ **Route déclarée AVANT `/dashboard/admin/{section}`** : le catch-all l'absorberait sinon.
+
+#### ⚠️ Fuite de périmètre trouvée dans une fonction partagée
+
+`_presenter_objectif` — la source unique d'affichage d'un objectif, utilisée des deux côtés —
+**expose le besoin métier** : elle le place dans `sous_ligne` **et** dans `titre` (l'infobulle),
+y compris pour une configuration qui porte pourtant un objectif prédéfini, et le renvoie comme
+`label` pour les configurations « besoin libre ». L'employer côté admin aurait publié le besoin
+de chaque entreprise sur une page de supervision.
+
+**`objectif_pour_admin(c)`** est la frontière : elle **énumère ce qui sort** (`libelle`, `icone`,
+`couleur`, `libre`) au lieu d'exclure ce qui ne doit pas sortir — même principe que `charge_utile()`
+en 4.5. Le jour où `_presenter_objectif` gagne un champ, il ne franchira pas la frontière tout seul.
+Pour un besoin libre, la **mention** `MENTION_BESOIN_LIBRE` remplace le texte.
+
+Audit complet des autres fonctions partagées : `activite_par_entreprise`, `entreprises_actives`,
+`synthese_admin`, `etat_pipeline` ne renvoient que des volumes ; `alertes.py` lit `criticite_motif`
+mais uniquement pour le côté entreprise. **Aucune autre fuite.** Vérifié en cherchant les 45 valeurs
+sensibles réellement présentes en base dans les 9 pages admin : aucune n'apparaît.
+
+#### Ce qui n'est pas calculable, et n'a pas été inventé
+
+⚠️ **Il n'existe aucun historique des tentatives.** `execution_erreur`, `intention_erreur` et
+`message_execution` ne gardent que la **dernière**. « Échecs répétés » exigerait une table
+d'exécutions. Trois signaux le remplacent, tous calculables :
+
+| Signal | Calcul |
+|---|---|
+| `jamais_lancee` | active, `derniere_execution IS NULL` |
+| `sans_resultat` | lancée, mais aucun `ResultatAnalyse` — 2 cas réels (cfg 68, 75) |
+| `en_echec` | statut d'erreur ou colonne d'erreur renseignée |
+
+Un seul signal s'affiche par ligne, le plus actionnable : en afficher trois noierait le message.
+
+⚠️ **Le modal le dit lui-même** : l'historique ne liste que les exécutions **ayant produit un
+résultat**, car un échec ne crée aucune ligne. Un journal partiel présenté comme complet ferait
+croire qu'une analyse n'a jamais échoué.
+
+**`nature_erreur()` classe un échec sans recopier son message** : seule la *colonne* qui porte
+l'erreur est lue, ce qui suffit à donner la nature (source indisponible / service d'interprétation /
+moteur de calcul) et l'action à mener. Le message d'exécution est rédigé pour l'entreprise et peut
+nommer ses colonnes — il ne franchit pas la frontière.
+
+#### Contrôle de saisie
+
+Tout paramètre d'URL est confronté aux valeurs connues **avant** d'atteindre la couche de données ;
+`entreprise_id` n'est converti que s'il désigne une entreprise existante. Une valeur inconnue
+retombe sur le défaut et **liste tout** — vider silencieusement la page serait pire que l'ignorer.
+Éprouvé sur 6 saisies invalides, dont une tentative d'injection : 200 partout, liste complète.
+
+**Une requête pour tout le parc** : le dernier résultat de chaque configuration se prend en
+parcourant une liste triée, pas par un `GROUP_CONCAT ... ORDER BY` propre à MySQL.
+
+Vérifié : 9 configurations listées, les 9 filtres de statut et de fréquence confrontés un par un à
+un décompte SQL indépendant, aucune fuite sur 4 combinaisons de filtres, un seul type de bouton
+dans le tableau, et une entreprise qui demande l'URL est redirigée (303).
+
+### Centre d'alertes admin : des volumes aux décisions (12/08/2026)
+
+**Retiré : le bloc « À surveiller ».** Il occupait un tiers de largeur pour cinq lignes serrées et
+**répétait les cartes situées juste dessous** — « 1 alerte critique non traitée » était déjà dit
+par les cartes « Critique » et « Non traitées ». Une information dite deux fois n'est pas dite
+plus fort.
+
+**Cinq cartes ramenées à quatre.** « Alertes au total » a sauté : un cumul incluant les alertes
+déjà traitées ne dit rien de l'état du parc. Il est remplacé par **« Plus ancienne ouverte »**,
+qui distingue « des alertes arrivent » de « des alertes s'accumulent ».
+
+#### Ce qui manquait pour décider
+
+| Ajout | Calcul — `date_creation` et `date_traitement` suffisent |
+|---|---|
+| Ancienneté du plus vieux dossier ouvert | `min(date_creation)` sur les non traitées, par entreprise |
+| Délai moyen de traitement | `avg(date_traitement − date_creation)` sur les traitées |
+| Évolution de l'encours | `alertes_ouvertes_par_jour` — le composant du tableau de bord |
+
+⚠️ **L'encours est un ÉTAT, pas un flux** : il redescend quand les entreprises traitent, là où un
+cumul de créations ne redescend jamais. Vérifié : la dernière valeur de la courbe égale le nombre
+d'alertes non traitées en base.
+
+⚠️ **« Aucune alerte encore traitée » s'affiche toujours.** Ce repli était d'abord calculé mais
+jamais rendu — or c'est **le cas le plus parlant** : il distingue une entreprise réactive d'une
+entreprise qui laisse tout ouvert. Aucune moyenne n'est inventée quand rien n'a été traité.
+
+**Tri par ce qui appelle l'attention**, jamais alphabétique : critiques ouvertes, puis ancienneté
+du plus vieux dossier, puis encours. Le nom ne départage que deux situations identiques.
+
+`SEUIL_ALERTE_ANCIENNE = 14` jours : au-delà, une alerte non traitée n'est plus un événement
+récent. Le seuil **qualifie** l'ancienneté, il ne déclenche rien.
+
+**Périmètre inchangé** : ni message, ni motif, ni lien vers un résultat. Vérifié en cherchant les
+10 valeurs sensibles réellement en base — aucune n'apparaît. L'ancienneté est confrontée à un
+décompte SQL indépendant.
+
+### Aperçu d'un import — côté entreprise uniquement (12/08/2026)
+
+`apercu_import(db, imp, source)` dans `extraction.py` + endpoint
+`GET /dashboard/entreprise/imports/{source_id}/apercu`.
+
+**La restriction précédente n'avait pas lieu d'être** : « le contenu brut n'est jamais affiché ici »
+s'appliquait aux données **de l'entreprise elle-même**. Le modal montre désormais les 10 premières
+lignes, avec en-têtes et compte total — un contrôle avant configuration (colonnes alignées, dates
+bien interprétées), pas un explorateur : ni pagination, ni recherche.
+
+⚠️ **Le fichier n'est jamais chargé en entier.**
+
+| Format | Lecture |
+|---|---|
+| CSV | `read_csv(nrows=10)` pour l'aperçu, `chunksize=50_000` pour le compte exact |
+| SQL | lecture bornée à `OCTETS_APERCU_SQL` (512 Ko), assez pour le premier `CREATE` et ses `INSERT` |
+
+Les deux lecteurs sont **ceux du profilage du wizard**, et le typage passe par `_normaliser_types` :
+ce que l'aperçu montre est ce que l'analyse lira. Mesuré sur un CSV de 9,7 Mo / 300 000 lignes
+fabriqué pour l'épreuve : **15 ms** pour les 10 lignes, 0,11 s pour le comptage par blocs.
+
+⚠️ **Sur un script SQL, le total est celui du fragment lu**, pas du fichier. `total_partiel` le dit
+au gabarit, qui écrit « sur au moins N » — annoncer un total qu'on n'a pas compté serait faux.
+
+⚠️ **L'appartenance est vérifiée dans la REQUÊTE**, pas après : le filtre sur `idEntreprise` fait
+partie du `WHERE`. Une source d'autrui est *introuvable* (404), elle n'est pas « trouvée puis
+refusée ». Éprouvé sur 4 identifiants hors périmètre, plus un non numérique (422).
+
+⚠️ **Le modal administrateur est inchangé** : aucun aperçu, et sa note de périmètre reste. Vérifié
+par un test dédié — l'endpoint lui-même le redirige (303).
+
+**L'aperçu est chargé à l'ouverture du modal**, jamais avec la page : dix sources listées
+déclencheraient sinon dix lectures de fichier pour rien. Vérifié : aucune valeur du fichier
+n'apparaît dans le HTML servi.
+
 ### Couleurs
 
 Reprises de `criticite.py`, aucune créée : `eleve` → `#fb923c` (orange), `critique` → `#f87171`

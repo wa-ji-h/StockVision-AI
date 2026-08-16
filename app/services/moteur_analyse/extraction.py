@@ -1110,3 +1110,112 @@ def executer_extraction(db, config) -> ResultatExtraction | None:
     config.derniere_execution = datetime.utcnow()
     db.commit()
     return resultat
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Aperçu d'un import — vérification par l'entreprise
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Un aperçu de vérification, pas un explorateur : dix lignes suffisent à voir si
+# les colonnes sont alignées et les dates bien interprétées.
+LIGNES_APERCU = 10
+
+# Garde-fou de lecture pour les scripts SQL. Le fichier n'est PAS chargé en entier :
+# on n'en lit que le début, assez pour trouver le premier CREATE et ses premiers
+# INSERT. Un dump de plusieurs centaines de Mo ne doit pas passer par la mémoire
+# pour montrer dix lignes.
+OCTETS_APERCU_SQL = 512 * 1024
+
+
+def _apercu_csv(chemin: str, nom_fichier: str) -> dict:
+    """Dix premières lignes d'un CSV, et le compte exact — sans tout charger.
+
+    `nrows` pour l'aperçu, `chunksize` pour le comptage : le même couple que
+    `_profiler_csv`, correct vis-à-vis des sauts de ligne échappés.
+    """
+    entete = list(pd.read_csv(chemin, nrows=0, encoding="utf-8-sig").columns)
+    if not entete:
+        raise ExtractionError(f"Le fichier « {nom_fichier} » ne porte aucune colonne.")
+    apercu = pd.read_csv(chemin, encoding="utf-8-sig", nrows=LIGNES_APERCU)
+    total = sum(
+        len(bloc) for bloc in pd.read_csv(
+            chemin, usecols=[entete[0]], encoding="utf-8-sig", chunksize=50_000)
+    )
+    return {"table": nom_fichier, "colonnes": entete, "lignes": apercu, "total": total}
+
+
+def _apercu_sql(chemin: str, nom_fichier: str) -> dict:
+    """Dix premières lignes de la PREMIÈRE table déclarée dans le script.
+
+    Un fichier multi-tables s'analyse table par table ; l'aperçu montre la
+    première, qui suffit à vérifier que l'import s'est bien déroulé.
+    """
+    with open(chemin, "r", encoding="utf-8", errors="replace") as fh:
+        debut = fh.read(OCTETS_APERCU_SQL)
+        tronque = bool(fh.read(1))
+
+    tables = _tables_du_fichier_sql(debut)
+    if not tables:
+        raise ExtractionError(
+            f"Aucune table n'a été trouvée dans le début du fichier « {nom_fichier} »."
+        )
+    table = tables[0]
+    colonnes_create = _colonnes_create_table(debut, table)
+    colonnes, lignes = _lignes_insert(debut, table, colonnes_create)
+    if not colonnes:
+        colonnes = colonnes_create
+
+    donnees = pd.DataFrame(lignes[:LIGNES_APERCU], columns=colonnes or None)
+    return {
+        "table": table,
+        "colonnes": list(donnees.columns),
+        "lignes": donnees,
+        # Le compte est celui du fragment lu : au-delà, il serait faux de l'annoncer
+        # comme un total. `total_partiel` le dit au gabarit, qui l'écrit.
+        "total": len(lignes),
+        "total_partiel": tronque,
+        "autres_tables": tables[1:],
+    }
+
+
+def apercu_import(db, imp: ImportDonnee, source: SourceDonnee) -> dict:
+    """Aperçu des premières lignes d'un import fichier.
+
+    ⚠️ **Réservé à l'entreprise propriétaire** : ce sont ses données, elle a le
+    droit de les vérifier. L'appelant doit avoir confirmé l'appartenance — cette
+    fonction ne connaît pas l'utilisateur.
+
+    ⚠️ **Le fichier n'est jamais chargé en entier** : `nrows` côté CSV, lecture
+    bornée à `OCTETS_APERCU_SQL` côté script. Le typage passe par
+    `_normaliser_types`, le même que l'extraction : ce que l'aperçu montre est ce
+    que l'analyse lira.
+    """
+    if source.type_source not in ("CSV", "SQL"):
+        raise ExtractionError(
+            "L'aperçu n'est proposé que pour les fichiers importés."
+        )
+    chemin = _chemin_fichier(imp, source)
+    nom = imp.nom_fichier or source.nom
+    try:
+        brut = _apercu_csv(chemin, nom) if source.type_source == "CSV" else _apercu_sql(chemin, nom)
+    except ExtractionError:
+        raise
+    except Exception as exc:
+        raise ExtractionError(f"Le fichier « {nom} » n'a pas pu être lu : {exc}")
+
+    donnees, _ = _normaliser_types(brut["lignes"], brut["table"])
+    # Rendu texte : une date normalisée doit s'afficher telle que l'analyse la lira,
+    # et une valeur absente se dit « — » plutôt que « NaN ».
+    lignes = [
+        ["" if pd.isna(v) else str(v) for v in ligne]
+        for ligne in donnees.itertuples(index=False, name=None)
+    ]
+    return {
+        "table": brut["table"],
+        "colonnes": [str(c) for c in brut["colonnes"]],
+        "lignes": lignes,
+        "total": brut["total"],
+        "total_partiel": brut.get("total_partiel", False),
+        "affichees": len(lignes),
+        "autres_tables": brut.get("autres_tables", []),
+    }

@@ -1,0 +1,371 @@
+{% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
+{% from "components/indicateurs.html" import carte %}
+{% from "components/objectifs.html" import obj_pastille %}
+{% block title %}Analyses en cours — StockVision AI{% endblock %}
+
+{% block dash_content %}
+
+{{ entete("Console d'administration", title, guide) }}
+
+{# ── Indicateurs de parc ─────────────────────────────────────────────────────
+   Teinte uniquement quand la valeur signale : « en échec » à zéro reste neutre. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte("Configurations actives", indicateurs.actives, "toutes entreprises confondues",
+                 icone="sliders2") }}
+        {{ carte("Analyses ce mois", indicateurs.analyses_mois, "exécutions ayant produit un résultat",
+                 icone="play-circle") }}
+        {{ carte("Analyses en échec", indicateurs.en_echec,
+                 "à examiner" if indicateurs.en_echec else "aucune en erreur",
+                 icone="exclamation-triangle-fill",
+                 ton="eleve" if indicateurs.en_echec else "") }}
+        {{ carte("Exécutions programmées", indicateurs.programmees,
+                 "récurrentes, en attente d'échéance", icone="calendar-check") }}
+    </div>
+</section>
+
+{# ── Filtres ─────────────────────────────────────────────────────────────────
+   Mêmes composants que les autres pages admin. Les comptes sont calculés avant
+   filtrage : un filtre doit annoncer ce qu'il cache. #}
+<section class="dash-rangee">
+    <div class="dash-toolbar">
+        <form class="dash-search" method="get" action="/dashboard/admin/configurations" id="cfgAdmForm">
+            <input type="hidden" name="statut" value="{{ statut_filtre }}">
+            <input type="hidden" name="frequence" value="{{ frequence_filtre }}">
+            <i class="bi bi-building"></i>
+            <select name="entreprise_id" class="dash-search-input" id="cfgAdmEntreprise"
+                    style="background:transparent; border:none; color:inherit;">
+                <option value="">Toutes les entreprises</option>
+                {% for e in entreprises %}
+                <option value="{{ e.idEntreprise }}" {{ 'selected' if entreprise_filtre == e.idEntreprise }}>{{ e.nom }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <div class="dash-toolbar-spacer"></div>
+        <span class="dash-rangee-note">{{ lignes|length }} sur {{ total }} configuration{{ 's' if total > 1 }}</span>
+    </div>
+
+    <div class="cfg-filters">
+        <div class="cfg-filter-row">
+            <a href="?entreprise_id={{ entreprise_filtre }}&frequence={{ frequence_filtre }}&statut=tous"
+               class="cfg-filter-chip {{ 'active' if statut_filtre == 'tous' }}"
+               style="border-color: rgba(148,163,184,0.3); color: {{ '#fff' if statut_filtre == 'tous' else 'var(--text-muted)' }};">
+                Tous les états
+            </a>
+            {% for code, libelle, classe in statuts %}
+            <a href="?entreprise_id={{ entreprise_filtre }}&frequence={{ frequence_filtre }}&statut={{ 'tous' if statut_filtre == code else code }}"
+               class="cfg-filter-chip {{ 'active' if statut_filtre == code }} {{ 'is-vide' if not comptes_statut[code] }}">
+                {{ libelle }} <span class="res-chip-compte">{{ comptes_statut[code] }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="cfg-filter-row">
+            <a href="?entreprise_id={{ entreprise_filtre }}&statut={{ statut_filtre }}&frequence=toutes"
+               class="cfg-filter-chip {{ 'active' if frequence_filtre == 'toutes' }}"
+               style="border-color: rgba(148,163,184,0.3); color: {{ '#fff' if frequence_filtre == 'toutes' else 'var(--text-muted)' }};">
+                Toutes fréquences
+            </a>
+            {% for code, libelle in frequences %}
+            <a href="?entreprise_id={{ entreprise_filtre }}&statut={{ statut_filtre }}&frequence={{ 'toutes' if frequence_filtre == code else code }}"
+               class="cfg-filter-chip {{ 'active' if frequence_filtre == code }} {{ 'is-vide' if not comptes_frequence[code] }}">
+                {{ libelle }} <span class="res-chip-compte">{{ comptes_frequence[code] }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# ── Tableau ─────────────────────────────────────────────────────────────── #}
+<section class="dash-rangee">
+{% if not lignes %}
+<div class="imh-empty imh-empty--compact">
+    <div class="imh-empty-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+    </div>
+    <p class="imh-empty-text">Aucune configuration ne correspond à ces filtres.</p>
+    <a href="/dashboard/admin/configurations" class="imp-btn-ghost">Réinitialiser les filtres</a>
+</div>
+{% else %}
+<div class="dash-table-wrap">
+    <table class="dash-table ent-table">
+        <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Objectif</th>
+                <th class="text-center">Fréquence</th>
+                <th class="text-center">État</th>
+                <th>Exécutions</th>
+                <th class="text-center">Criticité</th>
+                <th class="text-center">Détail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lignes %}
+            {# Le liseré ne signale que ce qui appelle un regard de l'administrateur. #}
+            <tr class="ent-row {{ 'ent-row--eleve' if l.signal in ('en_echec', 'source') else '' }}">
+                <td>
+                    <div class="dash-table-entity">
+                        <span class="dash-table-avatar">{{ l.entreprise[0]|upper }}</span>
+                        <span class="ent-identite">
+                            <span class="ent-nom">{{ l.entreprise }}</span>
+                            <span class="ent-secteur">{{ l.source_nom }}</span>
+                        </span>
+                    </div>
+                </td>
+
+                <td>
+                    <div class="cfg-obj-cell">
+                        {{ obj_pastille(l.icone, l.couleur, 15, 'cfg-obj-badge') }}
+                        <span class="cfg-obj-texte">
+                            {# Pour un besoin libre : la MENTION, jamais le besoin lui-même. #}
+                            <span class="cfg-obj-name {{ 'cfg-obj-name--libre' if l.libre }}">{{ l.libelle }}</span>
+                            {% if l.signal %}
+                            <span class="ent-sous ent-sous--{{ 'eleve' if l.signal in ('en_echec','source') else 'muet' }}">
+                                {%- if l.signal == 'en_echec' %}{{ l.erreur.titre }}
+                                {%- elif l.signal == 'source' %}Source en erreur ou suspendue
+                                {%- elif l.signal == 'sans_resultat' %}Lancée, aucun résultat produit
+                                {%- else %}Jamais lancée depuis sa création{% endif %}
+                            </span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </td>
+
+                <td class="text-center"><span class="dash-pill">{{ l.frequence_libelle }}</span></td>
+
+                <td class="text-center">
+                    {% if l.etat_classe %}
+                    <span class="dash-status {{ l.etat_classe }}">{{ l.etat_libelle }}</span>
+                    {% else %}
+                    <span class="dash-status" style="background:rgba(148,163,184,0.12); color:var(--text-muted-subtle);">{{ l.etat_libelle }}</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <span class="ent-activite">{{ l.nb_resultats }} exécution{{ 's' if l.nb_resultats > 1 }}</span>
+                    <span class="ent-sous ent-sous--muet">
+                        {%- if l.derniere %}Dernière : {{ l.derniere_fmt }}{% else %}Jamais lancée{% endif %}
+                        {%- if l.prochaine %} · Prochaine : {{ l.prochaine_fmt }}{% endif %}
+                    </span>
+                </td>
+
+                <td class="text-center">
+                    {% if l.criticite %}
+                    {# Le NIVEAU, qui est un état. Jamais le motif, qui est du contenu. #}
+                    <span class="res-crit res-crit--{{ l.criticite }}">
+                        <span class="res-crit-point res-crit-point--{{ l.criticite }}"></span>
+                        {{ l.criticite_libelle }}
+                    </span>
+                    {% else %}
+                    <span class="ent-sous ent-sous--muet">—</span>
+                    {% endif %}
+                </td>
+
+                {# Action unique : consulter. L'administrateur ne relance, ne modifie
+                   ni ne supprime la configuration d'une entreprise. #}
+                <td class="text-center">
+                    <button type="button" class="dash-icon-btn cfgAdmDetail" title="Voir le détail"
+                        aria-label="Voir le détail de la configuration {{ l.id }}"
+                        data-detail='{{ {
+                            "id": l.id, "entreprise": l.entreprise, "objectif": l.libelle,
+                            "source": l.source_nom, "source_erreur": l.source_en_erreur,
+                            "frequence": l.frequence_libelle, "statut": l.statut,
+                            "etat": l.etat_libelle, "etat_classe": l.etat_classe,
+                            "creee": l.creee_fmt, "derniere": l.derniere_fmt,
+                            "prochaine": l.prochaine_fmt, "nb": l.nb_resultats,
+                            "signal": l.signal,
+                            "erreur": l.erreur, "historique": l.historique
+                        } | tojson }}'>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+</section>
+
+<p class="sv-note-perimetre">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    États et volumes uniquement — le besoin exprimé par l'entreprise, les données sélectionnées,
+    les valeurs produites et les interprétations ne sont jamais accessibles ici.
+</p>
+
+{# ── Modal de détail ─────────────────────────────────────────────────────── #}
+<div class="sv-modal" id="cfgAdmModal" style="display:none;">
+    <div class="sv-modal-card sv-modal-card--lg">
+        <div class="sv-modal-head">
+            <div class="sv-modal-ident">
+                <span class="sv-modal-avatar sv-modal-avatar--neutre">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                </span>
+                <div class="sv-modal-titres">
+                    <h3 class="sv-modal-title" id="cfgAdmNom">—</h3>
+                    <p class="sv-modal-sub">
+                        <span id="cfgAdmEnt">—</span>
+                        <span class="sv-modal-sep">·</span>
+                        <span id="cfgAdmEtat" class="dash-status">—</span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" class="sv-modal-close" id="cfgAdmClose" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="sv-modal-body">
+            <div class="sv-modal-note sv-modal-espace" id="cfgAdmNote" style="display:none;"></div>
+
+            <div class="sv-modal-section">
+                <h4 class="sv-modal-section-title">Paramétrage</h4>
+                <div class="sv-modal-pairs">
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Entreprise</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmPairEnt">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Source de données</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmSource">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Objectif</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmObjectif">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Fréquence</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmFreq">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Créée le</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmCreee">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Dernière exécution</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmDerniere">—</span>
+                    </div>
+                    <div class="sv-modal-pair">
+                        <span class="sv-modal-pair-label">Prochaine exécution</span>
+                        <span class="sv-modal-pair-value" id="cfgAdmProchaine">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sv-modal-section">
+                <h4 class="sv-modal-section-title">Exécutions ayant produit un résultat</h4>
+                {# ⚠️ Journal PARTIEL, et il faut le dire : une tentative qui échoue ne
+                   crée aucune ligne de résultat. Présenter cette liste comme
+                   exhaustive laisserait croire qu'une analyse n'a jamais échoué. #}
+                <p class="sv-modal-avert" id="cfgAdmAvert">
+                    Seules les exécutions ayant abouti figurent ici. Les tentatives en échec ne
+                    laissent pas de trace horodatée : seul l'état d'erreur courant est connu.
+                </p>
+                <div id="cfgAdmHisto"></div>
+            </div>
+        </div>
+
+        <p class="sv-modal-foot">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Ni le besoin exprimé, ni les données sélectionnées, ni les résultats ne sont exposés ici.
+        </p>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    /* Le choix d'entreprise soumet le formulaire : les deux autres filtres sont
+       portés par des champs cachés, donc jamais perdus au passage. */
+    const choixEnt = document.getElementById('cfgAdmEntreprise');
+    if (choixEnt) {
+        choixEnt.addEventListener('change', () => document.getElementById('cfgAdmForm').submit());
+    }
+
+    const modal = document.getElementById('cfgAdmModal');
+    if (!modal) return;
+    const txt = (id, v) => { document.getElementById(id).textContent = v || '—'; };
+
+    function remplir(d) {
+        txt('cfgAdmNom', 'Configuration n° ' + d.id);
+        txt('cfgAdmEnt', d.entreprise);
+        txt('cfgAdmPairEnt', d.entreprise);
+        txt('cfgAdmSource', d.source);
+        txt('cfgAdmObjectif', d.objectif);
+        txt('cfgAdmFreq', d.frequence);
+        txt('cfgAdmCreee', d.creee);
+        txt('cfgAdmDerniere', d.derniere);
+        txt('cfgAdmProchaine', d.prochaine);
+
+        const etat = document.getElementById('cfgAdmEtat');
+        etat.className = 'dash-status ' + (d.etat_classe || '');
+        etat.textContent = d.etat || '—';
+
+        /* Un seul message, le plus actionnable. La nature technique de l'échec est
+           montrée — elle relève de la supervision — jamais le message d'origine,
+           qui est rédigé pour l'entreprise et peut nommer ses colonnes. */
+        const note = document.getElementById('cfgAdmNote');
+        let ton = '', message = '';
+        if (d.erreur) {
+            ton = 'sv-modal-note--ko';
+            message = d.erreur.titre + ' — ' + d.erreur.action;
+        } else if (d.source_erreur) {
+            ton = 'sv-modal-note--ko';
+            message = 'La source de données est en erreur ou suspendue : les prochaines exécutions échoueront.';
+        } else if (d.signal === 'sans_resultat') {
+            ton = 'sv-modal-note--warn';
+            message = 'Cette configuration a été lancée mais n’a jamais produit de résultat.';
+        } else if (d.signal === 'jamais_lancee') {
+            ton = 'sv-modal-note--info';
+            message = 'Cette configuration est active mais n’a jamais été lancée depuis sa création.';
+        } else {
+            ton = 'sv-modal-note--ok';
+            message = 'Aucun point d’attention : la configuration s’exécute normalement.';
+        }
+        note.className = 'sv-modal-note sv-modal-espace ' + ton;
+        note.textContent = message;
+        note.style.display = '';
+
+        const histo = document.getElementById('cfgAdmHisto');
+        histo.innerHTML = '';
+        if (!d.historique || !d.historique.length) {
+            histo.innerHTML = '<p class="sv-liste-vide">Aucune exécution n’a produit de résultat.</p>';
+            return;
+        }
+        const liste = document.createElement('div');
+        liste.className = 'sv-liste';
+        d.historique.forEach(h => {
+            const item = document.createElement('div');
+            item.className = 'sv-liste-item';
+            item.innerHTML =
+                `<span class="res-crit-point res-crit-point--${h.criticite}"></span>
+                 <span class="sv-liste-corps">
+                     <span class="sv-liste-titre">${h.date}</span>
+                     <span class="sv-liste-sous">Fiabilité ${h.fiabilite} · ${h.modele}</span>
+                 </span>
+                 <span class="sv-liste-fin">${h.criticite_libelle}</span>`;
+            liste.appendChild(item);
+        });
+        histo.appendChild(liste);
+    }
+
+    document.querySelectorAll('.cfgAdmDetail').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let d = {};
+            try { d = JSON.parse(btn.dataset.detail || '{}'); } catch (e) { }
+            remplir(d);
+            modal.style.display = 'flex';
+        });
+    });
+
+    const fermer = () => { modal.style.display = 'none'; };
+    document.getElementById('cfgAdmClose').addEventListener('click', fermer);
+    modal.addEventListener('click', e => { if (e.target === modal) fermer(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.style.display !== 'none') fermer();
+    });
+})();
+</script>
+{% endblock %}

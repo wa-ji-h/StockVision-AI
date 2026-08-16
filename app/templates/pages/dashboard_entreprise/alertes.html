@@ -1,26 +1,14 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/objectifs.html" import obj_icon %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Mes alertes — StockVision AI{% endblock %}
 
 {# Icônes d'objectif — identiques au wizard, à la liste des configurations et à la page
    de résultats : une configuration se reconnaît partout de la même façon. #}
-{% macro obj_icon(icon, size=15) %}
-{% if icon == 'trending-up' %}
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-{% elif icon == 'chart-line' %}
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-{% elif icon == 'alert-triangle' %}
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-{% else %}
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><line x1="7" y1="5" x2="7" y2="19"/><path d="M21 15l-4 4-4-4"/><line x1="17" y1="19" x2="17" y2="5"/></svg>
-{% endif %}
-{% endmacro %}
 
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">{{ title }}</h1>
-    <p class="dash-page-guide">{{ guide }}</p>
-</div>
+{{ entete("Espace entreprise", title, guide) }}
 
 {% if total %}
 <div class="cfg-filters">

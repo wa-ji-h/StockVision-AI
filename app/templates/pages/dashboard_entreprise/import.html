@@ -1,11 +1,9 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Importer des données — StockVision AI{% endblock %}
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Ajouter vos données</h1>
-    <p class="dash-page-guide">Déposez vos fichiers CSV ou SQL, ou connectez votre base de données pour commencer une nouvelle analyse.</p>
-</div>
+{{ entete("Espace entreprise", "Ajouter vos données", "Déposez vos fichiers CSV ou SQL, ou connectez votre base de données pour commencer une nouvelle analyse.") }}
 
 <!-- ── Layout 2 colonnes ── -->
 <div class="imp-layout">

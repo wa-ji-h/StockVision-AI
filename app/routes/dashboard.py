@@ -34,6 +34,7 @@ from app.services.moteur_analyse import (
     OBJECTIFS_TEMPORELS,
     PAS_PAR_FREQUENCE,
     TYPE_PAR_OBJECTIF,
+    COULEUR_PAR_NIVEAU,
     LIBELLE_PAR_NIVEAU,
     NIVEAUX_CRITICITE,
     SEUIL_FIABILITE_BONNE,
@@ -340,11 +341,55 @@ def admin_dashboard(
     db: Session = Depends(get_db),
     user: Utilisateur = Depends(require_role(RoleEnum.administrateur)),
 ):
+    from app.services.alertes import NIVEAUX_ALERTE, STATUT_TRAITEE
+    from app.services.graphiques import (
+        alertes_ouvertes_par_jour,
+        entreprises_actives,
+        series_parc,
+    )
+    from app.services.supervision import (
+        RANG_CRITIQUE,
+        STATUTS_SOURCE_ERREUR,
+        activite_par_entreprise,
+        activite_recente,
+    )
+
     pending_count = _pending_count(db)
     entreprises_count = (
         db.query(Entreprise).filter(Entreprise.statut_demande == StatutDemandeEnum.validee).count()
     )
     utilisateurs_count = db.query(Utilisateur).count()
+    sources_erreur = (
+        db.query(SourceDonnee).filter(SourceDonnee.statut.in_(STATUTS_SOURCE_ERREUR)).count()
+    )
+    alertes_critiques = (
+        db.query(Alerte).filter(Alerte.criticite_rang >= RANG_CRITIQUE)
+        .filter(Alerte.statut != STATUT_TRAITEE).count()
+    )
+
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    volumes = activite_par_entreprise(db, debut_mois)
+    analyses_mois = sum(v["analyses_mois"] for c, v in volumes.items() if c != "_vide")
+
+    series = series_parc(db)
+    series["encours"] = alertes_ouvertes_par_jour(db)
+
+    # Répartition par niveau : les teintes viennent de criticite.py, aucune créée.
+    # Seuls les rangs ≥ « élevé » produisent une alerte, il n'y a donc que 2 parts.
+    comptes = dict(
+        db.query(Alerte.niveau, func.count(Alerte.id_alerte))
+        .filter(Alerte.statut != STATUT_TRAITEE).group_by(Alerte.niveau).all()
+    )
+    total_alertes = sum(comptes.values()) or 1
+    repartition_niveaux = [
+        {
+            "label": niv["libelle"],
+            "color": COULEUR_PAR_NIVEAU.get(niv["code"], "#64748b"),
+            "nombre": comptes.get(niv["code"], 0),
+            "pct": round(comptes.get(niv["code"], 0) * 100 / total_alertes),
+        }
+        for niv in NIVEAUX_ALERTE
+    ]
 
     response = templates.TemplateResponse(
         request,
@@ -355,6 +400,18 @@ def admin_dashboard(
             "pending_count": pending_count,
             "entreprises_count": entreprises_count,
             "utilisateurs_count": utilisateurs_count,
+            "sources_erreur": sources_erreur,
+            "alertes_critiques": alertes_critiques,
+            "analyses_mois": analyses_mois,
+            "series": series,
+            "series_courbe": {c: series[c] for c in ("analyses", "imports", "inscriptions")},
+            "repartition_niveaux": repartition_niveaux,
+            "classement": entreprises_actives(db, volumes),
+            # Le rail de triage vient du context processor (`supervision`) : il est
+            # déjà servi à chaque page, inutile de le recalculer ici.
+            "activite": [
+                {**a, "periode": _periode_activite(a)} for a in activite_recente(db, limite=5)
+            ],
             "notifications_count": pending_count,
         },
     )
@@ -390,6 +447,10 @@ def admin_demandes(
 # Au-delà, une entreprise est dite « dormante ». C'est un constat, jamais une alerte :
 # ne pas utiliser la plateforme n'est pas un incident, et le liseré reste neutre.
 DELAI_DORMANCE = timedelta(days=30)
+
+# Une alerte non traitée depuis plus de deux semaines n'est plus un événement récent :
+# c'est un dossier oublié. Le seuil qualifie l'ancienneté, il ne déclenche rien.
+SEUIL_ALERTE_ANCIENNE = 14
 
 
 def _fmt_date(valeur, avec_heure: bool = False) -> str:
@@ -876,7 +937,8 @@ def admin_alertes(
     et il n'agit pas à sa place.
     """
     from app.services.alertes import NIVEAUX_ALERTE, synthese_admin
-    from app.services.supervision import NATURES, activite_recente, notifications_admin
+    from app.services.graphiques import alertes_ouvertes_par_jour, series_parc
+    from app.services.supervision import activite_recente
 
     title, guide = ADMIN_SECTIONS["alertes"]
     lignes = synthese_admin(db)
@@ -900,6 +962,36 @@ def admin_alertes(
             for niv in NIVEAUX_ALERTE
         }
 
+    # Ancienneté du plus vieux dossier ouvert du parc. C'est LE chiffre qui distingue
+    # « des alertes arrivent » de « des alertes s'accumulent sans être traitées ».
+    ouvertes = [l for l in lignes if l["anciennete_jours"] is not None]
+    plus_vieille = max((l["anciennete_jours"] for l in ouvertes), default=None)
+    totaux["anciennete"] = plus_vieille
+    totaux["anciennete_libelle"] = (
+        "aucune alerte ouverte" if plus_vieille is None
+        else "ouverte aujourd'hui" if plus_vieille == 0
+        else f"ouverte depuis {plus_vieille} jour" + ("s" if plus_vieille > 1 else "")
+    )
+    # Au-delà de ce délai, une alerte non traitée cesse d'être un événement récent.
+    totaux["anciennete_ton"] = ("critique" if (plus_vieille or 0) >= SEUIL_ALERTE_ANCIENNE
+                                else "eleve" if (plus_vieille or 0) >= 7 else "")
+
+    for ligne in lignes:
+        ligne["anciennete_texte"] = _anciennete(ligne["plus_ancienne"])
+        ligne["delai_texte"] = (
+            f"traitées en {ligne['delai_moyen_h']} h en moyenne"
+            if ligne["delai_moyen_h"] is not None
+            # Sans alerte traitée, il n'existe aucun délai moyen : on montre à la
+            # place l'âge du plus vieux dossier ouvert, jamais une moyenne inventée.
+            else "aucune alerte encore traitée"
+        )
+
+    # Séries des 30 derniers jours : mêmes producteurs que le tableau de bord.
+    series = {
+        "encours": alertes_ouvertes_par_jour(db),
+        "declenchees": series_parc(db)["alertes"],
+    }
+
     pending_count = db.query(Entreprise).filter(
         Entreprise.statut_demande == StatutDemandeEnum.en_attente).count()
 
@@ -911,15 +1003,106 @@ def admin_alertes(
             "pending_count": pending_count, "notifications_count": pending_count,
             "title": title, "guide": guide,
             "lignes": lignes, "totaux": totaux, "niveaux": NIVEAUX_ALERTE,
-            # Ce qui appelle une action, et le fil de vie du parc : la page d'alertes est
-            # le poste de supervision, pas seulement un tableau de comptes.
-            "supervision": [
-                {**i, "nature_libelle": NATURES[i["nature"]][0], "ton": NATURES[i["nature"]][1]}
-                for i in notifications_admin(db)
-            ],
+            "series": series,
             "activite": [
-                {**a, "periode": _periode_activite(a)} for a in activite_recente(db)
+                {**a, "periode": _periode_activite(a)} for a in activite_recente(db, limite=5)
             ],
+        },
+    )
+    return _no_store(response)
+
+
+@router.get("/dashboard/admin/configurations")
+def admin_configurations(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.administrateur)),
+    entreprise_id: str = "",
+    statut: str = "tous",
+    frequence: str = "toutes",
+):
+    """Supervision des configurations d'analyse du parc.
+
+    ⚠️ **Déclarée AVANT `/dashboard/admin/{section}`** : FastAPI apparie dans
+    l'ordre de déclaration, la route générique l'absorberait sinon.
+    """
+    from app.services.supervision_analyses import (
+        FREQUENCES,
+        STATUTS_EXECUTION,
+        historique_executions,
+        indicateurs_parc,
+        lister_configurations,
+    )
+
+    # ── Contrôle de saisie ───────────────────────────────────────────────────
+    # Tout paramètre d'URL est une saisie : il est confronté aux valeurs connues
+    # avant d'atteindre la couche de données. Une valeur inconnue retombe sur le
+    # défaut plutôt que de vider silencieusement la liste ou de lever une erreur.
+    statuts_valides = {code for code, _, _ in STATUTS_EXECUTION} | {"tous"}
+    frequences_valides = {code for code, _ in FREQUENCES} | {"toutes"}
+    statut = statut if statut in statuts_valides else "tous"
+    frequence = frequence if frequence in frequences_valides else "toutes"
+
+    entreprises = (
+        db.query(Entreprise)
+        .filter(Entreprise.statut_demande == StatutDemandeEnum.validee)
+        .order_by(Entreprise.nom).all()
+    )
+    ids_connus = {e.idEntreprise for e in entreprises}
+    # `entreprise_id` arrive en texte : on ne le convertit que s'il désigne bien
+    # une entreprise existante. Un identifiant fabriqué ne filtre rien.
+    filtre_entreprise = None
+    if entreprise_id.strip().isdigit() and int(entreprise_id) in ids_connus:
+        filtre_entreprise = int(entreprise_id)
+
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    indicateurs = indicateurs_parc(db, debut_mois)
+
+    # Les comptes du filtre sont calculés AVANT filtrage : un filtre doit annoncer
+    # ce qu'il cache.
+    toutes = lister_configurations(db, objectif_pour_admin, filtre_entreprise)
+    comptes_statut = {code: 0 for code, _, _ in STATUTS_EXECUTION}
+    comptes_frequence = {code: 0 for code, _ in FREQUENCES}
+    for l in toutes:
+        comptes_statut[l["etat"]] = comptes_statut.get(l["etat"], 0) + 1
+        comptes_frequence[l["frequence"]] = comptes_frequence.get(l["frequence"], 0) + 1
+
+    lignes = [l for l in toutes
+              if (statut == "tous" or l["etat"] == statut)
+              and (frequence == "toutes" or l["frequence"] == frequence)]
+
+    # L'historique est chargé pour les seules configurations listées, en une passe.
+    historiques = {l["id"]: historique_executions(db, l["id"]) for l in lignes}
+
+    title, guide = ADMIN_SECTIONS["configurations"]
+    response = templates.TemplateResponse(
+        request,
+        "pages/dashboard_admin/admin_configurations.html",
+        {
+            "user": user,
+            "active_page": "configurations",
+            "pending_count": _pending_count(db),
+            "notifications_count": _pending_count(db),
+            "title": title,
+            "guide": guide,
+            "indicateurs": indicateurs,
+            "lignes": [
+                {**l,
+                 "derniere_fmt": _fmt_date(l["derniere"], avec_heure=True),
+                 "prochaine_fmt": _fmt_date(l["prochaine"], avec_heure=True),
+                 "creee_fmt": _fmt_date(l["creee"]),
+                 "historique": historiques.get(l["id"], [])}
+                for l in lignes
+            ],
+            "entreprises": entreprises,
+            "statuts": STATUTS_EXECUTION,
+            "frequences": FREQUENCES,
+            "comptes_statut": comptes_statut,
+            "comptes_frequence": comptes_frequence,
+            "total": len(toutes),
+            "entreprise_filtre": filtre_entreprise or "",
+            "statut_filtre": statut,
+            "frequence_filtre": frequence,
         },
     )
     return _no_store(response)
@@ -966,12 +1149,91 @@ _ENTREPRISE_SECTIONS: dict[str, tuple[str, str]] = {
 @router.get("/dashboard/entreprise")
 def entreprise_dashboard(
     request: Request,
+    db: Session = Depends(get_db),
     user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
 ):
+    """Page d'accueil entreprise : où en est sa chaîne, et quoi faire ensuite."""
+    from app.services.alertes import alertes_recentes
+    from app.services.graphiques import (
+        alertes_ouvertes_par_jour,
+        repartition_objectifs,
+        series_entreprise,
+    )
+    from app.services.supervision import activite_par_entreprise
+    from app.services.tableau_bord import etat_pipeline
+
+    ident = user.idUtilisateur
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Même producteur de volumes que la supervision admin : les deux consoles
+    # lisent les mêmes chiffres, obtenus par les mêmes jointures.
+    volumes_tous = activite_par_entreprise(db, debut_mois, id_entreprise=ident)
+    volumes = volumes_tous.get(ident, volumes_tous.get("_vide", {}))
+    pipeline = etat_pipeline(db, ident, volumes)
+
+    derniers_resultats = []
+    for ligne, config in (
+        db.query(ResultatAnalyse, ConfigurationAnalyse)
+        .join(ConfigurationAnalyse,
+              ResultatAnalyse.id_configuration == ConfigurationAnalyse.id_configuration)
+        .join(ImportDonnee, ConfigurationAnalyse.id_import == ImportDonnee.id_import)
+        .join(SourceDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
+        .filter(SourceDonnee.idEntreprise == ident)
+        .order_by(ResultatAnalyse.date_execution.desc())
+        .limit(4).all()
+    ):
+        presentation = _presenter_objectif(config)
+        derniers_resultats.append({
+            "id_configuration": config.id_configuration,
+            # Source unique de cet affichage : une configuration se reconnaît à
+            # l'identique ici et sur la page des résultats.
+            "objectif": presentation["label"],
+            # Icône ET couleur viennent du même endroit que dans le wizard et la
+            # liste des configurations : une analyse se reconnaît à l'identique.
+            "icone": presentation["icon"],
+            "couleur": presentation["color"],
+            "modele": LIBELLE_MODELE.get(ligne.modele_applique, ligne.modele_applique or "—"),
+            "criticite": ligne.criticite or "normal",
+            "criticite_libelle": LIBELLE_PAR_NIVEAU.get(ligne.criticite, "Non évalué"),
+            "criticite_motif": ligne.criticite_motif or "",
+            "fiabilite": ligne.fiabilite or "—",
+            "date": _fmt_date(ligne.date_execution, avec_heure=True),
+        })
+
+    dernieres_alertes = [
+        {
+            "id_configuration": a.id_configuration,
+            "message": a.message,
+            "niveau": a.niveau,
+            "date": _fmt_date(a.date_creation, avec_heure=True),
+        }
+        for a in alertes_recentes(db, ident, limite=4)
+    ]
+
+    # Séries des 30 derniers jours. L'encours d'alertes est un ÉTAT reconstitué
+    # depuis `date_traitement` : compter les créations donnerait une courbe qui ne
+    # redescend jamais, alors que l'encours, lui, redescend.
+    series = series_entreprise(db, ident)
+    series["encours"] = alertes_ouvertes_par_jour(db, ident)
+
+    derniere = volumes.get("derniere_activite")
     response = templates.TemplateResponse(
         request,
         "pages/dashboard_entreprise/entreprise_overview.html",
-        {"user": user, "active_page": "overview", "notifications_count": 0},
+        {
+            "user": user,
+            "active_page": "overview",
+            "notifications_count": 0,
+            "pipeline": pipeline,
+            "volumes": volumes,
+            "series": series,
+            "series_courbe": {c: series[c] for c in ("analyses", "imports", "alertes")},
+            "repartition": repartition_objectifs(db, ident, _presenter_objectif),
+            "derniere_activite": _anciennete(derniere),
+            "activite_exacte": _fmt_date(derniere, avec_heure=True) if derniere
+                               else "aucun import ni analyse",
+            "derniers_resultats": derniers_resultats,
+            "dernieres_alertes": dernieres_alertes,
+        },
     )
     return _no_store(response)
 
@@ -1551,6 +1813,57 @@ async def entreprise_import_confirm(
     return JSONResponse({"row_count": None})
 
 
+@router.get("/dashboard/entreprise/imports/{source_id}/apercu")
+def entreprise_apercu_import(
+    source_id: int,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
+):
+    """Aperçu des premières lignes d'un import — pour l'entreprise propriétaire.
+
+    Ce sont **ses** données : elle a le droit de les consulter pour vérifier que
+    l'import s'est bien déroulé avant de configurer une analyse dessus.
+
+    ⚠️ **L'appartenance est vérifiée ici, pas dans le service.** Le filtre sur
+    `idEntreprise` fait partie de la requête : une source qui n'appartient pas au
+    demandeur est introuvable, elle n'est pas « trouvée puis refusée ».
+    """
+    from app.services.moteur_analyse.extraction import ExtractionError, apercu_import
+
+    source = (
+        db.query(SourceDonnee)
+        .filter(SourceDonnee.id_source == source_id)
+        .filter(SourceDonnee.idEntreprise == user.idUtilisateur)
+        .first()
+    )
+    if not source:
+        return JSONResponse({"ok": False, "message": "Source introuvable."}, status_code=404)
+
+    imp = (
+        db.query(ImportDonnee)
+        .filter(ImportDonnee.id_source == source.id_source)
+        .order_by(ImportDonnee.date_import.desc())
+        .first()
+    )
+    if not imp:
+        return JSONResponse(
+            {"ok": False, "message": "Aucun import n'est rattaché à cette source."},
+            status_code=404,
+        )
+
+    try:
+        apercu = apercu_import(db, imp, source)
+    except ExtractionError as exc:
+        # Message destiné à l'entreprise : c'est sa source, elle doit savoir quoi faire.
+        return JSONResponse({"ok": False, "message": exc.message_complet()}, status_code=200)
+    except Exception:
+        _log.exception("[apercu] source %s illisible", source_id)
+        return JSONResponse(
+            {"ok": False, "message": "L'aperçu n'a pas pu être produit."}, status_code=200
+        )
+    return JSONResponse({"ok": True, **apercu})
+
+
 @router.get("/dashboard/entreprise/imports")
 def entreprise_imports_history(
     request: Request,
@@ -1766,6 +2079,32 @@ _OBJECTIF_PAR_TYPE = {type_: val for val, type_ in TYPE_PAR_OBJECTIF.items()}
 # Catégorie de filtre pour les configurations sans objectif prédéfini. Sans elle, elles
 # disparaîtraient silencieusement de la liste dès qu'un filtre d'objectif est actif.
 _FILTRE_BESOIN_LIBRE = "besoin_libre"
+
+# Mention affichée à l'administrateur pour une configuration sans objectif prédéfini.
+# Elle NOMME la catégorie sans jamais citer le besoin.
+MENTION_BESOIN_LIBRE = "Besoin exprimé librement"
+
+
+def objectif_pour_admin(c) -> dict:
+    """Vue d'un objectif **destinée à l'administrateur** — liste blanche stricte.
+
+    ⚠️ `_presenter_objectif` ne convient pas côté admin : elle place le **besoin
+    exprimé par l'entreprise** dans `sous_ligne` et dans `titre` (l'infobulle),
+    y compris pour une configuration qui porte pourtant un objectif prédéfini.
+    L'employer telle quelle exposerait un contenu métier sur une page de
+    supervision.
+
+    Comme `charge_utile()` en 4.5, cette fonction **énumère ce qui sort** plutôt
+    que d'exclure ce qui ne doit pas sortir : le jour où `_presenter_objectif`
+    gagne un champ, il ne franchira pas cette frontière tout seul.
+    """
+    vue = _presenter_objectif(c)
+    return {
+        "libelle": MENTION_BESOIN_LIBRE if vue["libre"] else vue["label"],
+        "icone": vue["icon"],
+        "couleur": vue["color"],
+        "libre": vue["libre"],
+    }
 
 _FREQUENCE_COLORS = {
     "ponctuelle": "#1D9E75",

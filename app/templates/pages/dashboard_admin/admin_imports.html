@@ -1,13 +1,11 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Supervision des imports — StockVision AI{% endblock %}
 {% from "components/indicateurs.html" import carte %}
 
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">{{ title }}</h1>
-    <p class="dash-page-guide">{{ guide }}</p>
-</div>
+{{ entete("Console d'administration", title, guide) }}
 
 <div class="sv-stats">
     {{ carte("Total imports", total_imports, "toutes entreprises", icone="archive-fill") }}

@@ -1,13 +1,11 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% from "components/indicateurs.html" import carte %}
 {% block title %}Entreprises partenaires — StockVision AI{% endblock %}
 
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Entreprises partenaires</h1>
-    <p class="dash-page-guide">Suivez l'activité de chaque entreprise sur la plateforme : volumes de
-        données, analyses lancées et points nécessitant votre attention.</p>
-</div>
+{{ entete("Console d'administration", "Entreprises partenaires", "Suivez l'activité de chaque entreprise sur la plateforme : volumes de
+        données, analyses lancées et points nécessitant votre attention.") }}
 
 {# ── Vue d'ensemble du parc ────────────────────────────────────────────────────
    Quatre chiffres, quatre significations distinctes : combien d'entreprises

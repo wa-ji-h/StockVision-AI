@@ -1,13 +1,11 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Statistiques globales — StockVision AI{% endblock %}
 
 {% from "components/indicateurs.html" import carte %}
 
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Analyses en cours</h1>
-    <p class="dash-page-guide">Consultez les configurations d'analyse créées par les entreprises et leur état d'exécution.</p>
-</div>
+{{ entete("Console d'administration", "Analyses en cours", "Consultez les configurations d'analyse créées par les entreprises et leur état d'exécution.") }}
 
 <div class="sv-stats">
     {# « Refusées » n'est pas teintée : c'est une décision passée, pas un incident

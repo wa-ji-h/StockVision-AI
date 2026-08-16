@@ -1,13 +1,11 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% block title %}Utilisateurs — StockVision AI{% endblock %}
 
 {% from "components/indicateurs.html" import carte %}
 
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Gestion des comptes</h1>
-    <p class="dash-page-guide">Gérez les accès et le statut de tous les utilisateurs de la plateforme, entreprises et administrateurs.</p>
-</div>
+{{ entete("Console d'administration", "Gestion des comptes", "Gérez les accès et le statut de tous les utilisateurs de la plateforme, entreprises et administrateurs.") }}
 
 <div class="sv-stats">
     {# Trois volumes, aucun signal : aucune carte n'est teintée. #}

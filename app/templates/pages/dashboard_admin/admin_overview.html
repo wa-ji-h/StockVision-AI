@@ -1,28 +1,165 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
+{% from "components/indicateurs.html" import carte_serie %}
 {% block title %}Tableau de bord — StockVision AI{% endblock %}
 
-{% from "components/indicateurs.html" import carte %}
-
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Vue d'ensemble</h1>
-    <p class="dash-page-guide">Suivez en un coup d'œil l'activité globale de la plateforme : demandes en attente, entreprises actives et utilisateurs enregistrés.</p>
-</div>
 
-<div class="sv-stats">
-    {# Seule carte teintée : des demandes en attente bloquent des connexions
-       d'entreprise. Les deux autres sont des volumes, pas des signaux. #}
-    {{ carte("Demandes en attente", pending_count, "à traiter dès que possible",
-             icone="inbox-fill", ton="attention" if pending_count else "") }}
-    {{ carte("Entreprises actives", entreprises_count, "comptes validés",
-             icone="building-fill") }}
-    {{ carte("Utilisateurs", utilisateurs_count, "tous rôles confondus",
-             icone="people-fill") }}
-</div>
+{{ entete("Console d'administration", "Vue d'ensemble du parc",
+          "Demandes à trancher, sources en difficulté et volume d'alertes des entreprises.") }}
 
-{% if pending_count %}
-<a href="/dashboard/admin/demandes" class="btn btn-gradient mt-4">
-    Voir les {{ pending_count }} demande(s) en attente
-</a>
-{% endif %}
+{# ── Rangée 1 — indicateurs de parc ──────────────────────────────────────────
+   Mêmes règles de couleur que partout : icône neutre, teinte seulement quand la
+   valeur signale. Les courbes portent la tendance des 30 derniers jours. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte_serie("Entreprises actives", entreprises_count, "comptes validés",
+                       series.inscriptions, icone="building-fill") }}
+        {{ carte_serie("Sources en difficulté", sources_erreur,
+                       "aucune analyse ne peut s’exécuter dessus" if sources_erreur
+                       else "toutes opérationnelles",
+                       series.sources, icone="database-exclamation",
+                       ton="eleve" if sources_erreur else "") }}
+        {{ carte_serie("Analyses ce mois", analyses_mois, "tout le parc",
+                       series.analyses, icone="graph-up") }}
+        {{ carte_serie("Alertes critiques", alertes_critiques, "non traitées par les entreprises",
+                       series.encours, icone="exclamation-octagon",
+                       ton="critique" if alertes_critiques else "") }}
+    </div>
+</section>
+
+{# ── Le rail de triage ───────────────────────────────────────────────────────
+   Trois natures distinguées par ce que l'administrateur peut en faire :
+   trancher, corriger, observer. L'ordre porte l'information. #}
+<section class="dash-rangee">
+    {% if supervision %}
+    <div class="sup-actions">
+        {% for s in supervision %}
+        <a href="{{ s.lien }}" class="sup-carte sup-carte--{{ s.ton }}">
+            <span class="sup-carte-nombre">{{ s.nombre }}</span>
+            <span class="sup-carte-corps">
+                <span class="sup-carte-nature">{{ s.nature_libelle }}</span>
+                <span class="sup-carte-titre">{{ s.titre }}</span>
+                <span class="sup-carte-detail">{{ s.detail }}</span>
+            </span>
+            <span class="sup-carte-action">
+                {{ s.action }}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    {# Un vide se déclare : sans cette ligne, on ne distinguerait pas « rien à
+       traiter » de « le rail n'a pas chargé ». #}
+    <div class="sv-rail-vide">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Rien n'appelle votre intervention : aucune demande en attente, aucune source en difficulté,
+        aucune alerte critique non traitée.
+    </div>
+    {% endif %}
+</section>
+
+{# ── Rangée 2 — activité (2/3) et répartition des alertes (1/3) ───────────── #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Activité de la plateforme", "Une série à la fois") }}
+            <div class="sv-panneau">
+                <div class="sv-graph-choix">
+                    <button type="button" class="sv-graph-btn is-actif" data-serie="analyses" data-unite="analyse(s)">Analyses</button>
+                    <button type="button" class="sv-graph-btn" data-serie="imports" data-unite="import(s)">Imports</button>
+                    <button type="button" class="sv-graph-btn" data-serie="inscriptions" data-unite="inscription(s)">Inscriptions</button>
+                </div>
+                <div class="sv-graph" data-graph="courbe" data-defaut="analyses" data-unite="analyse(s)"
+                     data-libelle="Activité de la plateforme sur les 30 derniers jours"
+                     data-series='{{ series_courbe | tojson }}'>
+                    <span class="sv-graph-bulle"></span>
+                    <div class="sv-graph-zone"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {{ section("Alertes par niveau", "Volumes uniquement") }}
+            <div class="sv-panneau">
+                {# Teintes reprises de criticite.py, aucune créée. Barres et non
+                   anneau : le libellé porte l'identité, la couleur la renforce. #}
+                <div class="sv-parts" data-graph="barres"
+                     data-parts='{{ repartition_niveaux | tojson }}'></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{# ── Rangée 3 — entreprises les plus actives (2/3) et fil d'activité (1/3) ── #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Entreprises les plus actives",
+                       lien="/dashboard/admin/entreprises", lien_texte="Toutes les entreprises") }}
+            <div class="sv-panneau">
+                {% if not classement %}
+                <p class="sv-liste-vide">Aucune activité enregistrée sur le parc.</p>
+                {% else %}
+                <div class="sv-classement">
+                    {% for l in classement %}
+                    {# Le classement porte sur les analyses lancées — l'usage réel —
+                       et non sur le nombre de sources, déclaré une fois. #}
+                    <div class="sv-rang {{ 'sv-rang--erreur' if l.erreurs }}">
+                        <span class="sv-rang-nom">{{ l.nom }}</span>
+                        <span class="sv-rang-volumes">
+                            {{ l.analyses }} analyse{{ 's' if l.analyses > 1 }} ·
+                            {{ l.sources }} source{{ 's' if l.sources > 1 }}{% if l.erreurs %} ({{ l.erreurs }} en erreur){% endif %}
+                            {%- if l.alertes %} · {{ l.alertes }} alerte{{ 's' if l.alertes > 1 }}{% endif %}
+                        </span>
+                        <span class="sv-rang-piste">
+                            <span class="sv-rang-barre" style="width:{{ [l.part, 3] | max }}%"></span>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            {{ section("Activité récente", "Qui a fait quoi, jamais le contenu") }}
+            <div class="sv-panneau">
+                {% if not activite %}
+                <p class="sv-liste-vide">Aucune activité enregistrée pour le moment.</p>
+                {% else %}
+                <div class="sv-liste">
+                    {% for a in activite %}
+                    <div class="sv-liste-item">
+                        <span class="sup-fil-icone sup-fil-icone--{{ a.quoi }}">
+                            {% if a.quoi == 'import' %}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            {% else %}
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            {% endif %}
+                        </span>
+                        <span class="sv-liste-corps">
+                            <span class="sv-liste-titre">{{ a.entreprise }} {{ a.libelle }}</span>
+                            <span class="sv-liste-sous">{{ a.periode }}</span>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<p class="sv-note-perimetre">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Volumes uniquement — le contenu des analyses, les résultats et les messages d'alerte
+    appartiennent aux entreprises qui les ont produits.
+</p>
+
 {% endblock %}

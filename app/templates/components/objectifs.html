@@ -1,0 +1,33 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Icône d'objectif d'analyse — définition unique.
+
+   ⚠️ Ce jeu d'icônes vivait en DEUX copies (la liste des configurations et le
+   wizard), avec pour seule garantie une note dans CLAUDE.md demandant de les
+   tenir identiques. Elles avaient déjà divergé une fois : la liste rendait
+   encore l'ancienne icône « adjustments » (des curseurs) là où le wizard
+   affichait `arrows-sort`. Une note ne remplace pas une source unique.
+
+   L'icône est déduite de `_presenter_objectif(...)["icon"]`, elle-même issue de
+   `_OBJECTIFS` : le nom, la couleur et le pictogramme d'un objectif viennent
+   tous du même endroit.
+   ═══════════════════════════════════════════════════════════════════════════ #}
+
+{% macro obj_icon(icon, size=15) %}
+{% if icon == 'trending-up' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+{% elif icon == 'chart-line' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+{% elif icon == 'alert-triangle' %}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+{% else %}
+{# arrows-sort — « Comparer et classer », et repli des besoins libres. #}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l4-4 4 4"/><line x1="7" y1="5" x2="7" y2="19"/><path d="M21 15l-4 4-4-4"/><line x1="17" y1="19" x2="17" y2="5"/></svg>
+{% endif %}
+{% endmacro %}
+
+{# Pastille colorée portant l'icône. La teinte vient de l'objectif, jamais du rang. #}
+{% macro obj_pastille(icon, color, size=15, classe='sv-ligne-pastille') %}
+<span class="{{ classe }}" style="background:{{ color }}26; color:{{ color }};">
+    {{ obj_icon(icon, size) }}
+</span>
+{% endmacro %}

@@ -1,8 +1,162 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
+{% from "components/indicateurs.html" import carte, carte_serie %}
+{% from "components/objectifs.html" import obj_pastille %}
 {% block title %}Tableau de bord — StockVision AI{% endblock %}
+
 {% block dash_content %}
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">Votre espace StockVision AI</h1>
-    <p class="dash-page-guide">Retrouvez ici un aperçu de vos données, analyses et alertes récentes.</p>
-</div>
+
+{{ entete("Espace entreprise", "Votre chaîne d'analyse",
+          "Où en sont vos données, ce qu'il reste à faire et ce que vos analyses ont produit.") }}
+
+{# ── Rangée 1 — indicateurs, avec la tendance des 30 derniers jours ───────────
+   Même composant, même sobriété : icône neutre, couleur uniquement quand la
+   valeur signale. La courbe ajoute une information — la forme du mois — sans
+   introduire de teinte.
+   ⚠️ « Dernière activité » n'en porte pas : c'est une date, pas une série. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte_serie("Sources connectées", volumes.sources,
+                       volumes.sources_erreur ~ " en erreur ou suspendue(s)" if volumes.sources_erreur
+                       else "toutes opérationnelles",
+                       series.sources, icone="database",
+                       ton="eleve" if volumes.sources_erreur else "") }}
+        {{ carte_serie("Analyses lancées", volumes.analyses,
+                       volumes.analyses_mois ~ " ce mois-ci" if volumes.analyses_mois else "aucune ce mois-ci",
+                       series.analyses, icone="play-circle") }}
+        {{ carte_serie("Alertes à traiter", volumes.alertes,
+                       volumes.alertes_critiques ~ " de niveau critique" if volumes.alertes_critiques
+                       else ("aucune critique" if volumes.alertes else "rien à signaler"),
+                       series.encours, icone="bell",
+                       ton="critique" if volumes.alertes_critiques else ("eleve" if volumes.alertes else "")) }}
+        {{ carte("Dernière activité", derniere_activite, activite_exacte, icone="clock-history") }}
+    </div>
+</section>
+
+{# ── Le fil du pipeline et la prochaine action ───────────────────────────────
+   Conservés : ils disent où l'on en est et quoi faire, ce qu'aucun graphique
+   ne remplace. #}
+<section class="dash-rangee">
+    <div class="sv-panneau sv-panneau--serre">
+        <div class="sv-fil">
+            {% for e in pipeline.etapes %}
+            <a href="{{ e.lien }}" class="sv-maillon sv-maillon--{{ e.etat }}">
+                <span class="sv-maillon-rang">Étape {{ e.rang }}</span>
+                <span class="sv-maillon-nombre">{{ e.nombre }}</span>
+                <span class="sv-maillon-titre">{{ e.titre }}</span>
+                <span class="sv-maillon-sous">{{ e.sous_titre }}</span>
+                {% if e.etat == 'attendu' %}<span class="sv-maillon-etat">À faire</span>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% if not pipeline.complet %}
+<section class="dash-rangee">
+    <div class="sv-suite">
+        <div class="sv-suite-texte">
+            <h2 class="sv-suite-titre">{{ pipeline.prochaine.titre }}</h2>
+            <p class="sv-suite-guide">{{ pipeline.prochaine.texte }}</p>
+        </div>
+        <a href="{{ pipeline.prochaine.lien }}" class="imp-btn-primary">
+            {{ pipeline.prochaine.action }}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+    </div>
+</section>
+{% endif %}
+
+{# ── Rangée 2 — évolution (2/3) et répartition (1/3) ─────────────────────── #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Votre activité", "30 derniers jours, une série à la fois") }}
+            <div class="sv-panneau">
+                {# Le sélecteur tient sur une rangée, au-dessus du graphique. #}
+                <div class="sv-graph-choix">
+                    <button type="button" class="sv-graph-btn is-actif" data-serie="analyses" data-unite="analyse(s)">Analyses lancées</button>
+                    <button type="button" class="sv-graph-btn" data-serie="imports" data-unite="import(s)">Imports</button>
+                    <button type="button" class="sv-graph-btn" data-serie="alertes" data-unite="alerte(s)">Alertes déclenchées</button>
+                </div>
+                <div class="sv-graph" data-graph="courbe" data-defaut="analyses" data-unite="analyse(s)"
+                     data-libelle="Votre activité sur les 30 derniers jours"
+                     data-series='{{ series_courbe | tojson }}'>
+                    <span class="sv-graph-bulle"></span>
+                    <div class="sv-graph-zone"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {{ section("Par objectif", "Toutes vos analyses") }}
+            <div class="sv-panneau">
+                {# Barres et non anneau : chaque part porte son libellé, donc
+                   l'identité ne repose jamais sur la seule couleur. Les teintes
+                   sont celles déjà définies par objectif dans le wizard. #}
+                <div class="sv-parts" data-graph="barres"
+                     data-parts='{{ repartition | tojson }}'></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{# ── Rangée 3 — dernières analyses (2/3) et alertes (1/3) ─────────────────── #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Dernières analyses", lien="/dashboard/entreprise/resultats") }}
+            <div class="sv-panneau">
+                {% if not derniers_resultats %}
+                <p class="sv-liste-vide">Aucune analyse n'a encore produit de résultat.</p>
+                {% else %}
+                <div class="sv-liste">
+                    {% for r in derniers_resultats %}
+                    <a href="/dashboard/entreprise/resultats?config={{ r.id_configuration }}" class="sv-liste-item">
+                        {{ obj_pastille(r.icone, r.couleur, 14) }}
+                        <span class="sv-liste-corps">
+                            <span class="sv-liste-titre">{{ r.objectif }}</span>
+                            <span class="sv-ligne-meta">
+                                <span class="res-crit res-crit--{{ r.criticite }}" title="{{ r.criticite_motif }}">
+                                    <span class="res-crit-point res-crit-point--{{ r.criticite }}"></span>
+                                    {{ r.criticite_libelle }}
+                                </span>
+                                <span class="sv-liste-sous">Fiabilité {{ r.fiabilite }} · {{ r.modele }}</span>
+                            </span>
+                        </span>
+                        <span class="sv-liste-fin">{{ r.date }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            {{ section("Alertes à traiter", lien="/dashboard/entreprise/alertes") }}
+            <div class="sv-panneau">
+                {% if not dernieres_alertes %}
+                <p class="sv-liste-vide">Aucune alerte en attente.</p>
+                {% else %}
+                <div class="sv-liste">
+                    {% for a in dernieres_alertes %}
+                    <a href="/dashboard/entreprise/resultats?config={{ a.id_configuration }}" class="sv-liste-item">
+                        <span class="res-crit-point res-crit-point--{{ a.niveau }}"></span>
+                        <span class="sv-liste-corps">
+                            <span class="sv-liste-titre">{{ a.message }}</span>
+                            <span class="sv-liste-sous">{{ a.date }}</span>
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</section>
+
 {% endblock %}

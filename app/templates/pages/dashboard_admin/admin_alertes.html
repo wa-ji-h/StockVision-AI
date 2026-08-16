@@ -1,127 +1,118 @@
 {% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
 {% from "components/indicateurs.html" import carte %}
 {% block title %}Centre d'alertes — StockVision AI{% endblock %}
 
 {% block dash_content %}
 
-<div class="dash-intro-card">
-    <h1 class="dash-page-title">{{ title }}</h1>
-    <p class="dash-page-guide">{{ guide }}</p>
-</div>
+{{ entete("Console d'administration", title, guide) }}
 
-{# ── 1. Ce qui appelle une action ─────────────────────────────────────────────
-   En tête, parce que c'est la seule partie de cette page sur laquelle
-   l'administrateur peut agir. Le reste s'observe. #}
-{% if supervision %}
-<section class="sup-actions">
-    {% for s in supervision %}
-    <a href="{{ s.lien }}" class="sup-carte sup-carte--{{ s.ton }}">
-        <span class="sup-carte-nombre">{{ s.nombre }}</span>
-        <span class="sup-carte-corps">
-            <span class="sup-carte-nature">{{ s.nature_libelle }}</span>
-            <span class="sup-carte-titre">{{ s.titre }}</span>
-            <span class="sup-carte-detail">{{ s.detail }}</span>
-        </span>
-        <span class="sup-carte-action">
-            {{ s.action }}
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </span>
-    </a>
-    {% endfor %}
-</section>
-{% endif %}
-
-{# ── 2. Volumes du parc ─────────────────────────────────────────────────────
-   Même composant que partout ailleurs (`carte`) : libellé, valeur, contexte.
-   Les deux tuiles de niveau sont teintées parce que leur valeur signale — les
-   trois autres sont des volumes. Les pourcentages sont calculés côté route. #}
-<section class="sv-stats">
-    {{ carte("Entreprises concernées", totaux.entreprises, "ayant au moins une alerte",
-             icone="buildings") }}
-    {{ carte("Alertes au total", totaux.total, "toutes entreprises confondues", icone="bell") }}
-    {{ carte("Non traitées", totaux.non_traitees, "par les entreprises",
-             icone="inbox", ton="attention" if totaux.non_traitees else "") }}
-    {% for niv in niveaux %}
-    {{ carte(niv.libelle, totaux[niv.code], totaux.parts[niv.code] ~ " % des alertes",
-             icone="exclamation-triangle" if niv.code == 'eleve' else "exclamation-octagon",
-             ton=niv.code if totaux[niv.code] else "") }}
-    {% endfor %}
+{# ── Rangée 1 — quatre indicateurs, chacun porteur d'une décision ─────────────
+   « Alertes au total » a été retiré : un cumul incluant les alertes déjà traitées
+   ne dit rien de l'état du parc. « Plus ancienne ouverte » le remplace — c'est ce
+   qui distingue « des alertes arrivent » de « des alertes s'accumulent ».
+   Le bloc « À surveiller » a disparu pour la même raison : il répétait ces chiffres. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte("Non traitées", totaux.non_traitees, "en attente chez les entreprises",
+                 icone="inbox", ton="attention" if totaux.non_traitees else "") }}
+        {% for niv in niveaux %}
+        {{ carte(niv.libelle, totaux[niv.code], totaux.parts[niv.code] ~ " % des alertes",
+                 icone="exclamation-triangle" if niv.code == 'eleve' else "exclamation-octagon",
+                 ton=niv.code if totaux[niv.code] else "") }}
+        {% endfor %}
+        {# L'ancienneté est un délai, pas un volume : sa valeur est un texte. #}
+        {{ carte("Plus ancienne ouverte",
+                 (totaux.anciennete ~ " j") if totaux.anciennete is not none else "—",
+                 totaux.anciennete_libelle, icone="hourglass-split",
+                 ton=totaux.anciennete_ton) }}
+    </div>
 </section>
 
-<div class="sup-colonnes">
+{# ── Rangée 2 — l'évolution (2/3) et la répartition par entreprise (1/3) ──────
+   Un parc dont l'encours monte n'est pas dans le même état qu'un parc où il
+   redescend : c'est la question à laquelle un volume seul ne répond pas. #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
 
-    {# ── 3. Répartition par entreprise ─────────────────────────────────────────
-       Des volumes, jamais le contenu. Le détail métier appartient à l'entreprise :
-       l'administrateur voit qui est sollicité, pas ce qui a été détecté. #}
-    <section class="sup-bloc">
-        <div class="sup-bloc-entete">
-            <h2 class="sup-bloc-titre">Répartition par entreprise</h2>
-            <span class="sup-bloc-note">Volumes uniquement — le détail appartient à l'entreprise</span>
-        </div>
-
-        {% if not lignes %}
-        <div class="imh-empty imh-empty--compact">
-            <div class="imh-empty-icon">
-                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </div>
-            <p class="imh-empty-text">Aucune alerte sur l'ensemble du parc.</p>
-            <p class="imh-empty-sub">Les alertes apparaissent lorsqu'une analyse d'entreprise
-                produit un résultat élevé ou critique.</p>
-        </div>
-        {% else %}
-        <ul class="sup-entreprises">
-            {% for l in lignes %}
-            <li class="sup-entreprise">
-                <div class="sup-ent-tete">
-                    <span class="sup-ent-nom">{{ l.nom }}</span>
-                    <span class="sup-ent-compteurs">
-                        {% for niv in niveaux %}
-                        {% if l[niv.code] %}
-                        <span class="alr-compte alr-compte--{{ niv.code }}" title="{{ niv.libelle }}">{{ l[niv.code] }}</span>
-                        {% endif %}
-                        {% endfor %}
-                        <span class="sup-ent-total">{{ l.total }} au total</span>
-                    </span>
+        <div>
+            {{ section("Évolution des alertes", "30 derniers jours") }}
+            <div class="sv-panneau">
+                <div class="sv-graph-choix">
+                    <button type="button" class="sv-graph-btn is-actif" data-serie="encours" data-unite="non traitée(s)">Encours non traité</button>
+                    <button type="button" class="sv-graph-btn" data-serie="declenchees" data-unite="alerte(s)">Alertes déclenchées</button>
                 </div>
-                {# Barre de répartition : la proportion se lit d'un coup d'œil, là où
-                   deux nombres côte à côte demandent un calcul mental. #}
-                <div class="sup-barre" role="img"
-                     aria-label="{% for niv in niveaux %}{{ l[niv.code] }} {{ niv.libelle }}{{ ', ' if not loop.last }}{% endfor %}">
-                    {% for niv in niveaux %}
-                    {% if l.parts[niv.code] %}
-                    <span class="sup-barre-part sup-barre-part--{{ niv.code }}"
-                          style="width:{{ l.parts[niv.code] }}%;"></span>
-                    {% endif %}
+                {# « Encours » est un ÉTAT reconstitué depuis date_traitement, pas un
+                   flux : il redescend quand les entreprises traitent. #}
+                <div class="sv-graph" data-graph="courbe" data-defaut="encours" data-unite="non traitée(s)"
+                     data-libelle="Évolution des alertes sur les 30 derniers jours"
+                     data-series='{{ series | tojson }}'>
+                    <span class="sv-graph-bulle"></span>
+                    <div class="sv-graph-zone"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {{ section("Par entreprise", "Les plus critiques d'abord") }}
+            <div class="sv-panneau">
+                {% if not lignes %}
+                <p class="sv-liste-vide">Aucune alerte sur l'ensemble du parc.</p>
+                {% else %}
+                <div class="sv-classement">
+                    {% for l in lignes %}
+                    {# Trié par criticité ouverte, puis ancienneté, puis volume —
+                       jamais par ordre alphabétique. #}
+                    <div class="sv-rang {{ 'sv-rang--erreur' if l.critique }}">
+                        <span class="sv-rang-nom">{{ l.nom }}</span>
+                        <span class="sv-rang-volumes">
+                            {%- for niv in niveaux %}{% if l[niv.code] %}{{ l[niv.code] }} {{ niv.libelle|lower }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}
+                        </span>
+                        <span class="sv-rang-piste">
+                            {% for niv in niveaux %}
+                            {% if l.parts[niv.code] %}
+                            <span class="sup-barre-part sup-barre-part--{{ niv.code }}"
+                                  style="width:{{ l.parts[niv.code] }}%;"></span>
+                            {% endif %}
+                            {% endfor %}
+                        </span>
+                        {# Le délai, ou à défaut l'âge du plus vieux dossier ouvert : c'est
+                           ce qui sépare une entreprise réactive d'une qui laisse traîner.
+                           Aucune moyenne n'est inventée quand rien n'a encore été traité. #}
+                        <span class="sv-rang-delai">
+                            {% if l.non_traitees %}
+                            <span class="{{ 'sv-delai--alerte' if (l.anciennete_jours or 0) >= 14 else '' }}">
+                                {{ l.non_traitees }} en attente · la plus ancienne {{ l.anciennete_texte|lower }}
+                            </span>
+                            {% else %}
+                            <span class="sv-delai--ok">Toutes traitées</span>
+                            {% endif %}
+                            {# Toujours affiché : « aucune alerte encore traitée » est
+                               justement le signal qui distingue une entreprise réactive
+                               d'une entreprise qui laisse ses alertes ouvertes. Le taire
+                               reviendrait à ne rien dire du cas le plus parlant. #}
+                            <span class="sv-delai--moyen">{{ l.delai_texte }}</span>
+                        </span>
+                    </div>
                     {% endfor %}
                 </div>
-                <div class="sup-ent-pied">
-                    {% if l.non_traitees %}
-                    <span class="sup-ent-attente">{{ l.non_traitees }} en attente de traitement</span>
-                    {% else %}
-                    <span class="sup-ent-ok">Toutes traitées</span>
-                    {% endif %}
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    </section>
-
-    {# ── 4. Fil d'activité du parc ─────────────────────────────────────────────
-       Uniquement des faits déjà enregistrés : qui a fait quoi et quand. Aucun
-       contenu métier. #}
-    <section class="sup-bloc">
-        <div class="sup-bloc-entete">
-            <h2 class="sup-bloc-titre">Activité récente</h2>
-            <span class="sup-bloc-note">Dernières actions des entreprises</span>
+                {% endif %}
+            </div>
         </div>
 
+    </div>
+</section>
+
+{# ── Rangée 3 — fil de vie du parc ───────────────────────────────────────── #}
+<section class="dash-rangee">
+    {{ section("Activité récente", "Qui a fait quoi, jamais le contenu") }}
+    <div class="sv-panneau">
         {% if not activite %}
-        <p class="sup-vide">Aucune activité enregistrée pour le moment.</p>
+        <p class="sv-liste-vide">Aucune activité enregistrée pour le moment.</p>
         {% else %}
-        <ul class="sup-fil">
+        <div class="sv-liste">
             {% for a in activite %}
-            <li class="sup-fil-item">
+            <div class="sv-liste-item">
                 <span class="sup-fil-icone sup-fil-icone--{{ a.quoi }}">
                     {% if a.quoi == 'import' %}
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -129,19 +120,21 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     {% endif %}
                 </span>
-                <span class="sup-fil-corps">
-                    <span class="sup-fil-texte">
-                        <strong>{{ a.entreprise }}</strong> {{ a.libelle }}
-                        {# Le compteur n'apparaît que s'il regroupe : « ×1 » serait du bruit. #}
-                        {% if a.nombre > 1 %}<span class="sup-fil-compte">×{{ a.nombre }}</span>{% endif %}
-                    </span>
-                    <span class="sup-fil-date">{{ a.periode }}</span>
+                <span class="sv-liste-corps">
+                    <span class="sv-liste-titre">{{ a.entreprise }} {{ a.libelle }}</span>
+                    <span class="sv-liste-sous">{{ a.periode }}</span>
                 </span>
-            </li>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
         {% endif %}
-    </section>
-</div>
+    </div>
+</section>
+
+<p class="sv-note-perimetre">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Volumes, niveaux et délais uniquement — le message d'une alerte, le motif de sa criticité et
+    le résultat qui l'a produite appartiennent à l'entreprise concernée.
+</p>
 
 {% endblock %}

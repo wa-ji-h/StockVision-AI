@@ -228,8 +228,13 @@ def _cle_entreprise(rangees) -> dict[int, tuple]:
     return {r[0]: tuple(r[1:]) for r in rangees}
 
 
-def activite_par_entreprise(db, debut_mois=None) -> dict[int, dict]:
-    """Volumes d'activité de **toutes** les entreprises, en 4 requêtes agrégées.
+def activite_par_entreprise(db, debut_mois=None, id_entreprise: int | None = None) -> dict[int, dict]:
+    """Volumes d'activité des entreprises, en 4 requêtes agrégées.
+
+    `id_entreprise` restreint le calcul à une seule entreprise — c'est ce qu'appelle
+    son propre tableau de bord. **Producteur unique de ces volumes** : le côté
+    entreprise et le côté administrateur lisent les mêmes chiffres, obtenus par les
+    mêmes jointures. Recopier la chaîne d'appartenance ailleurs les ferait diverger.
 
     ⚠️ **Le nombre de requêtes ne dépend pas du nombre d'entreprises** : chaque décompte
     est un `GROUP BY idEntreprise` sur l'ensemble du parc, jamais une requête par ligne.
@@ -246,6 +251,12 @@ def activite_par_entreprise(db, debut_mois=None) -> dict[int, dict]:
         "derniere_activite": None,
     }
     try:
+        def restreindre(requete):
+            """Filtre sur une entreprise quand on n'en regarde qu'une."""
+            if id_entreprise is None:
+                return requete
+            return requete.filter(SourceDonnee.idEntreprise == id_entreprise)
+
         # La chaîne d'appartenance est la même partout : Résultat/Alerte → Configuration
         # → Import → Source → Entreprise. Aucune autre ne relie une analyse à son
         # propriétaire.
@@ -256,33 +267,33 @@ def activite_par_entreprise(db, debut_mois=None) -> dict[int, dict]:
 
         erreur = func.sum(
             case((SourceDonnee.statut.in_(STATUTS_SOURCE_ERREUR), 1), else_=0))
-        sources = _cle_entreprise(
-            db.query(SourceDonnee.idEntreprise, func.count(SourceDonnee.id_source), erreur)
-              .group_by(SourceDonnee.idEntreprise).all())
+        sources = _cle_entreprise(restreindre(
+            db.query(SourceDonnee.idEntreprise, func.count(SourceDonnee.id_source), erreur))
+            .group_by(SourceDonnee.idEntreprise).all())
 
-        imports = _cle_entreprise(
+        imports = _cle_entreprise(restreindre(
             db.query(SourceDonnee.idEntreprise, func.max(ImportDonnee.date_import))
-              .join(ImportDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
-              .group_by(SourceDonnee.idEntreprise).all())
+              .join(ImportDonnee, ImportDonnee.id_source == SourceDonnee.id_source))
+            .group_by(SourceDonnee.idEntreprise).all())
 
         du_mois = func.sum(
             case((ResultatAnalyse.date_execution >= debut_mois, 1), else_=0)
         ) if debut_mois else func.count(ResultatAnalyse.id_resultat)
         analyses = _cle_entreprise(
-            remonter(db.query(SourceDonnee.idEntreprise,
+            restreindre(remonter(db.query(SourceDonnee.idEntreprise,
                               func.count(ResultatAnalyse.id_resultat),
                               du_mois,
                               func.max(ResultatAnalyse.date_execution))
                        .join(ConfigurationAnalyse,
-                             ResultatAnalyse.id_configuration == ConfigurationAnalyse.id_configuration))
+                             ResultatAnalyse.id_configuration == ConfigurationAnalyse.id_configuration)))
             .group_by(SourceDonnee.idEntreprise).all())
 
         critiques = func.sum(case((Alerte.criticite_rang >= RANG_CRITIQUE, 1), else_=0))
         alertes = _cle_entreprise(
-            remonter(db.query(SourceDonnee.idEntreprise,
+            restreindre(remonter(db.query(SourceDonnee.idEntreprise,
                               func.count(Alerte.id_alerte), critiques)
                        .join(ConfigurationAnalyse,
-                             Alerte.id_configuration == ConfigurationAnalyse.id_configuration))
+                             Alerte.id_configuration == ConfigurationAnalyse.id_configuration)))
             .filter(Alerte.statut != STATUT_TRAITEE)
             .group_by(SourceDonnee.idEntreprise).all())
 

@@ -1,0 +1,55 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Composition de page — en-tête et rangées.
+
+   ⚠️ Le surtitre n'est plus RENDU (12/08) : il répétait ce que la barre latérale
+   dit déjà, et titre + surtitre + séparateur occupaient la moitié du premier
+   écran. Le paramètre est conservé pour ne pas casser les appels existants et
+   pour documenter le poste dans le gabarit.
+
+   Un seul gabarit pour les deux dashboards. Le surtitre dit de quel poste on
+   parle : sur deux consoles qui partagent la même coque, savoir où l'on se
+   trouve est la première information utile.
+
+   ⚠️ Remplace `.dash-intro-card`, qui portait une bordure d'accent et une ombre
+   de lueur sur une simple phrase — le traitement le plus fort de la page allait
+   à son élément le moins important, et écrasait la première rangée de cartes.
+   ═══════════════════════════════════════════════════════════════════════════ #}
+
+{% macro entete(surtitre, titre, guide='') %}
+<header class="sv-page">
+    <div class="sv-page-texte">
+        <h1 class="sv-page-titre">{{ titre }}</h1>
+        {% if guide %}<p class="sv-page-guide">{{ guide }}</p>{% endif %}
+    </div>
+    {# Emplacement d'action, aligné à droite sur la ligne de base du titre. #}
+    {% if caller is defined %}<div class="sv-page-actions">{{ caller() }}</div>{% endif %}
+</header>
+{% endmacro %}
+
+{# Même en-tête, avec un bouton d'action. Jinja n'autorise `caller()` que dans un
+   appel `{% call %}` : les deux formes sont donc séparées plutôt que devinées. #}
+{% macro entete_action(surtitre, titre, guide='') %}
+<header class="sv-page">
+    <div class="sv-page-texte">
+        <h1 class="sv-page-titre">{{ titre }}</h1>
+        {% if guide %}<p class="sv-page-guide">{{ guide }}</p>{% endif %}
+    </div>
+    <div class="sv-page-actions">{{ caller() }}</div>
+</header>
+{% endmacro %}
+
+{# En-tête de section : titre à gauche, note de périmètre ou lien à droite.
+   La note dit la règle de lecture, jamais un ornement. #}
+{% macro section(titre, note='', lien='', lien_texte='') %}
+<div class="dash-rangee-tete">
+    <h2 class="dash-rangee-titre">{{ titre }}</h2>
+    {% if lien %}
+    <a href="{{ lien }}" class="dash-rangee-lien">
+        {{ lien_texte or 'Tout voir' }}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    {% elif note %}
+    <span class="dash-rangee-note">{{ note }}</span>
+    {% endif %}
+</div>
+{% endmacro %}
