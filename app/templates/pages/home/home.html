@@ -1,192 +1,271 @@
 {% extends "pages/base.html" %}
-{% block title %}StockVision AI — Plateforme Intelligente d'Analyse & Prévision de Stock{% endblock %}
+{% block title %}StockVision AI · Analyse et prévision de vos données de stock{% endblock %}
 {% block content %}
-<!-- HERO SECTION -->
-<section class="hero-section">
-    <div class="hero-badge">
-        <span class="badge-dot"></span>
-        <span class="badge-text">Intelligence Artificielle & Business Intelligence</span>
-    </div>
-    <div class="hero-split align-items-center">
-        <div class="hero-text">
-            <h1>Anticipez vos <span class="gradient-text">Ruptures de Stock</span> et Maximizez vos Ventes</h1>
-            <p>Collectez, centralisez et prévoyez l'évolution de vos stocks en temps réel grâce à nos moteurs d'IA Python et nos tableaux de bord Power BI décisionnels.</p>
-            <div class="hero-actions mb-4">
-                <a href="/inscription" class="btn btn-gradient btn-lg">Demander une Démonstration</a>
-                <a href="/fonctionnalites" class="btn btn-outline-light btn-lg">Explorer la Solution</a>
-            </div>
-            <div class="trust-metrics d-flex gap-4 pt-3 border-top border-secondary border-opacity-10">
-                <div>
-                    <span class="d-block h4 fw-bold text-cyan mb-0">99.4%</span>
-                    <span class="small text-muted">Précision des prévisions</span>
-                </div>
-                <div>
-                    <span class="d-block h4 fw-bold text-blue mb-0">-40%</span>
-                    <span class="small text-muted">Surstockage évité</span>
-                </div>
-                <div>
-                    <span class="d-block h4 fw-bold text-indigo mb-0">100%</span>
-                    <span class="small text-muted">Bases en lecture seule</span>
-                </div>
-            </div>
+<script>
+    /* Posé avant le rendu : sans JavaScript, l'état masqué des reveals n'est
+       jamais appliqué et la page reste intégralement lisible. */
+    document.documentElement.classList.add('fx-js');
+</script>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="hm-hero">
+    <div class="hm-hero-texte">
+        <span class="hero-badge fx-entree" style="--i:0">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Analyse, prévision et alertes sur vos données</span>
+        </span>
+
+        <h1 class="fx-entree" style="--i:1">
+            Anticipez l'évolution de vos stocks<br>
+            <span class="gradient-text">sans expertise data</span>
+        </h1>
+
+        <p class="hm-hero-sous fx-entree" style="--i:2">
+            Connectez vos fichiers ou votre base, choisissez ce que vous voulez savoir.
+            La plateforme calcule, explique et alerte.
+        </p>
+
+        <div class="hm-hero-actions fx-entree" style="--i:3">
+            <a href="/inscription" class="btn btn-gradient btn-lg">Demander un accès</a>
+            <a href="/fonctionnalites" class="btn btn-outline-light btn-lg">Explorer la plateforme</a>
         </div>
-        <div class="hero-graphic">
-            <div class="hero-3d-wrapper position-relative">
-                <img src="/static/images/stock_3d_analytics.png" alt="StockVision AI 3D Analytics" class="img-fluid rounded-4 shadow-lg border border-secondary border-opacity-20 hero-3d-img">
-                <div class="floating-glass-card p-3 rounded-4 bg-card border border-light border-opacity-10 shadow-lg position-absolute bottom-0 start-0 m-3 d-none d-sm-block">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="p-2 rounded-3 bg-success bg-opacity-20 text-success fs-5">✓</div>
-                        <div>
-                            <span class="d-block fw-bold text-white small">Alerte IA Stock Optimisé</span>
-                            <span class="text-muted extra-small">Reconstitution recommandée +14%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    </div>
+
+    <div class="hm-hero-visuel fx-entree" style="--i:2">
+        <div class="hm-hero-cadre">
+            <img src="/static/images/stock_3d_analytics.png"
+                 alt="Tableau de bord d'analyse et de prévision StockVision AI"
+                 class="hm-hero-img" width="1024" height="1024" fetchpriority="high">
         </div>
     </div>
 </section>
 
-<!-- CALCULATEUR ROI INTERACTIF POUR CLIENTS -->
-<section class="roi-section my-5 py-4">
-    <div class="roi-card glow-panel p-4 p-md-5 rounded-4">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-6">
-                <span class="badge bg-info bg-opacity-10 text-cyan px-3 py-2 rounded-pill small fw-bold mb-3">Simulateur de Gain Métier</span>
-                <h2 class="fw-bold mb-3">Calculez l'Impact de StockVision AI sur Votre Entreprise</h2>
-                <p class="text-muted mb-4">
-                    Estimez immédiatement les économies réalisées sur vos coûts de surstockage et le chiffre d'affaires préservé grâce à l'élimination des ruptures de stock.
-                </p>
-                <div class="roi-inputs d-flex flex-column gap-3">
-                    <div>
-                        <label class="form-label text-white small fw-bold d-flex justify-content-between">
-                            <span>Nombre de références (SKUs) en stock :</span>
-                            <span id="skuVal" class="text-cyan">2 500 references</span>
-                        </label>
-                        <input type="range" class="form-range" id="skuRange" min="100" max="20000" step="100" value="2500">
-                    </div>
-                    <div>
-                        <label class="form-label text-white small fw-bold d-flex justify-content-between">
-                            <span>Chiffre d'affaires mensuel des ventes :</span>
-                            <span id="caVal" class="text-blue">150 000 € / mois</span>
-                        </label>
-                        <input type="range" class="form-range" id="caRange" min="10000" max="1000000" step="10000" value="150000">
-                    </div>
-                </div>
+<!-- ═══════════════════ PROPOSITION DE VALEUR ═══════════════════ -->
+<section class="fx-section hm-manifeste fx-reveal">
+    <h2>
+        La plupart des entreprises <span class="hm-barre">subissent</span>
+        leurs variations de stock.
+    </h2>
+    <p class="hm-manifeste-suite">
+        Les données pour les anticiper existent déjà : dans un export, un fichier,
+        une base de production. <strong>StockVision AI les lit, les calcule, et vous
+        dit ce qu'elles montrent.</strong>
+    </p>
+</section>
+
+<!-- ══════════════ DE LA DONNÉE À LA DÉCISION (escalier) ══════════════ -->
+<section class="fx-section">
+    <div class="fx-tete fx-reveal">
+        <h2>De la donnée brute à la décision</h2>
+        <p>Trois temps. Vous gardez la main sur chacun, rien ne se déclenche à votre insu.</p>
+    </div>
+
+    <div class="hm-escalier fx-reveal">
+        <article class="hm-etape" style="--i:0">
+            <span class="hm-etape-rang">01</span>
+            <h3>Vous connectez</h3>
+            <p>Un fichier déposé ou un accès en lecture seule à votre base. Les tables et
+               les colonnes sont détectées, typées, puis affichées en aperçu.</p>
+        </article>
+
+        <article class="hm-etape" style="--i:1">
+            <span class="hm-etape-rang">02</span>
+            <h3>Le moteur calcule</h3>
+            <p>Vous choisissez les colonnes à retenir et ce que vous voulez savoir.
+               Le calcul est fait localement, en Python, par des modèles statistiques.</p>
+        </article>
+
+        <article class="hm-etape" style="--i:2">
+            <span class="hm-etape-rang">03</span>
+            <h3>Vous décidez</h3>
+            <p>Un résultat chiffré, son intervalle de confiance, son graphique et son
+               interprétation écrite. Une alerte si le seuil de criticité est franchi.</p>
+        </article>
+    </div>
+</section>
+
+<!-- ═══════════ CE QUE VOUS CONNECTEZ / CE QUE VOUS OBTENEZ ═══════════ -->
+<section class="fx-section">
+    <div class="hm-duo fx-reveal">
+        <div>
+            <h2>Ce que vous connectez</h2>
+            <ul class="hm-sources">
+                <li>
+                    <span class="hm-source-type">Fichier CSV</span>
+                    <span class="hm-source-desc">Un export de votre outil de gestion, déposé tel quel.</span>
+                </li>
+                <li>
+                    <span class="hm-source-type">Script SQL</span>
+                    <span class="hm-source-desc">Un dump multi-tables. Chaque table s'analyse séparément.</span>
+                </li>
+                <li>
+                    <span class="hm-source-type">Base de données</span>
+                    <span class="hm-source-desc">MySQL, PostgreSQL ou SQL Server, en lecture seule.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <h2>Ce que vous obtenez</h2>
+            <div class="hm-tuiles">
+                <article class="hm-tuile" style="--hm-teinte:#378ADD; --i:0">
+                    <span class="hm-tuile-pastille"></span>
+                    <h3>Prévoir une évolution</h3>
+                    <p>Les valeurs à venir, avec leur intervalle de confiance.</p>
+                </article>
+                <article class="hm-tuile" style="--hm-teinte:#1D9E75; --i:1">
+                    <span class="hm-tuile-pastille"></span>
+                    <h3>Détecter une tendance</h3>
+                    <p>La direction générale que prennent vos données.</p>
+                </article>
+                <article class="hm-tuile" style="--hm-teinte:#D85A30; --i:2">
+                    <span class="hm-tuile-pastille"></span>
+                    <h3>Identifier une anomalie</h3>
+                    <p>Les valeurs inhabituelles, dès qu'elles apparaissent.</p>
+                </article>
+                <article class="hm-tuile" style="--hm-teinte:#7F77DD; --i:3">
+                    <span class="hm-tuile-pastille"></span>
+                    <h3>Comparer et classer</h3>
+                    <p>Ce qui performe le mieux parmi vos produits ou vos clients.</p>
+                </article>
             </div>
-            <div class="col-lg-6">
-                <div class="roi-result-box p-4 rounded-4 text-center border border-info border-opacity-30 bg-dark bg-opacity-50">
-                    <span class="text-muted small text-uppercase tracking-wider d-block mb-2">Économie & Gain Annuel Estimé</span>
-                    <div class="display-4 fw-bold gradient-text mb-3" id="roiTotal">32 400 € / an</div>
-                    <div class="row g-2 pt-3 border-top border-secondary border-opacity-20">
-                        <div class="col-6">
-                            <span class="extra-small text-muted d-block">Réduction des ruptures</span>
-                            <span class="fw-bold text-success" id="roiRupture">+18 000 €</span>
-                        </div>
-                        <div class="col-6">
-                            <span class="extra-small text-muted d-block">Optimisation du stockage</span>
-                            <span class="fw-bold text-cyan" id="roiStock">+14 400 €</span>
-                        </div>
-                    </div>
-                    <a href="/inscription" class="btn btn-gradient w-100 mt-4">Activer la Solution pour Mon Entreprise</a>
-                </div>
-            </div>
+            <p class="fx-note hm-duo-note">
+                Chaque analyse se relance au rythme que vous fixez : quotidien, hebdomadaire ou mensuel.
+            </p>
         </div>
     </div>
 </section>
 
-<!-- SECTEURS D'ACTIVITÉ CLIENTS -->
-<section class="sectors-section my-5 py-4">
-    <div class="section-header text-center mb-5">
-        <h2 class="fw-bold">Adapté aux Exigences de Votre Secteur</h2>
-        <p class="text-muted">Des modèles prédictifs configurés selon vos contraintes métier</p>
-    </div>
-    <div class="row g-4">
-        <div class="col-md-6 col-lg-3">
-            <div class="sv-card p-4 rounded-4 h-100 text-center">
-                <div class="sv-icon-badge">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Distribution & Retail</h3>
-                <p class="text-muted small mb-0">Anticipation des pics saisonniers, réapprovisionnement automatique et synchronisation multi-points de vente.</p>
+<!-- ═════════════════════ IA ET PRÉVISION ═════════════════════ -->
+<section class="fx-section">
+    <div class="hm-ia fx-reveal">
+        <div class="hm-ia-visuel">
+            <div class="hm-ia-cadre">
+                <img src="/static/images/stock_3d_ai_brain.png"
+                     alt="Moteur de prévision et d'interprétation de StockVision AI"
+                     width="1024" height="1024" loading="lazy">
             </div>
         </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="sv-card p-4 rounded-4 h-100 text-center">
-                <div class="sv-icon-badge sv-icon-badge--blue">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V11l5 3.5V11l5 3.5V11l5 3.5V6l-2-2"/><path d="M14 20V4l4 3"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Industrie & Fabrication</h3>
-                <p class="text-muted small mb-0">Gestion fine des matières premières, prévision des composants et zéro arrêt de chaîne de production.</p>
+
+        <div class="hm-ia-texte">
+            <h2>Un modèle statistique calcule.<br><span class="gradient-text">L'IA rédige.</span></h2>
+            <p>
+                Les chiffres sont produits localement par des modèles éprouvés, choisis selon la
+                profondeur de votre historique. Le modèle de langage n'intervient qu'ensuite, pour
+                mettre le résultat en mots.
+            </p>
+            <p class="fx-note">
+                Un historique court ne bloque jamais une analyse : il en qualifie la fiabilité,
+                et cette fiabilité est affichée avec le résultat.
+            </p>
+
+            <div class="hm-ia-encart">
+                <span class="hm-ia-encart-titre">La règle est stricte</span>
+                <p>Le modèle de langage ne calcule jamais une prévision, et ne reçoit
+                   aucune ligne de vos données. Il commente un résultat déjà établi.</p>
             </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="sv-card p-4 rounded-4 h-100 text-center">
-                <div class="sv-icon-badge sv-icon-badge--indigo">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Santé & Pharmacie</h3>
-                <p class="text-muted small mb-0">Suivi strict des péremptions, traçabilité des lots et respect rigoureux des stocks de sécurité réglementaires.</p>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="sv-card p-4 rounded-4 h-100 text-center">
-                <div class="sv-icon-badge">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Logistique & Transport</h3>
-                <p class="text-muted small mb-0">Optimisation du taux de remplissage des entrepôts et réduction des délais de rotation des stocks.</p>
-            </div>
+
+            <a href="/fonctionnalites" class="hm-lien">
+                Voir le détail du moteur
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </a>
         </div>
     </div>
 </section>
 
-<!-- CALL TO ACTION BANNER -->
+<!-- ═══════════════════ ALERTES ET POWER BI ═══════════════════ -->
+<section class="fx-section">
+    <div class="fx-tete fx-reveal">
+        <h2>Prévenu quand il le faut, <span class="gradient-text">pas à chaque calcul</span></h2>
+        <p>Une analyse qui alerte tout le temps n'alerte plus. Le déclenchement est calculé, pas rédigé.</p>
+    </div>
+
+    <div class="hm-sortie fx-reveal">
+        <article class="fx-carte" style="--i:0">
+            <span class="fx-carte-icone">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </span>
+            <h3>Alertes de criticité</h3>
+            <p>Le niveau est calculé de façon déterministe, sans modèle de langage : la même
+               analyse redonne toujours le même verdict, et reste rejouable.</p>
+
+            <div class="fx-crit">
+                <div class="fx-crit-barre" role="img" aria-label="Échelle de criticité à quatre niveaux : normal, à surveiller, élevé, critique. Le seuil de déclenchement d'une alerte se situe au niveau élevé.">
+                    <span style="--fx-teinte:#64748b"></span>
+                    <span style="--fx-teinte:#f59e0b"></span>
+                    <span style="--fx-teinte:#fb923c"></span>
+                    <span style="--fx-teinte:#f87171"></span>
+                </div>
+                <ul class="fx-crit-libelles">
+                    <li>Normal</li>
+                    <li>À surveiller</li>
+                    <li>Élevé</li>
+                    <li>Critique</li>
+                </ul>
+                <p class="fx-crit-seuil">Une alerte n'est créée qu'à partir du niveau « Élevé ».</p>
+            </div>
+        </article>
+
+        <article class="fx-carte hm-sortie-bi" style="--i:1">
+            <img src="/static/images/stock_3d_powerbi.png"
+                 alt="Restitution des résultats StockVision AI dans Power BI"
+                 class="fx-restit-img" width="1024" height="1024" loading="lazy">
+            <div class="fx-restit-corps">
+                <h3>Restitution Power BI</h3>
+                <p>Sept vues SQL à plat, exposées en lecture seule. Le compte de connexion
+                   n'a aucun droit sur les tables de l'application.</p>
+            </div>
+        </article>
+    </div>
+</section>
+
+<!-- ═════════════════════════ CONFIANCE ═════════════════════════ -->
+<section class="fx-section">
+    <div class="hm-confiance fx-reveal">
+        <h2>Vos données restent les vôtres</h2>
+        <ul class="hm-points">
+            <li class="hm-point" style="--i:0">
+                <span class="hm-point-icone">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <h3>Lecture seule</h3>
+                <p>Une connexion à votre base n'ouvre qu'un accès en lecture. Vos tables
+                   sources ne sont jamais modifiées.</p>
+            </li>
+            <li class="hm-point" style="--i:1">
+                <span class="hm-point-icone">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </span>
+                <h3>Identifiants chiffrés</h3>
+                <p>Les identifiants de connexion à vos bases sont chiffrés avant d'être
+                   stockés, jamais conservés en clair.</p>
+            </li>
+            <li class="hm-point" style="--i:2">
+                <span class="hm-point-icone">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg>
+                </span>
+                <h3>Accès validé</h3>
+                <p>Chaque inscription d'entreprise est vérifiée par un administrateur
+                   avant l'ouverture du compte.</p>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- ═══════════════════════════ CLÔTURE ═══════════════════════════ -->
 <section class="cta-banner text-center py-5 my-4">
-    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden">
-        <h2 class="fw-bold mb-3">Rejoignez les Entreprises qui Anticipent leur Avenir</h2>
-        <p class="text-muted mx-auto mb-4" style="max-width: 580px;">
-            Soumettez votre demande d'inscription et accédez à vos premiers indicateurs prédictifs Power BI dès aujourd'hui.
+    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden fx-reveal">
+        <h2 class="fw-bold mb-3">Lancez votre première analyse</h2>
+        <p class="text-muted mx-auto mb-4" style="max-width: 560px;">
+            Inscrivez votre entreprise, importez un premier fichier et obtenez un résultat
+            expliqué le jour même.
         </p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/inscription" class="btn btn-gradient btn-lg">Soumettre une demande client</a>
-            <a href="/contact" class="btn btn-outline-light btn-lg">Prendre rendez-vous</a>
+            <a href="/inscription" class="btn btn-gradient btn-lg">Demander un accès</a>
+            <a href="/contact" class="btn btn-outline-light btn-lg">Parler à un expert</a>
         </div>
     </div>
 </section>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const skuRange = document.getElementById('skuRange');
-    const caRange = document.getElementById('caRange');
-    const skuVal = document.getElementById('skuVal');
-    const caVal = document.getElementById('caVal');
-    const roiTotal = document.getElementById('roiTotal');
-    const roiRupture = document.getElementById('roiRupture');
-    const roiStock = document.getElementById('roiStock');
-
-    function updateROI() {
-        if (!skuRange || !caRange) return;
-        const skus = parseInt(skuRange.value);
-        const ca = parseInt(caRange.value);
-
-        skuVal.textContent = skus.toLocaleString('fr-FR') + ' références';
-        caVal.textContent = ca.toLocaleString('fr-FR') + ' € / mois';
-
-        const ruptureGain = Math.round(ca * 12 * 0.08); // 8% de prévision de perte de rupture évitée
-        const stockGain = Math.round(skus * 4.8 + ca * 12 * 0.04); // gain optimisation stockage
-        const total = ruptureGain + stockGain;
-
-        roiRupture.textContent = '+' + ruptureGain.toLocaleString('fr-FR') + ' €';
-        roiStock.textContent = '+' + stockGain.toLocaleString('fr-FR') + ' €';
-        roiTotal.textContent = total.toLocaleString('fr-FR') + ' € / an';
-    }
-
-    if (skuRange && caRange) {
-        skuRange.addEventListener('input', updateROI);
-        caRange.addEventListener('input', updateROI);
-        updateROI();
-    }
-});
-</script>
+<script src="/static/js/reveal.js?v={{ asset_version }}" defer></script>
 {% endblock %}

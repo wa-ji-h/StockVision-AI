@@ -1,50 +1,482 @@
 {% extends "pages/dashboard/base.html" %}
 {% from "components/composition.html" import entete, section %}
-{% block title %}Statistiques globales — StockVision AI{% endblock %}
-
-{% from "components/indicateurs.html" import carte %}
+{% from "components/indicateurs.html" import carte, carte_serie %}
+{% block title %}Statistiques du parc · StockVision AI{% endblock %}
 
 {% block dash_content %}
-{{ entete("Console d'administration", "Analyses en cours", "Consultez les configurations d'analyse créées par les entreprises et leur état d'exécution.") }}
 
-<div class="sv-stats">
-    {# « Refusées » n'est pas teintée : c'est une décision passée, pas un incident
-       en cours. Seule l'attente appelle une action. #}
-    {{ carte("En attente", stats.en_attente, "demandes à traiter",
-             icone="hourglass-split", ton="attention" if stats.en_attente else "") }}
-    {{ carte("Validées", stats.validees, "entreprises approuvées", icone="check2-circle") }}
-    {{ carte("Refusées", stats.refusees, "demandes rejetées", icone="x-circle") }}
-    {{ carte("Utilisateurs", stats.utilisateurs, "tous rôles confondus", icone="people") }}
-</div>
+{{ entete("Console d'administration", "Vue d’ensemble de la plateforme",
+          "Volumes, activité et criticité sur l'ensemble des entreprises. Aucun contenu d'analyse n'est exposé ici.") }}
 
-<h2 class="dash-section-title">Entreprises actives par secteur</h2>
-{% if not par_secteur %}
-<p class="text-muted">Aucune entreprise validée pour le moment.</p>
-{% else %}
-<div class="dash-table-wrap">
-    <table class="dash-table">
-        <thead>
-            <tr>
-                <th>Secteur d'activité</th>
-                <th class="text-center">Entreprises</th>
-                <th>Répartition</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% set total = par_secteur | sum(attribute=1) %}
-            {% for secteur, nombre in par_secteur %}
-            <tr>
-                <td>{{ secteur or 'Non renseigné' }}</td>
-                <td class="text-center">{{ nombre }}</td>
-                <td>
-                    <div class="dash-bar-track">
-                        <div class="dash-bar-fill" style="width: {{ (nombre / total * 100) | round(0, 'floor') }}%"></div>
+{# ── Rangée 1 · indicateurs de tête ──────────────────────────────────────────
+   Les courbes portent la tendance réelle des 30 derniers jours. Une carte n'en
+   reçoit une que si sa valeur a une histoire : « Utilisateurs » n'en a pas. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte_serie("Entreprises validées", stats.validees, "comptes actifs sur le parc",
+                       series.inscriptions, icone="building-fill") }}
+        {{ carte_serie("Analyses ce mois", analyses.analyses_mois, "exécutions produites",
+                       series.analyses, icone="graph-up") }}
+        {{ carte_serie("Alertes non traitées", alertes.non_traitees,
+                       "en attente côté entreprises" if alertes.non_traitees else "rien en attente",
+                       series.encours, icone="bell-fill",
+                       ton="eleve" if alertes.non_traitees else "") }}
+        {{ carte("Demandes en attente", stats.en_attente,
+                 "à trancher" if stats.en_attente else "aucune demande",
+                 icone="hourglass-split", ton="attention" if stats.en_attente else "") }}
+    </div>
+</section>
+
+{# ── Rangée 2 · état des configurations ─────────────────────────────────────
+   Quatre états issus d'`indicateurs_parc`, le producteur unique de ces volumes. #}
+<section class="dash-rangee">
+    {{ section("État des configurations d'analyse", "Volumes du parc entier") }}
+    <div class="stx-etats">
+        <div class="stx-etat">
+            <span class="stx-etat-valeur">{{ analyses.actives }}</span>
+            <span class="stx-etat-label">Actives</span>
+            <span class="stx-etat-note">configurations en service</span>
+        </div>
+        <div class="stx-etat">
+            <span class="stx-etat-valeur">{{ analyses.programmees }}</span>
+            <span class="stx-etat-label">Programmées</span>
+            <span class="stx-etat-note">récurrentes, avec échéance</span>
+        </div>
+        <div class="stx-etat {{ 'stx-etat--signal' if analyses.en_echec }}">
+            <span class="stx-etat-valeur">{{ analyses.en_echec }}</span>
+            <span class="stx-etat-label">En échec</span>
+            <span class="stx-etat-note">
+                {{ "dernière exécution en erreur" if analyses.en_echec else "aucune configuration en erreur" }}
+            </span>
+        </div>
+        <div class="stx-etat">
+            <span class="stx-etat-valeur">{{ alertes.total }}</span>
+            <span class="stx-etat-label">Alertes émises</span>
+            <span class="stx-etat-note">depuis l'ouverture du parc</span>
+        </div>
+    </div>
+</section>
+
+{# ── Rangée 3 · évolution (2/3) et criticité (1/3) ──────────────────────────
+   La courbe réutilise le moteur `graphiques.js` : sélecteur, infobulle et
+   survol y sont déjà, aucun second moteur n'est écrit. #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Évolution de l'activité", "Une série à la fois · " ~ fenetre_jours ~ " derniers jours") }}
+            <div class="sv-panneau">
+                <div class="sv-graph-choix">
+                    <button type="button" class="sv-graph-btn is-actif" data-serie="analyses" data-unite="analyse(s)">Analyses</button>
+                    <button type="button" class="sv-graph-btn" data-serie="imports" data-unite="import(s)">Imports</button>
+                    <button type="button" class="sv-graph-btn" data-serie="alertes" data-unite="alerte(s)">Alertes</button>
+                    <button type="button" class="sv-graph-btn" data-serie="sources" data-unite="source(s)">Sources</button>
+                    <button type="button" class="sv-graph-btn" data-serie="inscriptions" data-unite="inscription(s)">Inscriptions</button>
+                </div>
+                <div class="sv-graph" data-graph="courbe" data-defaut="analyses" data-unite="analyse(s)"
+                     data-libelle="Activité du parc sur les {{ fenetre_jours }} derniers jours"
+                     data-series='{{ series_courbe | tojson }}'>
+                    <span class="sv-graph-bulle"></span>
+                    <div class="sv-graph-zone"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            {{ section("Criticité des exécutions", "Toutes exécutions confondues") }}
+            <div class="sv-panneau">
+                {# Anneau + légende. Teintes reprises de criticite.py, aucune créée.
+
+                   ⚠️ Mesuré (CIEDE2000) : « À surveiller » #f59e0b et « Élevé » #fb923c
+                   sont à ΔE 9,4 en vision normale et 2,8 en deutéranopie — indiscernables,
+                   et adjacents dans l'anneau. Dans un anneau la couleur est le SEUL lien
+                   entre un arc et sa ligne de légende, contrairement à des barres où le
+                   libellé est collé à la barre. Deux encodages secondaires compensent :
+                   l'ordre de gravité, strictement partagé par l'anneau et la légende, et
+                   le survol lié dans les deux sens. L'identité ne dépend donc pas de la
+                   teinte seule. #}
+                {% set total_crit = repartition_criticite | sum(attribute='nombre') %}
+                {% if not total_crit %}
+                <p class="sv-liste-vide">Aucune exécution n'a encore été évaluée.</p>
+                {% else %}
+                <div class="stx-crit">
+                    <div class="stx-anneau">
+                        {# pathLength normalise la circonférence à 100 : les longueurs
+                           d'arc s'expriment en pourcentage, indépendamment du rayon. #}
+                        <svg viewBox="0 0 140 140" class="stx-anneau-svg" role="img"
+                             aria-label="Répartition des {{ total_crit }} exécutions par niveau de criticité : {% for p in repartition_criticite %}{{ p.label }} {{ p.nombre }}{{ ', ' if not loop.last }}{% endfor %}.">
+                            <circle class="stx-anneau-piste" cx="70" cy="70" r="54" pathLength="100"></circle>
+                            {% set ns = namespace(cumul=0) %}
+                            {% for p in repartition_criticite %}
+                            {% if p.nombre %}
+                            {% set part = p.nombre * 100 / total_crit %}
+                            {# Un écart de 1 unité sépare deux arcs, sauf si un seul niveau
+                               occupe tout l'anneau : l'entaille se lirait comme une part. #}
+                            {% set arc = part if part >= 99.5 else (part - 1) %}
+                            <circle class="stx-arc" data-niveau="{{ loop.index0 }}"
+                                    cx="70" cy="70" r="54" pathLength="100"
+                                    stroke="{{ p.color }}"
+                                    stroke-dasharray="{{ arc if arc > 0 else 0.5 }} {{ 100 - (arc if arc > 0 else 0.5) }}"
+                                    stroke-dashoffset="{{ -ns.cumul }}"
+                                    style="--ordre: {{ loop.index0 }}">
+                                <title>{{ p.label }} : {{ p.nombre }} ({{ p.pct }} %)</title>
+                            </circle>
+                            {% set ns.cumul = ns.cumul + part %}
+                            {% endif %}
+                            {% endfor %}
+                        </svg>
+                        <div class="stx-anneau-centre">
+                            <span class="stx-anneau-total">{{ total_crit }}</span>
+                            <span class="stx-anneau-unite">exécution{{ 's' if total_crit > 1 }}</span>
+                        </div>
                     </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+                    {# Légende dans l'ORDRE DE GRAVITÉ, identique au sens de parcours de
+                       l'anneau : c'est ce qui porte l'identité quand deux teintes se
+                       ressemblent. Volumes et parts uniquement, aucun contenu métier. #}
+                    <ul class="stx-legende">
+                        {% for p in repartition_criticite %}
+                        <li class="stx-legende-ligne{{ ' is-vide' if not p.nombre }}"
+                            data-niveau="{{ loop.index0 }}" style="--i: {{ loop.index0 }}">
+                            <span class="stx-legende-puce" style="background: {{ p.color }}"></span>
+                            <span class="stx-legende-nom">{{ p.label }}</span>
+                            <span class="stx-legende-pct">{{ p.pct }} %</span>
+                            <span class="stx-legende-nombre">{{ p.nombre }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <p class="stx-note">
+                    Une alerte n'est créée qu'à partir du niveau « Élevé ».
+                    Les deux premiers niveaux se consultent sans solliciter l'entreprise.
+                </p>
+            </div>
+
+            <script>
+            /* Survol lié anneau ↔ légende, dans les deux sens.
+               Ce n'est pas un ornement : « À surveiller » et « Élevé » sont à ΔE 2,8 en
+               deutéranopie, donc la couleur seule ne permet pas d'apparier un arc à sa
+               ligne. Le lien explicite rend l'appariement indépendant de la teinte.
+               Aucune donnée n'est lue ni transmise ici, seule une classe est posée. */
+            (function () {
+                const bloc = document.querySelector('.stx-crit');
+                if (!bloc) return;
+
+                const arcs = bloc.querySelectorAll('.stx-arc');
+                const lignes = bloc.querySelectorAll('.stx-legende-ligne');
+
+                function surligner(niveau) {
+                    bloc.classList.toggle('is-cible', niveau !== null);
+                    arcs.forEach(a => a.classList.toggle('is-actif', a.dataset.niveau === niveau));
+                    lignes.forEach(l => l.classList.toggle('is-actif', l.dataset.niveau === niveau));
+                }
+
+                [...arcs, ...lignes].forEach(el => {
+                    el.addEventListener('mouseenter', () => surligner(el.dataset.niveau));
+                    el.addEventListener('mouseleave', () => surligner(null));
+                });
+
+                /* Les lignes de légende sont focusables : l'appariement doit rester
+                   accessible sans souris. */
+                lignes.forEach(l => {
+                    l.tabIndex = 0;
+                    l.addEventListener('focus', () => surligner(l.dataset.niveau));
+                    l.addEventListener('blur', () => surligner(null));
+                });
+            })();
+            </script>
+        </div>
+
+    </div>
+</section>
+
+{# ── Barres classées ────────────────────────────────────────────────────────
+   Motif : libellé à gauche, barre proportionnelle, valeur alignée à droite.
+   Le tri est décroissant par volume, donc le rang se lit sans rien compter.
+
+   Le libellé est COLLÉ à sa barre : contrairement à l'anneau, l'identité ne
+   dépend pas ici de la teinte, et deux couleurs voisines ne se confondent pas.
+
+   Les graduations n'apparaissent qu'à partir de 3 catégories : sur une ou deux
+   barres elles seraient de la décoration, pas un repère de lecture. #}
+{% macro barres_classees(parts, unite, vide) %}
+{% set ordonne = parts | sort(attribute='nombre', reverse=true) %}
+{% set maxi = (ordonne | map(attribute='nombre') | max) or 0 %}
+{% if not ordonne or not maxi %}
+<p class="sv-liste-vide">{{ vide }}</p>
+{% else %}
+<div class="stx-rang{{ ' stx-rang--gradue' if ordonne | length >= 3 }}">
+    <ol class="stx-rang-liste">
+        {% for p in ordonne %}
+        <li class="stx-rang-ligne" style="--part: {{ (p.nombre * 100 / maxi) | round(1) }}%; --teinte: {{ p.color }}; --i: {{ loop.index0 }}">
+            <span class="stx-rang-nom" title="{{ p.label }}">{{ p.label }}</span>
+            <span class="stx-rang-piste">
+                <span class="stx-rang-barre"></span>
+            </span>
+            <span class="stx-rang-valeur">{{ p.nombre }}<span class="stx-rang-pct">{{ p.pct }} %</span></span>
+        </li>
+        {% endfor %}
+    </ol>
+    {% if ordonne | length >= 3 %}
+    <div class="stx-rang-axe" aria-hidden="true">
+        <span>0</span>
+        <span>{{ (maxi / 2) | round(0, 'floor') | int }}</span>
+        <span>{{ maxi }}</span>
+    </div>
+    {% endif %}
+    <p class="stx-rang-echelle">Échelle commune : 0 à {{ maxi }} {{ unite }}.</p>
 </div>
 {% endif %}
+{% endmacro %}
+
+{# ── Rangée 4 · alertes par niveau (1/3) et secteurs (2/3) ──────────────────
+   Proportions inversées par rapport à la rangée précédente : deux rangées de
+   même découpe donneraient une page qui se répète. #}
+<section class="dash-rangee">
+    <div class="sv-colonnes sv-colonnes--inverse">
+
+        <div>
+            {{ section("Alertes par niveau", "Répartition par volume · volumes uniquement") }}
+            <div class="sv-panneau">
+                {# Teintes de criticite.py, portées par les données. Aucune créée. #}
+                {{ barres_classees(repartition_alertes_niveaux, "alerte(s)",
+                                   "Aucune alerte émise sur le parc.") }}
+            </div>
+        </div>
+
+        <div>
+            {{ section("Entreprises par secteur", "Répartition par volume · comptes validés") }}
+            <div class="sv-panneau">
+                {# Une seule teinte, l'accent : une couleur attribuée par position
+                   n'encode rien et apprend à ignorer celles qui signalent. #}
+                {{ barres_classees(repartition_secteurs, "entreprise(s)",
+                                   "Aucune entreprise validée pour le moment.") }}
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{# ── Rangée 4 bis · ancienneté des alertes ouvertes ─────────────────────────
+   Une alerte ouverte depuis trois semaines n'appelle pas la même réaction qu'une
+   alerte ouverte ce matin : le volume seul ne dit pas si le parc traite ou
+   accumule. Cette rangée mesure l'arriéré, pas l'incident.
+
+   ⚠️ Périmètre : nombres uniquement. Aucun message d'alerte, aucun motif, aucun
+   résultat, aucune entreprise nommée ici. « Ouverte » et « âge » reprennent les
+   définitions de vw_pbi_alertes, elles ne sont pas redéfinies.
+
+   Réutilise les classes .stx-rang-* de la rangée précédente : le motif de barre
+   est le même, seul l'ORDRE change - chronologique et non par volume, parce
+   qu'ici la succession des tranches EST l'information. #}
+<section class="dash-rangee">
+    {{ section("Ancienneté des alertes non traitées",
+               "Répartition par tranche d'âge · volumes uniquement") }}
+    <div class="sv-panneau">
+        {% if not alertes_ouvertes_total %}
+        <p class="sv-liste-vide">
+            Aucune alerte ouverte : toutes les alertes émises ont été traitées par les entreprises.
+        </p>
+        {% else %}
+        <div class="stx-age-tete">
+            <div class="stx-age-chiffre">
+                <span class="stx-age-valeur">{{ alertes_ouvertes_total }}</span>
+                <span class="stx-age-label">alerte{{ 's' if alertes_ouvertes_total > 1 }} ouverte{{ 's' if alertes_ouvertes_total > 1 }}</span>
+            </div>
+            <p class="stx-age-resume">
+                {% if alertes_ouvertes_agees %}
+                dont <strong>{{ alertes_ouvertes_agees }}</strong> non traitée{{ 's' if alertes_ouvertes_agees > 1 }}
+                depuis plus de 7 jours.
+                {% else %}
+                toutes ouvertes depuis moins de 7 jours.
+                {% endif %}
+            </p>
+        </div>
+
+        {% set maxi = (anciennete_alertes | map(attribute='nombre') | max) or 1 %}
+        <div class="stx-rang">
+            <ol class="stx-rang-liste">
+                {% for t in anciennete_alertes %}
+                <li class="stx-rang-ligne{{ ' is-vide' if not t.nombre }}"
+                    style="--part: {{ (t.nombre * 100 / maxi) | round(1) }}%; --teinte: {{ t.color }}; --i: {{ loop.index0 }}">
+                    <span class="stx-rang-nom" title="{{ t.label }}">{{ t.label }}</span>
+                    <span class="stx-rang-piste">
+                        <span class="stx-rang-barre"></span>
+                    </span>
+                    <span class="stx-rang-valeur">{{ t.nombre }}<span class="stx-rang-pct">{{ t.pct }} %</span></span>
+                </li>
+                {% endfor %}
+            </ol>
+            <p class="stx-rang-echelle">Échelle commune : 0 à {{ maxi }} alerte(s).</p>
+        </div>
+        {% endif %}
+        <p class="stx-note">
+            Une tranche à zéro reste affichée : son absence est une information.
+            L'âge se compte depuis la création de l'alerte, jusqu'à son traitement par l'entreprise.
+        </p>
+    </div>
+</section>
+
+{# ── Rangée 5 · classement des entreprises ──────────────────────────────────
+   Tableau triable et filtrable côté client : les données sont déjà toutes
+   servies, il n'y a rien à redemander au serveur. #}
+<section class="dash-rangee">
+    {{ section("Activité par entreprise", lien="/dashboard/admin/entreprises",
+               lien_texte="Fiches entreprises") }}
+
+    {% if not classement %}
+    <div class="sv-panneau">
+        <p class="sv-liste-vide">Aucune activité enregistrée sur le parc.</p>
+    </div>
+    {% else %}
+    <div class="sv-panneau stx-panneau-table">
+        <div class="stx-barre-outils">
+            <label class="stx-recherche">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="search" id="stxRecherche" placeholder="Filtrer par nom d'entreprise"
+                       aria-label="Filtrer par nom d'entreprise" autocomplete="off">
+            </label>
+            <span class="stx-compte" id="stxCompte"
+                  data-modele="{n} entreprise(s) sur {total}">{{ classement | length }} entreprise(s)</span>
+        </div>
+
+        <div class="dash-table-wrap">
+            <table class="dash-table stx-table" id="stxTable">
+                <thead>
+                    <tr>
+                        <th><button type="button" class="stx-tri" data-col="0" data-type="texte">Entreprise</button></th>
+                        <th class="text-center"><button type="button" class="stx-tri" data-col="1" data-type="nombre">Sources</button></th>
+                        <th class="text-center"><button type="button" class="stx-tri" data-col="2" data-type="nombre">Analyses</button></th>
+                        <th class="text-center"><button type="button" class="stx-tri" data-col="3" data-type="nombre">Alertes</button></th>
+                        <th class="text-center"><button type="button" class="stx-tri" data-col="4" data-type="nombre">Sources en erreur</button></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in classement %}
+                    <tr data-nom="{{ l.nom | lower }}">
+                        <td class="stx-nom">{{ l.nom }}</td>
+                        <td class="text-center" data-valeur="{{ l.sources }}">{{ l.sources }}</td>
+                        <td class="text-center" data-valeur="{{ l.analyses }}">{{ l.analyses }}</td>
+                        <td class="text-center" data-valeur="{{ l.alertes }}">
+                            {% if l.alertes %}<span class="stx-pastille stx-pastille--alerte">{{ l.alertes }}</span>
+                            {% else %}<span class="stx-zero">0</span>{% endif %}
+                        </td>
+                        <td class="text-center" data-valeur="{{ l.erreurs }}">
+                            {% if l.erreurs %}<span class="stx-pastille stx-pastille--erreur">{{ l.erreurs }}</span>
+                            {% else %}<span class="stx-zero">0</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <p class="sv-liste-vide stx-aucun" id="stxAucun" hidden>Aucune entreprise ne correspond à ce filtre.</p>
+        <p class="stx-note">Volumes uniquement. Aucun motif, aucune interprétation, aucun résultat d'analyse.</p>
+    </div>
+    {% endif %}
+</section>
+
+{# ── Rangée 6 · fil d'activité ──────────────────────────────────────────────
+   Qui a fait quoi et quand, jamais le contenu. #}
+<section class="dash-rangee">
+    {{ section("Activité récente du parc", "Sans contenu métier") }}
+    <div class="sv-panneau">
+        {% if not activite %}
+        <p class="sv-liste-vide">Aucune activité récente.</p>
+        {% else %}
+        <ul class="stx-fil">
+            {% for a in activite %}
+            <li class="stx-fil-item" style="--i:{{ loop.index0 }}">
+                <span class="stx-fil-point"></span>
+                <span class="stx-fil-corps">
+                    <span class="stx-fil-texte">{{ a.libelle }}</span>
+                    <span class="stx-fil-meta">{{ a.entreprise }}</span>
+                </span>
+                <span class="stx-fil-periode">{{ a.periode }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+/* Filtrage et tri du classement - entièrement côté client : toutes les lignes
+   sont déjà servies, il n'y a rien à redemander au serveur. Aucun décompte
+   n'est recalculé, seules des lignes sont masquées ou réordonnées. */
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.getElementById('stxTable');
+    if (!table) return;
+
+    const corps = table.querySelector('tbody');
+    const lignes = Array.from(corps.rows);
+    const recherche = document.getElementById('stxRecherche');
+    const compte = document.getElementById('stxCompte');
+    const aucun = document.getElementById('stxAucun');
+    const modele = compte.dataset.modele;
+    const total = lignes.length;
+
+    function majCompte(n) {
+        compte.textContent = modele.replace('{n}', n).replace('{total}', total);
+        aucun.hidden = n !== 0;
+    }
+
+    function filtrer() {
+        const q = (recherche.value || '').trim().toLowerCase();
+        let visibles = 0;
+        lignes.forEach(tr => {
+            const ok = !q || tr.dataset.nom.includes(q);
+            tr.hidden = !ok;
+            if (ok) visibles++;
+        });
+        majCompte(visibles);
+    }
+
+    recherche.addEventListener('input', filtrer);
+
+    let colonneActive = null;
+    let ordre = 'desc';
+
+    table.querySelectorAll('.stx-tri').forEach(bouton => {
+        bouton.addEventListener('click', () => {
+            const col = parseInt(bouton.dataset.col, 10);
+            const numerique = bouton.dataset.type === 'nombre';
+
+            // Même colonne : on inverse. Colonne différente : on repart du sens
+            // le plus utile - décroissant pour un volume, alphabétique pour un nom.
+            if (colonneActive === col) {
+                ordre = ordre === 'desc' ? 'asc' : 'desc';
+            } else {
+                colonneActive = col;
+                ordre = numerique ? 'desc' : 'asc';
+            }
+
+            const signe = ordre === 'asc' ? 1 : -1;
+            const cle = tr => {
+                const cel = tr.cells[col];
+                return numerique ? Number(cel.dataset.valeur || 0)
+                                 : (cel.textContent || '').trim().toLowerCase();
+            };
+            lignes.sort((a, b) => {
+                const x = cle(a), y = cle(b);
+                if (x < y) return -1 * signe;
+                if (x > y) return 1 * signe;
+                return 0;
+            });
+            lignes.forEach(tr => corps.appendChild(tr));
+
+            table.querySelectorAll('.stx-tri').forEach(b => {
+                b.classList.remove('is-asc', 'is-desc');
+                b.removeAttribute('aria-sort');
+            });
+            bouton.classList.add(ordre === 'asc' ? 'is-asc' : 'is-desc');
+            bouton.setAttribute('aria-sort', ordre === 'asc' ? 'ascending' : 'descending');
+        });
+    });
+
+    majCompte(total);
+});
+</script>
 {% endblock %}

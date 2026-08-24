@@ -1568,6 +1568,51 @@ inexistant — le vrai nom est `Entreprise.nom`. La page admin renvoyait 200 tan
 n'existait (`synthese_admin` sortait avant la lecture des noms) et serait passée à 500 dès la
 première. **Un test sur une table vide ne teste pas le chemin nominal.**
 
+## Module 6 — Power BI (12/08/2026)
+
+`migrate_vues_powerbi.py` (7 vues, idempotent) + `docs/POWERBI.md`. **Aucune table modifiée ni
+créée, aucune dépendance Python ajoutée.**
+
+⚠️ **Le SGBD est MariaDB 10.4, pas MySQL.** `JSON_TABLE` — la façon standard d'éclater un tableau
+JSON en lignes — n'existe qu'à partir de **MariaDB 10.6**. Contournement retenu : le moteur
+**SEQUENCE** (`seq_0_to_N`), table virtuelle sans stockage, vérifié utilisable **à l'intérieur
+d'une vue**. Aucune table d'appoint.
+
+⚠️ **La borne de la séquence tronque en SILENCE.** Mesuré : avec `seq_0_to_999`, une série de
+5 000 points rend **1 000 lignes sans lever d'erreur**. Deux réponses, la seconde étant la vraie :
+borne portée à `LIMITE_POINTS_SERIE = 10 000`, **et** colonne `serie_tronquee` sur
+`vw_pbi_resultats` — un rapport qui perdrait des points le dit. *Une limite silencieuse est pire
+qu'une limite basse.*
+
+⚠️ **Le coût est dans `JSON_EXTRACT`, pas dans la séquence.** Chaque point relit le document :
+39 points → 3 ms · 1 000 → 0,6 s · 5 000 → 16 s. La borne, elle, ne coûte rien —
+`seq_0_to_99999` lit les données réelles aussi vite que `seq_0_to_999` (5 ms). Si les séries
+devaient s'allonger, la réponse est **MariaDB 10.6 + `JSON_TABLE`**, pas une borne plus haute.
+
+**Les libellés d'objectif sont dérivés, pas recopiés** : le `CASE` SQL est engendré depuis
+`_OBJECTIF_LABELS` au moment de la migration. Un renommage suit tout seul.
+
+**Sécurité — le compte lit les vues et rien d'autre.** Les vues s'exécutent en
+`SQL SECURITY DEFINER` (défaut) : le compte n'a **aucun droit sur les tables**, et les vues
+répondent quand même. Éprouvé en créant réellement le compte, puis en le retirant :
+7 vues lisibles · **10 tables refusées** (dont `Utilisateur`, `ConnexionBDD`,
+`PasswordResetToken`) · 6 écritures refusées · mots de passe, identifiants chiffrés et jetons
+hors de portée.
+
+⚠️ **`GRANT SELECT ON base.*` est proscrit** — cette forme donnerait accès aux tables sensibles.
+Un `GRANT` par vue, nommément.
+
+**Portée assumée et documentée** : le compte Power BI est un **canal d'exploitation interne**,
+ses identifiants ne sont jamais distribués aux entreprises. Il voit le contenu métier de tout le
+parc et **n'est pas cloisonné par entreprise** — ce n'est pas une contradiction avec le
+cloisonnement applicatif mais un niveau de privilège différent. Si l'accès devait un jour être
+ouvert aux entreprises, la voie est **un compte par entreprise sur des vues filtrées**, le filtre
+vivant dans la vue et non dans le rapport. Les deux points sont écrits dans `POWERBI.md`.
+
+Validé : 7 vues créées, **valeurs confrontées une à une au JSON d'origine** (types, libellés,
+fiabilité, conclusif, écarts calculés, dates et bornes des séries, z-scores), aucune colonne
+sensible ni JSON brut exposé, idempotence relancée.
+
 ## État d'avancement
 
 - Module 0 (site vitrine) : terminé
@@ -1602,7 +1647,7 @@ première. **Un test sur une table vide ne teste pas le chemin nominal.**
   cloche et panneau du topbar, page « Mes alertes » avec marquage traité, vue de supervision
   admin. **Correction du modèle : la relation devient Résultat → Alerte** (voir la section
   dédiée)
-- Module 6 (Power BI) : non commencé
+- Module 6 (Power BI) : terminé le 12/08/2026 — 7 vues à plat, compte en lecture seule sur les seules vues, documentation d'exploitation. **Tous les modules sont terminés.**
 
 ## Journal des sessions
 

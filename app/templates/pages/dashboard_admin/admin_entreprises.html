@@ -12,7 +12,8 @@
    existent, combien vivent, ce qui est cassé, ce qui a été produit. Les volumes
    sont calculés sur l'ensemble du parc, jamais sur le filtre courant — un
    indicateur d'ensemble qui bougerait avec une recherche ne serait plus un repère. #}
-<section class="sv-stats">
+<section class="dash-rangee">
+    <div class="sv-stats">
     {{ carte("Entreprises actives", tuiles.actives, "comptes validés sur la plateforme",
              icone="buildings") }}
     {{ carte("Actives ce mois", tuiles.actives_mois, "un import ou une analyse depuis le 1er",
@@ -25,34 +26,37 @@
              icone="database-exclamation", ton="eleve" if tuiles.sources_erreur else "") }}
     {{ carte("Analyses ce mois", tuiles.analyses_mois, "exécutions lancées, tout le parc",
              icone="graph-up") }}
+</div>
 </section>
 
-<div class="dash-tabs">
-    <a href="/dashboard/admin/entreprises?statut=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'tous' }}">Toutes</a>
-    <a href="/dashboard/admin/entreprises?statut=validee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'validee' }}">Actives</a>
-    <a href="/dashboard/admin/entreprises?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'en_attente' }}">En attente</a>
-    <a href="/dashboard/admin/entreprises?statut=refusee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'refusee' }}">Refusées</a>
-</div>
-
-<div class="dash-toolbar">
-    <form class="dash-search" method="get" action="/dashboard/admin/entreprises">
-        <input type="hidden" name="statut" value="{{ statut_filtre }}">
-        <i class="bi bi-search"></i>
-        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une entreprise..." value="{{ q }}">
-    </form>
-    <div class="dash-toolbar-spacer"></div>
-    <a href="/dashboard/admin/entreprises/export?statut={{ statut_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-btn-soft">
-        <i class="bi bi-download"></i> Exporter
-    </a>
-</div>
-
-{% if not lignes %}
-<div class="imh-empty imh-empty--compact">
-    <div class="imh-empty-icon">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+<section class="dash-rangee">
+    <div class="dash-tabs">
+        <a href="/dashboard/admin/entreprises?statut=tous{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'tous' }}">Toutes</a>
+        <a href="/dashboard/admin/entreprises?statut=validee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'validee' }}">Actives</a>
+        <a href="/dashboard/admin/entreprises?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'en_attente' }}">En attente</a>
+        <a href="/dashboard/admin/entreprises?statut=refusee{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if statut_filtre == 'refusee' }}">Refusées</a>
     </div>
-    <p class="imh-empty-text">Aucune entreprise ne correspond à cette recherche.</p>
-</div>
+
+    <div class="dash-toolbar">
+        <form class="dash-search" method="get" action="/dashboard/admin/entreprises">
+            <input type="hidden" name="statut" value="{{ statut_filtre }}">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une entreprise..." value="{{ q }}">
+        </form>
+        <div class="dash-toolbar-spacer"></div>
+        <a href="/dashboard/admin/entreprises/export?statut={{ statut_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-btn-soft">
+            <i class="bi bi-download"></i> Exporter
+        </a>
+    </div>
+
+    {% if not lignes %}
+    <div class="imh-empty imh-empty--compact">
+        <div class="imh-empty-icon">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+        </div>
+        <p class="imh-empty-text">Aucune entreprise ne correspond à cette recherche.</p>
+    </div>
+</section>
 {% else %}
 <div class="dash-table-wrap">
     <table class="dash-table ent-table">

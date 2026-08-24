@@ -7,36 +7,40 @@
 
 {{ entete("Console d'administration", title, guide) }}
 
-<div class="sv-stats">
-    {{ carte("Total imports", total_imports, "toutes entreprises", icone="archive-fill") }}
-    {{ carte("Sources actives", actives_count, "statut valide", icone="check-circle-fill") }}
-    {# À zéro la carte reste neutre : une absence de panne n'est pas un signal. #}
-    {{ carte("Sources en erreur", erreurs_count,
-             "aucune analyse ne peut s’exécuter dessus" if erreurs_count else "toutes les sources sont opérationnelles",
-             icone="exclamation-triangle-fill", ton="eleve" if erreurs_count else "") }}
-</div>
-
-<div class="dash-tabs" id="admImhTabs">
-    <a href="?kind=all&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'all' }}">Toutes</a>
-    <a href="?kind=file&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'file' }}">Fichiers</a>
-    <a href="?kind=db&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'db' }}">Connexions base de données</a>
-</div>
-
-<div class="dash-toolbar">
-    <form class="dash-search" method="get" action="/dashboard/admin/imports">
-        <input type="hidden" name="kind" value="{{ kind_filtre }}">
-        <i class="bi bi-search"></i>
-        <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une source ou une entreprise..." value="{{ q }}">
-    </form>
-    <div class="dash-select-wrap">
-        <select class="dash-select" id="admImhEntrepriseFilter">
-            <option value="0" {{ 'selected' if entreprise_id_filtre == 0 }}>Toutes les entreprises</option>
-            {% for ent in entreprises %}
-            <option value="{{ ent.idEntreprise }}" {{ 'selected' if entreprise_id_filtre == ent.idEntreprise }}>{{ ent.nom }}</option>
-            {% endfor %}
-        </select>
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte("Total imports", total_imports, "toutes entreprises", icone="archive-fill") }}
+        {{ carte("Sources actives", actives_count, "statut valide", icone="check-circle-fill") }}
+        {# À zéro la carte reste neutre : une absence de panne n'est pas un signal. #}
+        {{ carte("Sources en erreur", erreurs_count,
+                 "aucune analyse ne peut s’exécuter dessus" if erreurs_count else "toutes les sources sont opérationnelles",
+                 icone="exclamation-triangle-fill", ton="eleve" if erreurs_count else "") }}
     </div>
-</div>
+</section>
+
+<section class="dash-rangee">
+    <div class="dash-tabs" id="admImhTabs">
+        <a href="?kind=all&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'all' }}">Toutes</a>
+        <a href="?kind=file&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'file' }}">Fichiers</a>
+        <a href="?kind=db&entreprise_id={{ entreprise_id_filtre }}{% if q %}&q={{ q }}{% endif %}" class="dash-tab {{ 'active' if kind_filtre == 'db' }}">Connexions base de données</a>
+    </div>
+
+    <div class="dash-toolbar">
+        <form class="dash-search" method="get" action="/dashboard/admin/imports">
+            <input type="hidden" name="kind" value="{{ kind_filtre }}">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" class="dash-search-input" placeholder="Rechercher une source ou une entreprise..." value="{{ q }}">
+        </form>
+        <div class="dash-select-wrap">
+            <select class="dash-select" id="admImhEntrepriseFilter">
+                <option value="0" {{ 'selected' if entreprise_id_filtre == 0 }}>Toutes les entreprises</option>
+                {% for ent in entreprises %}
+                <option value="{{ ent.idEntreprise }}" {{ 'selected' if entreprise_id_filtre == ent.idEntreprise }}>{{ ent.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</section>
 
 {% if not sources %}
 <p class="text-muted">Aucune source de données ne correspond à ces critères.</p>

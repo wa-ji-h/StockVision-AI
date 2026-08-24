@@ -1,131 +1,277 @@
 {% extends "pages/base.html" %}
-{% block title %}Services & Solutions — StockVision AI{% endblock %}
+{% block title %}Services · StockVision AI{% endblock %}
 {% block content %}
-<!-- HERO HEADER -->
-<section class="hero-section">
-    <div class="hero-badge">
-        <span class="badge-dot"></span>
-        <span class="badge-text">Services Data & Solutions Power BI</span>
-    </div>
-    <div class="hero-split align-items-center">
-        <div class="hero-text">
-            <h1>Des Services Conçus Pour <span class="gradient-text">Booster Votre Rentabilité</span></h1>
-            <p>De l'ingestion sécurisée de vos fichiers d'inventaire jusqu'au déploiement de tableaux de bord Power BI décisionnels, nous transformons votre chaîne logistique.</p>
-            <div class="hero-actions mb-4">
-                <a href="/inscription" class="btn btn-gradient btn-lg">Rejoindre la Plateforme</a>
-                <a href="/contact" class="btn btn-outline-light btn-lg">Parler à un Expert</a>
-            </div>
+<script>
+    /* Posé avant le rendu : sans JavaScript, l'état masqué des reveals n'est
+       jamais appliqué et la page reste intégralement lisible. */
+    document.documentElement.classList.add('fx-js');
+</script>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="sr-hero">
+    <div class="sr-hero-texte">
+        <span class="hero-badge fx-entree" style="--i:0">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Ce que couvre la plateforme</span>
+        </span>
+
+        <h1 class="fx-entree" style="--i:1">
+            De vos données brutes<br>
+            <span class="gradient-text">à un rapport que vous pilotez</span>
+        </h1>
+
+        <p class="sr-hero-sous fx-entree" style="--i:2">
+            Quatre volets, du raccordement de vos sources jusqu'aux vues exposées à Power BI.
+            Chacun est décrit ici tel qu'il fonctionne.
+        </p>
+
+        <div class="sr-hero-actions fx-entree" style="--i:3">
+            <a href="/inscription" class="btn btn-gradient btn-lg">Demander un accès</a>
+            <a href="/fonctionnalites" class="btn btn-outline-light btn-lg">Voir le moteur d'analyse</a>
         </div>
-        <div class="hero-graphic text-center">
-            <img src="/static/images/stock_3d_powerbi.png" alt="StockVision Power BI Services" class="img-fluid rounded-4 shadow-lg border border-secondary border-opacity-20 hero-3d-img">
+    </div>
+
+    <!-- Bande visuelle pleine largeur : troisième paradigme de hero du site,
+         après le split de features.html et le visuel débordant de l'accueil. -->
+    <div class="sr-hero-bande fx-entree" style="--i:4">
+        <img src="/static/images/stock_3d_powerbi.png"
+             alt="Restitution des analyses StockVision AI dans Power BI"
+             width="1024" height="1024" fetchpriority="high">
+    </div>
+</section>
+
+<!-- ══════════════════════ L'OFFRE EN QUATRE VOLETS ══════════════════════ -->
+<section class="fx-section">
+    <div class="fx-tete fx-reveal">
+        <h2>Quatre volets, un seul parcours</h2>
+        <p>Les deux premiers portent le service. Les deux suivants en découlent et n'existent pas sans eux.</p>
+    </div>
+
+    <div class="sr-volets fx-reveal">
+        <article class="sr-volet sr-volet--principal" style="--i:0">
+            <span class="sr-volet-rang">Volet 1</span>
+            <h3>Raccordement de vos sources</h3>
+            <p>
+                Un fichier CSV, un script SQL ou un accès en lecture seule à votre base.
+                Les tables et les colonnes sont détectées et typées à la connexion, puis
+                affichées en aperçu avant qu'une seule analyse ne soit lancée.
+            </p>
+            <ul class="sr-puces">
+                <li>MySQL</li>
+                <li>PostgreSQL</li>
+                <li>SQL Server</li>
+                <li>CSV</li>
+                <li>Script SQL</li>
+            </ul>
+        </article>
+
+        <article class="sr-volet sr-volet--principal" style="--i:1">
+            <span class="sr-volet-rang">Volet 2</span>
+            <h3>Configuration et exécution des analyses</h3>
+            <p>
+                Vous choisissez les colonnes à retenir, ce que vous voulez savoir et le
+                rythme de relance. Le calcul est fait localement, en Python, et chaque
+                résultat porte son intervalle de confiance et son niveau de fiabilité.
+            </p>
+            <ul class="sr-puces">
+                <li>Prévision</li>
+                <li>Tendance</li>
+                <li>Anomalie</li>
+                <li>Classement</li>
+            </ul>
+        </article>
+
+        <article class="sr-volet" style="--i:2">
+            <span class="sr-volet-rang">Volet 3</span>
+            <h3>Supervision et alertes</h3>
+            <p>
+                Chaque exécution est évaluée sur une échelle de criticité déterministe.
+                Une alerte n'est créée qu'à partir du niveau « Élevé », et se consulte
+                dans votre espace.
+            </p>
+        </article>
+
+        <article class="sr-volet" style="--i:3">
+            <span class="sr-volet-rang">Volet 4</span>
+            <h3>Exposition vers Power BI</h3>
+            <p>
+                Sept vues SQL à plat, exposées en lecture seule à un compte dédié qui
+                n'a aucun droit sur les tables de l'application.
+            </p>
+        </article>
+    </div>
+</section>
+
+<!-- ═════════════ VOLET 1 EN DÉTAIL · RACCORDEMENT ═════════════ -->
+<section class="fx-section">
+    <div class="sr-detail fx-reveal">
+        <div class="sr-detail-texte">
+            <span class="sr-etiquette">Volet 1 en détail</span>
+            <h2>Votre base reste <span class="gradient-text">intacte</span></h2>
+            <p>
+                Une connexion à votre système n'ouvre qu'un accès en lecture. La plateforme
+                interroge le catalogue de votre base pour lister les tables disponibles, puis
+                ne lit que les colonnes que vous avez retenues. Aucune écriture, jamais.
+            </p>
+
+            <dl class="sr-specs">
+                <div>
+                    <dt>Identifiants</dt>
+                    <dd>Chiffrés avant stockage, jamais conservés en clair.</dd>
+                </div>
+                <div>
+                    <dt>Portée de lecture</dt>
+                    <dd>Les seules colonnes retenues dans votre configuration.</dd>
+                </div>
+                <div>
+                    <dt>Fichiers déposés</dt>
+                    <dd>Un import est une source autonome, sans lien avec votre base.</dd>
+                </div>
+                <div>
+                    <dt>Contrôle avant analyse</dt>
+                    <dd>Les premières lignes sont affichées, avec le type détecté par colonne.</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="sr-detail-visuel">
+            <div class="sr-detail-cadre">
+                <img src="/static/images/stock_3d_security.png"
+                     alt="Accès en lecture seule et chiffrement des identifiants de connexion"
+                     width="1024" height="1024" loading="lazy">
+            </div>
         </div>
     </div>
 </section>
 
-<!-- OFFRES DE SERVICES CLIENTS -->
-<section class="services-list-section my-5 py-4">
-    <div class="section-header text-center mb-5">
-        <h2 class="fw-bold">Nos Domaines d'Accompagnement</h2>
-        <p class="text-muted">Une solution complète clé en main sans contrainte technique</p>
+<!-- ═════════════ VOLET 2 EN DÉTAIL · RYTHME D'EXÉCUTION ═════════════ -->
+<section class="fx-section">
+    <div class="sr-rythme fx-reveal">
+        <div class="sr-rythme-entete">
+            <span class="sr-etiquette">Volet 2 en détail</span>
+            <h2>Vous fixez le rythme</h2>
+            <p>
+                Une analyse se lance à la demande, et se relance au pas de temps que vous
+                choisissez. Le pas retenu détermine comment vos lignes sont regroupées avant
+                le calcul.
+            </p>
+        </div>
+
+        <ul class="sr-frequences">
+            <li class="sr-frequence" style="--i:0">
+                <span class="sr-frequence-nom">Ponctuelle</span>
+                <span class="sr-frequence-desc">Aucun regroupement : l'analyse porte sur les lignes telles quelles.</span>
+            </li>
+            <li class="sr-frequence" style="--i:1">
+                <span class="sr-frequence-nom">Quotidienne</span>
+                <span class="sr-frequence-desc">Vos lignes sont regroupées par jour.</span>
+            </li>
+            <li class="sr-frequence" style="--i:2">
+                <span class="sr-frequence-nom">Hebdomadaire</span>
+                <span class="sr-frequence-desc">Regroupement par semaine.</span>
+            </li>
+            <li class="sr-frequence" style="--i:3">
+                <span class="sr-frequence-nom">Mensuelle</span>
+                <span class="sr-frequence-desc">Regroupement par mois.</span>
+            </li>
+        </ul>
+
+        <p class="fx-note sr-rythme-note">
+            Le pas de temps ne conditionne l'analyse que sur les objectifs temporels. Sur un
+            classement, il ne fixe que la cadence de mise à jour.
+        </p>
+    </div>
+</section>
+
+<!-- ═══════════════════ PARCOURS D'INTÉGRATION ═══════════════════ -->
+<section class="fx-section">
+    <div class="fx-tete fx-reveal">
+        <h2>Comment se déroule l'ouverture d'un compte</h2>
+        <p>Quatre étapes réelles, de la demande à la première analyse.</p>
     </div>
 
-    <div class="row g-4">
-        <!-- Service 1 -->
-        <div class="col-md-6 col-lg-3">
-            <div class="service-box p-4 rounded-4 bg-card h-100 text-center">
-                <div class="sv-icon-badge">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Ingestion Multi-Sources</h3>
-                <p class="text-muted small mb-0">Importation simplifiée de fichiers CSV/SQL ou connexion sécurisée en lecture seule à votre propre SGBD (MySQL, PostgreSQL, Oracle...).</p>
+    <ol class="sr-parcours fx-reveal">
+        <li class="sr-jalon" style="--i:0">
+            <span class="sr-jalon-rang">01</span>
+            <div class="sr-jalon-corps">
+                <h3>Vous déposez une demande</h3>
+                <p>Le nom de l'entreprise, son secteur et vos coordonnées suffisent.</p>
             </div>
+        </li>
+        <li class="sr-jalon" style="--i:1">
+            <span class="sr-jalon-rang">02</span>
+            <div class="sr-jalon-corps">
+                <h3>Un administrateur valide</h3>
+                <p>Aucun compte ne s'ouvre sans cette vérification. Un mot de passe provisoire vous est envoyé par courriel.</p>
+            </div>
+        </li>
+        <li class="sr-jalon" style="--i:2">
+            <span class="sr-jalon-rang">03</span>
+            <div class="sr-jalon-corps">
+                <h3>Vous raccordez une première source</h3>
+                <p>À la première connexion vous définissez votre mot de passe, puis vous importez un fichier ou déclarez un accès à votre base.</p>
+            </div>
+        </li>
+        <li class="sr-jalon" style="--i:3">
+            <span class="sr-jalon-rang">04</span>
+            <div class="sr-jalon-corps">
+                <h3>Vous lancez votre première analyse</h3>
+                <p>Le résultat arrive chiffré, expliqué, avec sa fiabilité et son graphique.</p>
+            </div>
+        </li>
+    </ol>
+</section>
+
+<!-- ═══════════════════════ PÉRIMÈTRE ═══════════════════════ -->
+<section class="fx-section">
+    <div class="sr-perimetre fx-reveal">
+        <div class="sr-perimetre-intro">
+            <h2>Le périmètre, sans zone grise</h2>
+            <p>
+                Dire ce qu'un outil ne fait pas vaut mieux que de le laisser découvrir en
+                cours de projet. Voici la limite exacte.
+            </p>
         </div>
 
-        <!-- Service 2 -->
-        <div class="col-md-6 col-lg-3">
-            <div class="service-box p-4 rounded-4 bg-card h-100 text-center">
-                <div class="sv-icon-badge sv-icon-badge--blue">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Configurations IA Sur-Mesure</h3>
-                <p class="text-muted small mb-0">Définissez vos objectifs métier et choisissez la fréquence de récurrence (ponctuelle, quotidienne, hebdomadaire, mensuelle).</p>
+        <div class="sr-perimetre-cols">
+            <div class="sr-pcol sr-pcol--fait">
+                <h3>Ce que la plateforme fait</h3>
+                <ul>
+                    <li>Lit vos fichiers et vos bases, en lecture seule</li>
+                    <li>Calcule localement prévision, tendance, anomalie et classement</li>
+                    <li>Qualifie la fiabilité de chaque résultat et l'affiche avec lui</li>
+                    <li>Déclenche une alerte à partir du niveau de criticité « Élevé »</li>
+                    <li>Expose sept vues SQL en lecture seule pour votre rapport</li>
+                </ul>
             </div>
-        </div>
 
-        <!-- Service 3 -->
-        <div class="col-md-6 col-lg-3">
-            <div class="service-box p-4 rounded-4 bg-card h-100 text-center">
-                <div class="sv-icon-badge sv-icon-badge--warn">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Supervision & Alertes Critiques</h3>
-                <p class="text-muted small mb-0">Détection d'anomalies en temps réel avec notifications directes avant tout risque de rupture de stock ou de surstockage.</p>
-            </div>
-        </div>
-
-        <!-- Service 4 -->
-        <div class="col-md-6 col-lg-3">
-            <div class="service-box p-4 rounded-4 bg-card h-100 text-center">
-                <div class="sv-icon-badge sv-icon-badge--indigo">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                </div>
-                <h3 class="h5 fw-bold mb-2">Restitution Power BI</h3>
-                <p class="text-muted small mb-0">Génération de rapports décisionnels dynamiques Power BI facilitant la prise de décision stratégique des dirigeants.</p>
+            <div class="sr-pcol sr-pcol--pas">
+                <h3>Ce qu'elle ne fait pas</h3>
+                <ul>
+                    <li>Elle n'écrit jamais dans vos bases source</li>
+                    <li>Elle n'analyse pas en continu : vous lancez, ou vous fixez un rythme</li>
+                    <li>Elle ne confie aucun calcul au modèle de langage, qui ne reçoit aucune ligne de vos données</li>
+                    <li>Elle ne compose pas vos rapports Power BI : elle expose les données, vous construisez le rapport</li>
+                </ul>
             </div>
         </div>
     </div>
 </section>
 
-<!-- PARCOURS ET EXPÉRIENCE CLIENT (ONBOARDING EN 4 ÉTAPES) -->
-<section class="workflow-section my-5 py-4">
-    <div class="section-header text-center mb-5">
-        <h2 class="fw-bold">Le Parcours d'une Entreprise Cliente</h2>
-        <p class="text-muted">Un processus fluide de l'inscription à la visualisation des prévisions</p>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="step-card p-4 rounded-4 text-center bg-card h-100">
-                <span class="step-num-badge">1</span>
-                <h4 class="h6 fw-bold text-white mb-2">Formulaire d'Inscription</h4>
-                <p class="text-muted extra-small mb-0">L'entreprise soumet sa demande avec son nom, son secteur et ses coordonnées.</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="step-card p-4 rounded-4 text-center bg-card h-100">
-                <span class="step-num-badge">2</span>
-                <h4 class="h6 fw-bold text-white mb-2">Validation Admin & Accès</h4>
-                <p class="text-muted extra-small mb-0">Un administrateur valide le compte. Un email automatique transmet le mot de passe provisoire.</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="step-card p-4 rounded-4 text-center bg-card h-100">
-                <span class="step-num-badge">3</span>
-                <h4 class="h6 fw-bold text-white mb-2">Import & Config IA</h4>
-                <p class="text-muted extra-small mb-0">Première connexion, réinitialisation du mot de passe, importation des données et création de la 1ère analyse.</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="step-card p-4 rounded-4 text-center bg-card h-100">
-                <span class="step-num-badge">4</span>
-                <h4 class="h6 fw-bold text-white mb-2">Pilotage Power BI</h4>
-                <p class="text-muted extra-small mb-0">Consultation des indicateurs prédictifs et réception des alertes critiques en temps réel.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CALL TO ACTION BANNER -->
+<!-- ═══════════════════════════ CLÔTURE ═══════════════════════════ -->
 <section class="cta-banner text-center py-5 my-4">
-    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden">
-        <h2 class="fw-bold mb-3">Donnez Une Nouvelle Dimension à Votre Gestion de Stock</h2>
-        <p class="text-muted mx-auto mb-4" style="max-width: 580px;">
-            Demandez dès aujourd'hui l'accès pour votre entreprise et commencez à anticiper la demande.
+    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden fx-reveal">
+        <h2 class="fw-bold mb-3">Raccordez votre première source</h2>
+        <p class="text-muted mx-auto mb-4" style="max-width: 560px;">
+            Inscrivez votre entreprise, importez un fichier et obtenez un résultat expliqué
+            le jour même.
         </p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="/inscription" class="btn btn-gradient btn-lg">Faire une Demande d'Inscription</a>
-            <a href="/contact" class="btn btn-outline-light btn-lg">Nous Contacter</a>
+            <a href="/inscription" class="btn btn-gradient btn-lg">Demander un accès</a>
+            <a href="/contact" class="btn btn-outline-light btn-lg">Parler à un expert</a>
         </div>
     </div>
 </section>
+
+<script src="/static/js/reveal.js?v={{ asset_version }}" defer></script>
 {% endblock %}

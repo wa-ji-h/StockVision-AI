@@ -633,7 +633,36 @@ def admin_statistiques(
     db: Session = Depends(get_db),
     user: Utilisateur = Depends(require_role(RoleEnum.administrateur)),
 ):
+    """Page d'analyse du parc.
+
+    ⚠️ Aucun décompte n'est inventé ici : chaque chiffre vient d'un producteur
+    déjà en service (`indicateurs_parc`, `series_parc`, `activite_par_entreprise`,
+    `entreprises_actives`, `repartition_alertes`, `activite_recente`). La route
+    ne fait que les assembler pour le gabarit — c'est le même patron que
+    `admin_dashboard`, et il n'y a donc qu'une seule source par volume.
+    """
+    from app.services.alertes import NIVEAUX_ALERTE, STATUT_TRAITEE
+    from app.services.graphiques import (
+        FENETRE_JOURS,
+        alertes_ouvertes_par_jour,
+        entreprises_actives,
+        series_parc,
+    )
+    from app.services.supervision import (
+        activite_par_entreprise,
+        activite_recente,
+        repartition_alertes,
+    )
+    from app.services.supervision_analyses import indicateurs_parc
+    from app.services.moteur_analyse.criticite import (
+        COULEUR_PAR_NIVEAU,
+        LIBELLE_PAR_NIVEAU,
+        NIVEAUX_CRITICITE,
+    )
+
     pending_count = _pending_count(db)
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
     par_secteur = (
         db.query(Entreprise.secteur_activite, func.count(Entreprise.idEntreprise))
         .filter(Entreprise.statut_demande == StatutDemandeEnum.validee)
@@ -651,6 +680,105 @@ def admin_statistiques(
         .count(),
         "utilisateurs": db.query(Utilisateur).count(),
     }
+
+    analyses = indicateurs_parc(db, debut_mois)
+    alertes = repartition_alertes(db)
+
+    series = series_parc(db)
+    series["encours"] = alertes_ouvertes_par_jour(db)
+
+    volumes = activite_par_entreprise(db, debut_mois)
+    classement = entreprises_actives(db, volumes, limite=50)
+
+    # Criticité de TOUTES les exécutions, sur les quatre niveaux — la page
+    # d'accueil n'en montre que deux, puisque seuls les rangs ≥ « élevé » créent
+    # une alerte. Agrégat en ligne, même patron que `admin_dashboard`.
+    comptes_crit = dict(
+        db.query(ResultatAnalyse.criticite, func.count(ResultatAnalyse.id_resultat))
+        .filter(ResultatAnalyse.criticite.isnot(None))
+        .group_by(ResultatAnalyse.criticite)
+        .all()
+    )
+    total_crit = sum(comptes_crit.values()) or 1
+    repartition_criticite = [
+        {
+            "label": LIBELLE_PAR_NIVEAU[code],
+            "color": COULEUR_PAR_NIVEAU[code],
+            "nombre": comptes_crit.get(code, 0),
+            "pct": round(comptes_crit.get(code, 0) * 100 / total_crit),
+        }
+        for code, _rang, _lib in NIVEAUX_CRITICITE
+    ]
+
+    # Alertes par niveau : volumes seulement, jamais un motif ni un message.
+    total_alertes = sum(alertes["par_niveau"].values()) or 1
+    repartition_alertes_niveaux = [
+        {
+            "label": niv["libelle"],
+            "color": COULEUR_PAR_NIVEAU.get(niv["code"], "#64748b"),
+            "nombre": alertes["par_niveau"].get(niv["code"], 0),
+            "pct": round(alertes["par_niveau"].get(niv["code"], 0) * 100 / total_alertes),
+        }
+        for niv in NIVEAUX_ALERTE
+    ]
+
+    # Ancienneté des alertes encore ouvertes.
+    #
+    # ⚠️ « Ouverte » et « âge » reprennent EXACTEMENT les définitions de
+    # `vw_pbi_alertes` (migrate_vues_powerbi.py) : est_ouverte = date_traitement
+    # IS NULL, age_ouverte_jours = DATEDIFF(NOW(), date_creation). Une seule
+    # définition pour l'application et pour Power BI, sinon les deux divergent.
+    #
+    # Le classement en tranches est fait en Python plutôt qu'en SQL : l'ensemble
+    # des alertes ouvertes est par nature un arriéré, donc petit, et la logique
+    # reste lisible et indépendante du SGBD.
+    _ouvertes = [
+        d for (d,) in db.query(Alerte.date_creation)
+        .filter(Alerte.date_traitement.is_(None)).all() if d
+    ]
+    _maintenant = datetime.now()
+    # (borne haute en jours, libellé, teinte). La dernière tranche n'a pas de
+    # borne : au-delà de 90 jours, l'écart de quelques jours ne dit plus rien.
+    _TRANCHES = (
+        (7, "Récent · 0-7 j", "#22d3ee"),
+        (30, "8-30 j", "#f59e0b"),
+        (90, "31-90 j", "#fb923c"),
+        (None, "Plus de 90 j", "#f87171"),
+    )
+    _comptes_age = [0] * len(_TRANCHES)
+    for _d in _ouvertes:
+        _age = (_maintenant - _d).days
+        for _i, (_borne, _lib, _c) in enumerate(_TRANCHES):
+            if _borne is None or _age <= _borne:
+                _comptes_age[_i] += 1
+                break
+    _total_ouvertes = len(_ouvertes)
+    anciennete_alertes = [
+        {
+            "label": lib,
+            "color": couleur,
+            "nombre": _comptes_age[i],
+            "pct": round(_comptes_age[i] * 100 / _total_ouvertes) if _total_ouvertes else 0,
+        }
+        for i, (_borne, lib, couleur) in enumerate(_TRANCHES)
+    ]
+    # Au-delà de 7 jours une alerte non traitée n'est plus un événement récent :
+    # c'est un arriéré. Le seuil qualifie, il ne déclenche rien.
+    alertes_ouvertes_agees = sum(_comptes_age[1:])
+
+    # Secteurs : une seule teinte pour toutes les parts. Une couleur attribuée
+    # par position n'encode rien et apprend à ignorer celles qui signalent.
+    total_secteur = sum(n for _s, n in par_secteur) or 1
+    repartition_secteurs = [
+        {
+            "label": secteur or "Non renseigné",
+            "color": "#22d3ee",
+            "nombre": nombre,
+            "pct": round(nombre * 100 / total_secteur),
+        }
+        for secteur, nombre in par_secteur
+    ]
+
     response = templates.TemplateResponse(
         request,
         "pages/dashboard_admin/admin_statistiques.html",
@@ -660,7 +788,24 @@ def admin_statistiques(
             "pending_count": pending_count,
             "notifications_count": pending_count,
             "stats": stats,
-            "par_secteur": par_secteur,
+            "analyses": analyses,
+            "alertes": alertes,
+            "series": series,
+            "series_courbe": {
+                c: series[c]
+                for c in ("analyses", "imports", "alertes", "sources", "inscriptions")
+            },
+            "repartition_criticite": repartition_criticite,
+            "repartition_alertes_niveaux": repartition_alertes_niveaux,
+            "anciennete_alertes": anciennete_alertes,
+            "alertes_ouvertes_total": _total_ouvertes,
+            "alertes_ouvertes_agees": alertes_ouvertes_agees,
+            "repartition_secteurs": repartition_secteurs,
+            "classement": classement,
+            "activite": [
+                {**a, "periode": _periode_activite(a)} for a in activite_recente(db, limite=8)
+            ],
+            "fenetre_jours": FENETRE_JOURS,
         },
     )
     return _no_store(response)

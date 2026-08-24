@@ -35,6 +35,27 @@
     --border-light: rgba(255, 255, 255, 0.14);
     --border-glow: rgba(34, 211, 238, 0.25);
     --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.18);
+
+    /* Rôles « couleur de TEXTE » des teintes de marque et de sévérité.
+       En sombre ils valent exactement les teintes actuelles : aucun pixel ne
+       bouge. En clair ils prennent une variante foncée de la MEME famille,
+       parce que #22d3ee tombe à 1,78:1 et #f59e0b à 2,11:1 sur fond clair.
+       L'identité sémantique est conservée, seule la luminosité change. */
+    --accent-texte: var(--accent);
+    --ton-normal-texte: #64748b;
+    --ton-attention-texte: #f59e0b;
+    --ton-eleve-texte: #fb923c;
+    --ton-critique-texte: #f87171;
+
+    /* Fonds de badge correspondants, pour la meme raison. */
+    --ton-normal-fond: rgba(100, 116, 139, 0.14);
+    --ton-attention-fond: rgba(245, 158, 11, 0.14);
+    --ton-eleve-fond: rgba(251, 146, 60, 0.14);
+    --ton-critique-fond: rgba(239, 68, 68, 0.14);
+    --ton-succes-texte: #34d399;
+    --ton-succes-fond: rgba(52, 211, 153, 0.14);
+    --ton-info-texte: #38bdf8;
+    --ton-info-fond: rgba(14, 165, 233, 0.14);
 }
 
 /* ===== RESET & GLOBAL STYLES ===== */
@@ -462,29 +483,6 @@ main.main {
 }
 .stat-trend.positive { color: #34d399; }
 
-.chart-sim {
-    height: 120px;
-    display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
-    padding-top: 1rem;
-    border-top: 1px dashed var(--border);
-}
-
-.chart-sim .bar {
-    flex: 1;
-    height: var(--h, 50%);
-    background: rgba(14, 165, 233, 0.25);
-    border-radius: 6px 6px 0 0;
-    transition: all 0.3s ease;
-}
-
-.chart-sim .bar.active,
-.chart-sim .bar:hover {
-    background: var(--accent-gradient);
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.5);
-}
-
 /* ===== FEATURES SECTION STYLES ===== */
 .features-preview {
     padding: 6rem 0 4.5rem;
@@ -658,13 +656,6 @@ main.main {
     margin-bottom: 0.6rem;
 }
 .sv-card p { margin: 0; }
-
-/* Onglets simulateur (features.html) avec icône SVG */
-.sim-tab-icon {
-    display: inline-flex;
-    margin-right: 0.4rem;
-    vertical-align: -3px;
-}
 
 /* ===== SITE FOOTER STYLES ===== */
 .site-footer {
@@ -2712,41 +2703,61 @@ main.main {
 
     --text: #0f172a;
     --text-muted: #475569;
-    --text-muted-subtle: #64748b;
-    --text-dim: #64748b;
+    /* Mesuré : #64748b tombait à 4,34:1 sur --bg-body, sous le seuil AA de 4,5.
+       Ces deux valeurs le passent tout en gardant la hiérarchie
+       text > muted > muted-subtle > dim. */
+    --text-muted-subtle: #556377;   /* 5,58:1 sur le fond */
+    --text-dim: #5b6b82;            /* 4,95:1 sur le fond */
 
     --border: rgba(15, 23, 42, 0.1);
     --border-light: rgba(15, 23, 42, 0.14);
     --border-glow: rgba(14, 165, 233, 0.3);
     --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.1);
+
+    /* Variantes lisibles sur fond clair. Mesurées sur leur fond de badge :
+       accent 4,79 · attention 4,51 · élevé 4,52 · critique 5,30 · normal 6,15.
+       ⚠️ --accent lui-même ne bouge PAS : il reste #22d3ee pour les aplats
+       (arcs, barres, boutons). Seul le rôle « texte » est assombri. */
+    --accent-texte: #0e7490;
+    --ton-normal-texte: #475569;
+    --ton-attention-texte: #b45309;
+    --ton-eleve-texte: #c2410c;
+    --ton-critique-texte: #b91c1c;
+
+    --ton-normal-fond: #e2e8f0;
+    --ton-attention-fond: #fef3c7;
+    --ton-eleve-fond: #ffedd5;
+    --ton-critique-fond: #fee2e2;
+    /* Mesurés : succès 4,84 · info 5,17 sur leur fond. Le vert et le bleu
+       manquaient à la première passe et tombaient à 1,9 et 2,0. */
+    --ton-succes-texte: #047857;
+    --ton-succes-fond: #d1fae5;
+    --ton-info-texte: #0369a1;
+    --ton-info-fond: #e0f2fe;
+
+    /* Surface d'en-tête de tableau : distincte du corps blanc. */
+    --surface-entete: #eef2f7;
 }
 
-[data-theme="light"] .dash-sidebar {
-    background: #ffffff;
-}
-
-[data-theme="light"] .dash-nav-link:hover {
-    color: #0f172a;
-    background: rgba(15, 23, 42, 0.05);
-}
-
-/* Le logo est dessiné pour un fond sombre : on lui garde une pastille
-   sombre en mode clair au lieu de le laisser illisible sur du blanc. */
-[data-theme="light"] .dash-logo-link {
-    background: #070b14;
-    padding: 0.4rem 0.7rem;
-    border-radius: 10px;
-}
-
-[data-theme="light"] .dash-nav-link.active {
-    color: #0369a1;
-    background: rgba(14, 165, 233, 0.12);
-}
-
+/* ⚠️ L'ancien réglage rendait l'onglet actif BLANC dans un conteneur déjà
+   quasi blanc : l'état actif ne se voyait plus. Il reprend un remplissage
+   d'accent, en cyan profond parce que du texte blanc sur #22d3ee pur ne
+   donne que 1,81:1. Sur #0e7490 : 5,36:1. */
 [data-theme="light"] .dash-tab.active {
-    color: #0f172a;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+    color: #ffffff;
+    background: var(--accent-texte);
+    border-color: transparent;
+    box-shadow: 0 1px 4px rgba(14, 116, 144, 0.35);
+}
+/* L'inactif doit rester lisible ET clairement inactif : l'opacité seule le
+   faisait disparaître dans le fond. */
+[data-theme="light"] .dash-tab {
+    color: var(--text-muted);
+    opacity: 1;
+}
+[data-theme="light"] .dash-tabs {
+    background: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.12);
 }
 
 [data-theme="light"] .dash-tab:hover {
@@ -2783,24 +2794,23 @@ main.main {
 }
 [data-theme="light"] .sv-stat--compact { background: rgba(15, 23, 42, 0.03); }
 
+/* ⚠️ `.dash-sidebar-logout` et `.dash-collapse-btn` vivent dans la barre
+   latérale, qui reste sombre : les repeindre en blanc rendait le bouton de
+   repli blanc sur blanc. Ils gardent donc leur habillage sombre. */
 [data-theme="light"] .dash-bar-track,
-[data-theme="light"] .dash-pill,
 [data-theme="light"] .dash-icon-btn,
 [data-theme="light"] .dash-search,
-[data-theme="light"] .dash-btn-soft,
-[data-theme="light"] .dash-sidebar-logout,
-[data-theme="light"] .dash-collapse-btn {
+[data-theme="light"] .dash-btn-soft {
     background: #ffffff;
 }
 
-[data-theme="light"] .dash-icon-btn,
-[data-theme="light"] .dash-sidebar-logout,
-[data-theme="light"] .dash-collapse-btn {
+[data-theme="light"] .dash-icon-btn {
     color: var(--text-muted);
 }
 
+/* `.dash-collapse-btn` est exclu : il vit dans la barre latérale, qui reste
+   sombre. Son survol est défini plus bas, en clair sur fond sombre. */
 [data-theme="light"] .dash-icon-btn:hover,
-[data-theme="light"] .dash-collapse-btn:hover,
 [data-theme="light"] .dash-btn-soft:hover {
     background: rgba(14, 165, 233, 0.08);
     color: #0369a1;
@@ -2808,11 +2818,6 @@ main.main {
 
 [data-theme="light"] .dash-topbar {
     background: rgba(255, 255, 255, 0.95);
-}
-
-[data-theme="light"] .dash-sidebar {
-    background: #ffffff;
-    scrollbar-color: rgba(0,0,0,.1) transparent;
 }
 
 [data-theme="light"] .dash-collapse-btn {
@@ -6846,3 +6851,3088 @@ a.sv-liste-item:hover .sv-liste-titre { color: var(--accent); }
 
 [data-theme="light"] .imh-apercu thead th { background: #ffffff; }
 [data-theme="light"] .imh-apercu-wrap { background: rgba(15, 23, 42, 0.02); }
+
+/* ==========================================================================
+   PAGE FONCTIONNALITES (features.html) - prefixe .fx-
+   Preprefixe dedie : le vitrine et le socle dashboard partagent deja `.sv-`,
+   et une redefinition partielle ne leve rien, elle ne se voit qu'a l'ecran.
+   Aucun token de marque n'est redefini ici, ils sont uniquement consommes.
+   ========================================================================== */
+
+.fx-section { margin: 6rem 0; }
+
+/* En-tete de section : aligne a gauche, largeur de lecture bornee. Le site
+   ouvrait chaque section par un bloc centre identique - c'est cette repetition
+   qui donnait le sentiment de gabarit. */
+.fx-tete { max-width: 60ch; margin-bottom: 3rem; }
+.fx-tete h2 {
+    font-size: clamp(1.75rem, 1.2rem + 1.9vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+}
+.fx-tete p {
+    color: var(--text-muted);
+    font-size: 1.03rem;
+    line-height: 1.7;
+    margin: 0;
+}
+.fx-note {
+    color: var(--text-muted-subtle);
+    font-size: 0.86rem;
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* ───────────────────────────── HERO ───────────────────────────── */
+.fx-hero {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 4rem;
+    align-items: center;
+    padding: 3rem 0 6rem;
+}
+.fx-hero-texte .hero-badge { margin-bottom: 2rem; }
+.fx-hero h1 {
+    font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+}
+.fx-hero-sous {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    max-width: 46ch;
+    margin-bottom: 2.25rem;
+}
+.fx-hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+
+.fx-hero-visuel { position: relative; }
+.fx-hero-cadre {
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), var(--shadow-glow);
+    position: relative;
+}
+/* Reflet haut : donne une epaisseur de materiau au cadre, sans halo colore. */
+.fx-hero-cadre::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.fx-hero-img { width: 100%; height: auto; display: block; }
+
+/* Carte en chevauchement : la profondeur manquait totalement au site, tout
+   etait a plat dans la grille. */
+.fx-hero-flottante {
+    position: absolute;
+    left: -2.5rem;
+    bottom: 2rem;
+    width: 17rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 16px;
+    background: rgba(10, 16, 28, 0.82);
+    border: 1px solid var(--border-light);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+.fx-flot-titre {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted-subtle);
+    margin-bottom: 0.8rem;
+}
+.fx-flot-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.fx-flot-liste li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--text);
+    line-height: 1.35;
+}
+.fx-flot-puce {
+    flex: none;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.7);
+}
+.fx-flot-puce--2 { background: var(--accent-blue); box-shadow: 0 0 10px rgba(14, 165, 233, 0.7); }
+.fx-flot-puce--3 { background: var(--accent-indigo); box-shadow: 0 0 10px rgba(99, 102, 241, 0.7); }
+
+@media (prefers-reduced-transparency: reduce) {
+    .fx-hero-flottante { background: #0a101c; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* ──────────────────── CHAINE DE TRAITEMENT ──────────────────── */
+/* Le rang numerote porte une information reelle : chaque maillon exige le
+   precedent (source, import, configuration, resultat, alerte). */
+.fx-rail {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.25rem;
+    position: relative;
+}
+.fx-rail::before {
+    content: '';
+    position: absolute;
+    top: 19px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg,
+        rgba(34, 211, 238, 0.5),
+        rgba(99, 102, 241, 0.35),
+        rgba(255, 255, 255, 0.05));
+}
+.fx-noeud { position: relative; display: flex; flex-direction: column; }
+.fx-noeud-rang {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    flex: none;
+    border-radius: 50%;
+    margin-bottom: 1.25rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-glow);
+    color: var(--accent);
+    font-family: var(--font-buttons);
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 0 0 5px rgba(7, 11, 20, 0.9);
+}
+.fx-noeud-carte {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+.fx-noeud:hover .fx-noeud-carte {
+    transform: translateY(-5px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+}
+.fx-noeud-carte h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 0.5rem; }
+.fx-noeud-carte p { color: var(--text-muted); font-size: 0.84rem; line-height: 1.6; margin: 0; }
+
+/* ──────────────────────── BENTO OBJECTIFS ──────────────────────── */
+/* Exactement 4 cellules pour 4 objectifs : aucune case vide par construction. */
+.fx-bento {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 1.25rem;
+}
+.fx-obj {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+.fx-obj::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--fx-teinte);
+    opacity: 0.5;
+}
+/* Halo teinte tres discret, ancre sur le coin de l'icone. */
+.fx-obj::after {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: var(--fx-teinte);
+    opacity: 0.08;
+    filter: blur(48px);
+    pointer-events: none;
+}
+.fx-obj:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--fx-teinte) 42%, transparent);
+    background: var(--bg-card-hover);
+}
+.fx-obj--maitre { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+.fx-obj--large  { grid-column: 2 / span 2; grid-row: 2; }
+
+.fx-obj-entete { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.9rem; }
+.fx-obj-icone {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--fx-teinte) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fx-teinte) 26%, transparent);
+    color: var(--fx-teinte);
+}
+.fx-obj h3 { font-size: 1.08rem; font-weight: 700; margin: 0; }
+.fx-obj p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.68; margin: 0; }
+.fx-obj--maitre h3 { font-size: 1.28rem; }
+.fx-obj--maitre > p { font-size: 0.95rem; }
+
+/* Graphe illustratif de prevision */
+.fx-graphe { margin: 1.75rem 0 0; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.fx-courbe { width: 100%; height: auto; display: block; overflow: visible; }
+.fx-graphe-legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem;
+    margin-top: 0.9rem;
+    font-size: 0.73rem;
+    color: var(--text-muted-subtle);
+}
+.fx-graphe-legende span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.fx-cle { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.fx-cle--obs  { background: #22d3ee; }
+.fx-cle--proj { background: repeating-linear-gradient(90deg, #818cf8 0 4px, transparent 4px 7px); }
+.fx-cle--band { background: rgba(129, 140, 248, 0.32); height: 8px; border-radius: 2px; }
+.fx-mention {
+    margin: 0.9rem 0 0;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* ─────────────────────────── MOTEUR ─────────────────────────── */
+.fx-moteur {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 26px;
+    padding: 3.25rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-glow), 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+.fx-moteur::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--accent-gradient);
+    opacity: 0.65;
+}
+.fx-moteur-halo {
+    position: absolute;
+    top: -140px; right: -120px;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 68%);
+    pointer-events: none;
+}
+.fx-moteur-entete {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: end;
+    margin-bottom: 3rem;
+}
+.fx-moteur-entete h2 {
+    font-size: clamp(1.7rem, 1.15rem + 1.85vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+.fx-moteur-entete p {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.75;
+    margin: 0;
+}
+
+/* Trois paliers echelonnes, relies par la jauge : le modele applique depend
+   de la profondeur de l'historique, la hauteur de barre le donne a voir. */
+.fx-paliers {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
+.fx-palier {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+.fx-palier-jauge {
+    display: block;
+    height: 4px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+.fx-palier-jauge i {
+    display: block;
+    height: 100%;
+    width: var(--fx-part);
+    border-radius: inherit;
+    background: var(--accent-gradient);
+    transform-origin: left center;
+}
+.fx-palier h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.3rem; }
+.fx-palier-cond {
+    color: var(--accent);
+    font-family: var(--font-buttons);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 0.7rem;
+}
+.fx-palier p:last-child { color: var(--text-muted); font-size: 0.86rem; line-height: 1.65; margin: 0; }
+.fx-moteur-note { position: relative; margin-top: 2.5rem; max-width: 70ch; }
+
+/* ───────────────────────── RESTITUTION ───────────────────────── */
+.fx-restit {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr 1fr;
+    gap: 1.25rem;
+    align-items: stretch;
+}
+.fx-carte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.85rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+.fx-carte:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+}
+.fx-carte-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border-radius: 13px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    color: var(--accent);
+}
+.fx-carte h3 { font-size: 1.08rem; font-weight: 700; margin: 0; }
+.fx-carte > p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.68; margin: 0; }
+
+/* Echelle de criticite : les quatre niveaux reels du moteur, dans l'ordre.
+   Les teintes viennent de criticite.py, aucune n'est inventee ici. */
+.fx-crit { margin-top: auto; padding-top: 0.5rem; }
+.fx-crit-barre { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.fx-crit-barre span {
+    height: 7px;
+    border-radius: 3px;
+    background: var(--fx-teinte);
+    opacity: 0.85;
+}
+.fx-crit-libelles {
+    list-style: none;
+    margin: 0.55rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    font-size: 0.66rem;
+    color: var(--text-muted-subtle);
+}
+.fx-crit-libelles li { line-height: 1.25; }
+.fx-crit-seuil { margin: 0.85rem 0 0; font-size: 0.78rem; color: var(--text-muted); }
+
+.fx-restit-bi { padding: 0; overflow: hidden; gap: 0; }
+.fx-restit-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    border-bottom: 1px solid var(--border);
+}
+.fx-restit-corps { padding: 1.65rem 1.85rem 1.85rem; display: flex; flex-direction: column; gap: 0.7rem; }
+
+/* ────────────────────── FRONTIERE DES DONNEES ────────────────────── */
+.fx-frontiere {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 26px;
+    padding: 3.25rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-glow), 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+.fx-frontiere::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--accent-gradient);
+    opacity: 0.65;
+}
+.fx-frontiere-intro { max-width: 64ch; margin-bottom: 3rem; }
+.fx-frontiere-intro h2 {
+    font-size: clamp(1.6rem, 1.1rem + 1.7vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+}
+.fx-frontiere-intro p { color: var(--text-muted); font-size: 0.99rem; line-height: 1.75; margin: 0; }
+
+/* Couture centrale : la frontiere est le sujet, elle doit se voir. */
+.fx-frontiere-cols {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5rem;
+}
+.fx-frontiere-cols::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    width: 1px;
+    background: linear-gradient(180deg,
+        transparent, var(--border-light) 15%, var(--border-light) 85%, transparent);
+}
+.fx-fcol h3 {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fx-teinte);
+    margin-bottom: 1.1rem;
+}
+.fx-fcol--oui { --fx-teinte: var(--accent-blue); }
+.fx-fcol--non { --fx-teinte: var(--accent); }
+.fx-fcol ul { list-style: none; margin: 0; padding: 0; }
+/* Un seul filet entre deux elements, jamais au-dessus et en dessous de chacun. */
+.fx-fcol li {
+    position: relative;
+    padding: 0.75rem 0 0.75rem 1.5rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+.fx-fcol li + li { border-top: 1px solid var(--border); }
+.fx-fcol li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 1.15rem;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    border: 1.5px solid var(--fx-teinte);
+}
+.fx-fcol--non li::before { border-radius: 50%; opacity: 0.55; }
+.fx-frontiere-note { position: relative; margin-top: 2.75rem; }
+
+/* ──────────────────────── MOUVEMENT ──────────────────────── */
+/* L'etat masque n'existe que si le script a pu poser `fx-js` : sans
+   JavaScript, la page reste integralement lisible plutot que vide. */
+.fx-js .fx-entree {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fx-monte 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 110ms + 60ms);
+}
+@keyframes fx-monte { to { opacity: 1; transform: none; } }
+
+.fx-js .fx-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fx-js .fx-reveal.is-visible { opacity: 1; transform: none; }
+
+/* Decalage des enfants : porte par --i, aucun calcul cote JavaScript. */
+.fx-js .fx-reveal .fx-noeud,
+.fx-js .fx-reveal .fx-obj,
+.fx-js .fx-reveal .fx-palier,
+.fx-js .fx-reveal .fx-carte {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 85ms);
+}
+.fx-js .fx-reveal.is-visible .fx-noeud,
+.fx-js .fx-reveal.is-visible .fx-obj,
+.fx-js .fx-reveal.is-visible .fx-palier,
+.fx-js .fx-reveal.is-visible .fx-carte { opacity: 1; transform: none; }
+
+/* La courbe se trace : le geste raconte la projection, il n'est pas decoratif.
+   Seule la serie OBSERVEE est tracee par stroke-dashoffset. La projection est
+   revelee en opacite : animer son dasharray ecraserait le pointille (6 5) qui
+   la distingue de l'observe, et la legende annoncerait un motif absent. */
+.fx-js .fx-reveal .fx-trace { stroke-dasharray: 400; stroke-dashoffset: 400; }
+.fx-js .fx-reveal .fx-proj,
+.fx-js .fx-reveal .fx-bande,
+.fx-js .fx-reveal .fx-point { opacity: 0; }
+.fx-js .fx-reveal.is-visible .fx-trace {
+    animation: fx-tracer 1.5s cubic-bezier(0.33, 1, 0.68, 1) 0.25s forwards;
+}
+.fx-js .fx-reveal.is-visible .fx-proj {
+    animation: fx-apparait 0.7s ease 1.15s forwards;
+}
+.fx-js .fx-reveal.is-visible .fx-bande {
+    animation: fx-apparait 0.9s ease 1.35s forwards;
+}
+.fx-js .fx-reveal.is-visible .fx-point {
+    animation: fx-apparait 0.5s ease 1.05s forwards;
+}
+@keyframes fx-tracer   { to { stroke-dashoffset: 0; } }
+@keyframes fx-apparait { to { opacity: 1; } }
+
+/* La barre de jauge se remplit une fois le palier revele. */
+.fx-js .fx-reveal .fx-palier-jauge i { transform: scaleX(0); }
+.fx-js .fx-reveal.is-visible .fx-palier-jauge i {
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 85ms + 220ms);
+    transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-js .fx-entree,
+    .fx-js .fx-reveal,
+    .fx-js .fx-reveal.is-visible,
+    .fx-js .fx-reveal .fx-noeud,
+    .fx-js .fx-reveal .fx-obj,
+    .fx-js .fx-reveal .fx-palier,
+    .fx-js .fx-reveal .fx-carte {
+        opacity: 1;
+        transform: none;
+        animation: none;
+        transition: none;
+    }
+    .fx-js .fx-reveal .fx-trace { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+    .fx-js .fx-reveal .fx-proj,
+    .fx-js .fx-reveal .fx-bande,
+    .fx-js .fx-reveal .fx-point { opacity: 1; animation: none; }
+    .fx-js .fx-reveal .fx-palier-jauge i { transform: scaleX(1); transition: none; }
+    .fx-obj:hover,
+    .fx-carte:hover,
+    .fx-noeud:hover .fx-noeud-carte { transform: none; }
+}
+
+/* ─────────────────────── PORTABLE ET TABLETTE ─────────────────────── */
+@media (max-width: 1199px) {
+    .fx-hero { gap: 3rem; }
+    .fx-hero-flottante { left: -1.25rem; width: 15.5rem; }
+    .fx-moteur, .fx-frontiere { padding: 2.5rem; }
+}
+
+@media (max-width: 991px) {
+    .fx-section { margin: 4.5rem 0; }
+    .fx-hero { grid-template-columns: 1fr; gap: 3rem; padding: 1.5rem 0 4rem; }
+    .fx-hero-sous { max-width: 60ch; }
+    .fx-hero-flottante { left: auto; right: 1.25rem; bottom: -1.25rem; }
+
+    /* Le rail devient une frise verticale : le lien de succession reste lisible,
+       ce qu'un simple empilement de cartes perdrait. */
+    .fx-rail { grid-template-columns: 1fr; gap: 0; }
+    .fx-rail::before {
+        top: 0; bottom: 0; left: 19px;
+        right: auto; width: 1px; height: auto;
+        background: linear-gradient(180deg,
+            rgba(34, 211, 238, 0.5), rgba(99, 102, 241, 0.35), rgba(255, 255, 255, 0.05));
+    }
+    .fx-noeud { flex-direction: row; gap: 1.25rem; padding-bottom: 1.25rem; }
+    .fx-noeud-rang { margin-bottom: 0; }
+    .fx-noeud-carte { padding: 1.1rem 1.25rem; }
+
+    .fx-bento { grid-template-columns: 1fr 1fr; }
+    .fx-obj--maitre { grid-column: 1 / span 2; grid-row: auto; }
+    .fx-obj--large  { grid-column: 1 / span 2; grid-row: auto; }
+
+    .fx-moteur-entete { grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
+    .fx-paliers { grid-template-columns: 1fr; gap: 1.5rem; }
+
+    /* Deux colonnes conservees : la carte porte le contenu, l'alerte l'appoint. */
+    .fx-restit { grid-template-columns: 1fr 1fr; }
+    .fx-restit-bi { grid-column: 1 / span 2; }
+    .fx-restit-img { height: 220px; }
+
+    .fx-frontiere-cols { gap: 2.5rem; }
+    .fx-frontiere-cols::before { display: none; }
+    .fx-fcol--non { padding-top: 2rem; border-top: 1px solid var(--border-light); }
+}
+
+@media (max-width: 640px) {
+    .fx-section { margin: 3.5rem 0; }
+    .fx-hero { padding: 1rem 0 3rem; }
+    .fx-hero-actions .btn { width: 100%; }
+    /* La carte flottante repasse dans le flux : en chevauchement sur un petit
+       ecran, elle masquerait l'image au lieu de la mettre en valeur. */
+    .fx-hero-flottante { position: static; width: auto; margin-top: 1rem; }
+
+    .fx-bento { grid-template-columns: 1fr; }
+    .fx-obj--maitre, .fx-obj--large { grid-column: 1; }
+    .fx-obj { padding: 1.4rem; }
+
+    .fx-restit { grid-template-columns: 1fr; }
+    .fx-restit-bi { grid-column: 1; }
+
+    .fx-moteur, .fx-frontiere { padding: 1.6rem; border-radius: 20px; }
+    .fx-crit-libelles { font-size: 0.6rem; }
+}
+
+/* ==========================================================================
+   PAGE D'ACCUEIL (home.html) - prefixe .hm-
+   Prefixe dedie, comme .fx- pour la page fonctionnalites : le site vitrine et
+   le socle dashboard partagent deja `.sv-`, et une redefinition partielle ne
+   leve rien, elle ne se voit qu'a l'ecran.
+   Aucun token de marque n'est redefini ici, ils sont uniquement consommes.
+   Les composants communs aux deux pages (.fx-section, .fx-tete, .fx-note,
+   .fx-carte, .fx-crit, .fx-restit-*) ne sont PAS redupliques.
+   ========================================================================== */
+
+/* ───────────────────────────── HERO ─────────────────────────────
+   Composition volontairement differente de celle de features.html : la
+   colonne texte y est la plus etroite et le visuel deborde vers la droite,
+   la ou features garde un cadre contenu avec carte en chevauchement. */
+.hm-hero {
+    display: grid;
+    grid-template-columns: 0.95fr 1.15fr;
+    gap: 4rem;
+    align-items: center;
+    padding: 2.5rem 0 6rem;
+}
+.hm-hero-texte .hero-badge { margin-bottom: 2rem; }
+.hm-hero h1 {
+    font-size: clamp(2.5rem, 1.5rem + 3.6vw, 4.25rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+}
+.hm-hero-sous {
+    color: var(--text-muted);
+    font-size: 1.12rem;
+    line-height: 1.7;
+    max-width: 44ch;
+    margin-bottom: 2.25rem;
+}
+.hm-hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+
+.hm-hero-visuel { position: relative; }
+.hm-hero-cadre {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.58), var(--shadow-glow);
+}
+/* Voile bas : l'image se fond dans le champ atmospherique de la page au lieu
+   de s'arreter net sur une arete. */
+.hm-hero-cadre::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 38%;
+    background: linear-gradient(180deg, transparent, rgba(7, 11, 20, 0.72));
+    pointer-events: none;
+    z-index: 1;
+}
+.hm-hero-cadre::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    z-index: 2;
+}
+.hm-hero-img { width: 100%; height: auto; display: block; }
+
+/* ──────────────────── PROPOSITION DE VALEUR ────────────────────
+   Moment typographique : aucune carte, aucune icone. La respiration et
+   l'echelle du texte portent seules la section. */
+.hm-manifeste {
+    max-width: 62rem;
+    padding: 1rem 0 2rem;
+}
+.hm-manifeste h2 {
+    font-size: clamp(1.9rem, 1.1rem + 3.1vw, 3.15rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    max-width: 18ch;
+    margin: 0 0 2.5rem;
+}
+.hm-barre {
+    position: relative;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+.hm-barre::after {
+    content: '';
+    position: absolute;
+    left: -0.06em; right: -0.06em;
+    top: 56%;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-gradient);
+    transform: scaleX(0);
+    transform-origin: left center;
+}
+.fx-js .fx-reveal.is-visible .hm-barre::after {
+    transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.35s;
+    transform: scaleX(1);
+}
+/* Le paragraphe est decale a droite : la section refuse l'axe unique et le
+   bloc centre qui ouvrait chaque section du site. */
+.hm-manifeste-suite {
+    margin: 0 0 0 auto;
+    max-width: 46ch;
+    color: var(--text-muted);
+    font-size: 1.12rem;
+    line-height: 1.75;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--border-glow);
+}
+.hm-manifeste-suite strong { color: var(--text); font-weight: 600; }
+
+/* ────────────────────── ESCALIER EN TROIS TEMPS ────────────────────── */
+.hm-escalier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+    padding-bottom: 5rem;   /* compense le decalage du dernier panneau */
+}
+.hm-etape {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem 1.75rem 1.75rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+/* La marche descendante remplace la rangee plate : elle donne une direction
+   de lecture, ce qu'une grille reguliere ne fait pas. */
+.hm-etape:nth-child(2) { margin-top: 2.5rem; }
+.hm-etape:nth-child(3) { margin-top: 5rem; }
+.hm-etape::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 1.75rem; right: 1.75rem;
+    height: 2px;
+    background: var(--accent-gradient);
+    opacity: 0.55;
+}
+.hm-etape:hover {
+    transform: translateY(-5px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+}
+.hm-etape-rang {
+    display: block;
+    font-family: var(--font-buttons);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+.hm-etape h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.6rem; }
+.hm-etape p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.68; margin: 0; }
+
+/* ─────────────── CE QUE VOUS CONNECTEZ / CE QUE VOUS OBTENEZ ─────────────── */
+.hm-duo {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 4rem;
+    align-items: start;
+}
+.hm-duo h2 {
+    font-size: clamp(1.4rem, 1.1rem + 1.1vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.75rem;
+}
+/* Sources : pas de cartes. Un filet suffit a separer trois lignes, et
+   l'elevation ne communiquerait aucune hierarchie ici. */
+.hm-sources { list-style: none; margin: 0; padding: 0; }
+.hm-sources li { padding: 1.15rem 0; }
+.hm-sources li + li { border-top: 1px solid var(--border); }
+.hm-source-type {
+    display: block;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+}
+.hm-source-desc {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    line-height: 1.6;
+}
+
+.hm-tuiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.hm-tuile {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.35rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+.hm-tuile:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--hm-teinte) 45%, transparent);
+    background: var(--bg-card-hover);
+}
+/* Teinte d'objectif : reprise du produit, aucune couleur creee ici. */
+.hm-tuile-pastille {
+    display: block;
+    width: 26px; height: 4px;
+    border-radius: 3px;
+    background: var(--hm-teinte);
+    margin-bottom: 1rem;
+}
+.hm-tuile h3 { font-size: 0.98rem; font-weight: 700; margin-bottom: 0.35rem; }
+.hm-tuile p { color: var(--text-muted); font-size: 0.83rem; line-height: 1.6; margin: 0; }
+.hm-duo-note { margin-top: 1.35rem; }
+
+/* ────────────────────────── IA ET PREVISION ──────────────────────────
+   Split inverse (visuel a gauche) pour ne pas rejouer l'orientation du hero
+   ni celle de features.html. */
+.hm-ia {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 4rem;
+    align-items: center;
+}
+.hm-ia-visuel { position: relative; }
+.hm-ia-cadre {
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+.hm-ia-cadre img { width: 100%; height: auto; display: block; }
+.hm-ia-texte h2 {
+    font-size: clamp(1.7rem, 1.15rem + 1.9vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+}
+.hm-ia-texte > p { color: var(--text-muted); font-size: 1rem; line-height: 1.75; margin-bottom: 1rem; }
+
+/* Encart en debord : il mord sur la colonne du visuel et cree la seule
+   superposition de la section. */
+.hm-ia-encart {
+    position: relative;
+    margin: 2rem 0 2rem -5rem;
+    padding: 1.35rem 1.5rem;
+    border-radius: 16px;
+    background: rgba(10, 16, 28, 0.86);
+    border: 1px solid var(--border-glow);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+.hm-ia-encart-titre {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+}
+.hm-ia-encart p { color: var(--text); font-size: 0.9rem; line-height: 1.65; margin: 0; }
+
+@media (prefers-reduced-transparency: reduce) {
+    .hm-ia-encart { background: #0a101c; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+.hm-lien {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: gap 0.3s ease, color 0.3s ease;
+}
+.hm-lien:hover { gap: 0.85rem; color: #67e8f9; }
+.hm-lien svg { flex: none; }
+
+/* ─────────────────────── ALERTES ET POWER BI ───────────────────────
+   Reutilise .fx-carte, .fx-crit et .fx-restit-* de features.html : seule la
+   grille est propre a cette page. */
+.hm-sortie {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+}
+.hm-sortie-bi { padding: 0; overflow: hidden; gap: 0; }
+
+/* ───────────────────────────── CONFIANCE ───────────────────────────── */
+.hm-confiance {
+    border-top: 1px solid var(--border);
+    padding-top: 3rem;
+}
+.hm-confiance h2 {
+    font-size: clamp(1.4rem, 1.1rem + 1.1vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 2.5rem;
+    max-width: 24ch;
+}
+.hm-points {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3rem;
+}
+.hm-point-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+    margin-bottom: 1.1rem;
+}
+.hm-point h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.hm-point p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.65; margin: 0; }
+
+/* ──────────────────────────── MOUVEMENT ────────────────────────────
+   Le systeme (.fx-entree, .fx-reveal, --i, prefers-reduced-motion) vit dans
+   le bloc .fx- : on ne fait qu'y raccrocher les enfants propres a l'accueil. */
+.fx-js .fx-reveal .hm-etape,
+.fx-js .fx-reveal .hm-tuile,
+.fx-js .fx-reveal .hm-point {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 85ms);
+}
+.fx-js .fx-reveal.is-visible .hm-etape,
+.fx-js .fx-reveal.is-visible .hm-tuile,
+.fx-js .fx-reveal.is-visible .hm-point { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-js .fx-reveal .hm-etape,
+    .fx-js .fx-reveal .hm-tuile,
+    .fx-js .fx-reveal .hm-point {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .hm-barre::after,
+    .fx-js .fx-reveal.is-visible .hm-barre::after { transform: scaleX(1); transition: none; }
+    .hm-etape:hover,
+    .hm-tuile:hover { transform: none; }
+    .hm-lien:hover { gap: 0.5rem; }
+}
+
+/* ────────────────────── PORTABLE ────────────────────── */
+@media (max-width: 1199px) {
+    .hm-hero { gap: 3rem; }
+    .hm-duo { gap: 2.75rem; }
+    .hm-ia { gap: 3rem; }
+    .hm-ia-encart { margin-left: -2.5rem; }
+    .hm-points { gap: 2rem; }
+}
+
+/* ────────────────────── TABLETTE ────────────────────── */
+@media (max-width: 991px) {
+    .hm-hero { grid-template-columns: 1fr; gap: 3rem; padding: 1.5rem 0 4rem; }
+    .hm-hero-sous { max-width: 58ch; }
+    /* Le visuel passe dessous mais reste large : le reduire en vignette
+       lui ferait perdre son role de preuve. */
+    .hm-hero-visuel { max-width: 34rem; }
+
+    .hm-manifeste h2 { max-width: 22ch; margin-bottom: 2rem; }
+    .hm-manifeste-suite { margin-left: 0; max-width: 60ch; }
+
+    /* L'escalier se replie en deux colonnes : la marche reste lisible sur la
+       premiere rangee, la troisieme etape passe pleine largeur. */
+    .hm-escalier { grid-template-columns: 1fr 1fr; gap: 1.25rem; padding-bottom: 2.5rem; }
+    .hm-etape:nth-child(2) { margin-top: 2.5rem; }
+    .hm-etape:nth-child(3) { margin-top: 0; grid-column: 1 / span 2; }
+
+    .hm-duo { grid-template-columns: 1fr; gap: 3rem; }
+
+    .hm-ia { grid-template-columns: 1fr; gap: 2.5rem; }
+    .hm-ia-visuel { max-width: 30rem; }
+    /* Sans deuxieme colonne, le debord n'a plus rien a mordre. */
+    .hm-ia-encart { margin-left: 0; }
+
+    .hm-sortie { grid-template-columns: 1fr; }
+    .hm-points { grid-template-columns: 1fr; gap: 2rem; }
+    .hm-confiance h2 { max-width: none; margin-bottom: 2rem; }
+}
+
+/* ────────────────────── MOBILE ────────────────────── */
+@media (max-width: 640px) {
+    .hm-hero { padding: 1rem 0 3rem; }
+    .hm-hero-actions { flex-direction: column; align-items: stretch; }
+    .hm-hero-actions .btn { width: 100%; }
+    .hm-hero-visuel { max-width: none; }
+    .hm-hero-cadre { border-radius: 18px; }
+
+    .hm-manifeste { padding-bottom: 0.5rem; }
+    .hm-manifeste h2 { max-width: none; }
+    /* Le trait barre saute en dessous de cette largeur : sur deux lignes il
+       traverserait du vide au lieu du mot. */
+    .hm-barre { white-space: normal; }
+    .hm-barre::after { display: none; }
+    .hm-manifeste-suite { padding-left: 1.1rem; font-size: 1rem; }
+
+    .hm-escalier { grid-template-columns: 1fr; gap: 1rem; padding-bottom: 0; }
+    .hm-etape:nth-child(2),
+    .hm-etape:nth-child(3) { margin-top: 0; grid-column: 1; }
+    .hm-etape { padding: 1.6rem 1.35rem 1.35rem; }
+
+    .hm-tuiles { grid-template-columns: 1fr; }
+    .hm-ia-visuel { max-width: none; }
+    .hm-ia-encart { margin-top: 1.5rem; padding: 1.15rem 1.25rem; }
+}
+
+/* ==========================================================================
+   PAGE SERVICES (services.html) - prefixe .sr-
+   Meme discipline que .fx- (fonctionnalites) et .hm- (accueil) : un prefixe
+   par page, parce que le site vitrine et le socle dashboard partagent deja
+   `.sv-` et qu'une redefinition partielle ne leve rien, elle ne se voit qu'a
+   l'ecran. Aucun token de marque n'est redefini ici, ils sont consommes.
+   Les composants communs (.fx-section, .fx-tete, .fx-note, .hero-badge,
+   .cta-box) ne sont PAS redupliques.
+   ========================================================================== */
+
+/* ───────────────────────────── HERO ─────────────────────────────
+   Troisieme paradigme de hero du site : texte contenu puis bande visuelle
+   pleine largeur, la ou features.html garde un split et l'accueil un visuel
+   debordant. */
+.sr-hero { padding: 2.5rem 0 5rem; }
+.sr-hero-texte { max-width: 40rem; }
+.sr-hero-texte .hero-badge { margin-bottom: 2rem; }
+.sr-hero h1 {
+    font-size: clamp(2.3rem, 1.5rem + 3vw, 3.75rem);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+}
+.sr-hero-sous {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    max-width: 46ch;
+    margin-bottom: 2.25rem;
+}
+.sr-hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+
+.sr-hero-bande {
+    position: relative;
+    margin-top: 3.5rem;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), var(--shadow-glow);
+}
+/* Cadrage en bandeau : l'image 3D est carree, on n'en garde qu'une tranche
+   pour qu'elle se lise comme une banniere et non comme une vignette geante. */
+.sr-hero-bande img {
+    width: 100%;
+    height: clamp(200px, 26vw, 340px);
+    object-fit: cover;
+    object-position: center 42%;
+    display: block;
+}
+.sr-hero-bande::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(7, 11, 20, 0.15), rgba(7, 11, 20, 0.62));
+    pointer-events: none;
+}
+.sr-hero-bande::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    pointer-events: none;
+}
+
+/* ─────────────────── L'OFFRE EN QUATRE VOLETS ───────────────────
+   Bento a dominance HORIZONTALE : les deux volets porteurs occupent la
+   rangee haute, les deux qui en decoulent la rangee basse. La hierarchie est
+   dans la surface, pas dans un badge « principal ». */
+.sr-volets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+.sr-volet {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.85rem;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+.sr-volet::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-gradient);
+    opacity: 0.4;
+}
+.sr-volet--principal { padding: 2.25rem; }
+.sr-volet--principal::before { opacity: 0.75; }
+.sr-volet:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+}
+.sr-volet-rang {
+    display: block;
+    font-family: var(--font-buttons);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.9rem;
+}
+.sr-volet h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.65rem; }
+.sr-volet--principal h3 { font-size: 1.35rem; }
+.sr-volet p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; margin: 0; }
+.sr-volet--principal p { font-size: 0.95rem; }
+
+.sr-puces {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 1.5rem 0 0;
+    padding: 0;
+}
+.sr-puces li {
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.3rem 0.7rem;
+    border-radius: 7px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--border);
+}
+
+/* ──────────────────── VOLET 1 EN DETAIL ──────────────────── */
+.sr-etiquette {
+    display: block;
+    font-family: var(--font-buttons);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted-subtle);
+    margin-bottom: 1rem;
+}
+.sr-detail {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 4rem;
+    align-items: center;
+}
+.sr-detail-texte h2 {
+    font-size: clamp(1.7rem, 1.15rem + 1.9vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+}
+.sr-detail-texte > p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.75;
+    margin-bottom: 2rem;
+}
+/* Rythme tabulaire : une paire par ligne, un seul filet entre deux lignes.
+   Cadence empruntee aux tableaux du tableau de bord de reference, sans rien
+   emprunter a sa palette. */
+.sr-specs { margin: 0; }
+.sr-specs > div {
+    display: grid;
+    grid-template-columns: 12rem 1fr;
+    gap: 1.5rem;
+    padding: 0.95rem 0;
+}
+.sr-specs > div + div { border-top: 1px solid var(--border); }
+.sr-specs dt { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.sr-specs dd {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+.sr-detail-cadre {
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+.sr-detail-cadre img { width: 100%; height: auto; display: block; }
+
+/* ──────────────────── VOLET 2 EN DETAIL · RYTHME ──────────────────── */
+.sr-rythme {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 26px;
+    padding: 3rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-glow), 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+.sr-rythme::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--accent-gradient);
+    opacity: 0.65;
+}
+.sr-rythme-entete { max-width: 58ch; margin-bottom: 2.5rem; }
+.sr-rythme-entete h2 {
+    font-size: clamp(1.6rem, 1.1rem + 1.7vw, 2.2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+}
+.sr-rythme-entete p { color: var(--text-muted); font-size: 0.99rem; line-height: 1.75; margin: 0; }
+
+/* Rangee segmentee : quatre pas de temps de meme rang, separes par un filet
+   vertical plutot que par quatre cartes. */
+.sr-frequences {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.sr-frequence {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.018);
+    transition: background 0.3s ease;
+}
+.sr-frequence + .sr-frequence { border-left: 1px solid var(--border); }
+.sr-frequence:hover { background: rgba(34, 211, 238, 0.05); }
+.sr-frequence-nom {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.45rem;
+}
+.sr-frequence-desc {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+}
+.sr-rythme-note { position: relative; margin-top: 1.75rem; }
+
+/* ──────────────────── PARCOURS D'INTEGRATION ────────────────────
+   Rythme tabulaire numerote : ni les cartes de l'accueil, ni le rail de la
+   page fonctionnalites. Le rang est une information reelle, chaque etape
+   exige la precedente. */
+.sr-parcours { list-style: none; margin: 0; padding: 0; }
+.sr-jalon {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: 2rem;
+    align-items: baseline;
+    padding: 1.75rem 0;
+    transition: padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sr-jalon + .sr-jalon { border-top: 1px solid var(--border); }
+.sr-jalon:hover { padding-left: 0.75rem; }
+.sr-jalon-rang {
+    font-family: var(--font-buttons);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: transparent;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    line-height: 1;
+}
+.sr-jalon-corps h3 { font-size: 1.12rem; font-weight: 700; margin-bottom: 0.45rem; }
+.sr-jalon-corps p { color: var(--text-muted); font-size: 0.92rem; line-height: 1.68; margin: 0; }
+
+/* ─────────────────────────── PERIMETRE ─────────────────────────── */
+.sr-perimetre {
+    border-top: 1px solid var(--border);
+    padding-top: 3rem;
+}
+.sr-perimetre-intro { max-width: 56ch; margin-bottom: 3rem; }
+.sr-perimetre-intro h2 {
+    font-size: clamp(1.6rem, 1.1rem + 1.7vw, 2.2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+}
+.sr-perimetre-intro p { color: var(--text-muted); font-size: 0.99rem; line-height: 1.75; margin: 0; }
+.sr-perimetre-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5rem;
+}
+.sr-pcol h3 {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--sr-teinte);
+    margin-bottom: 1.1rem;
+}
+/* Deux teintes de la meme famille de marque : rien n'est cree ici. */
+.sr-pcol--fait { --sr-teinte: var(--accent); }
+.sr-pcol--pas  { --sr-teinte: var(--text-muted-subtle); }
+.sr-pcol ul { list-style: none; margin: 0; padding: 0; }
+.sr-pcol li {
+    position: relative;
+    padding: 0.8rem 0 0.8rem 1.6rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+.sr-pcol li + li { border-top: 1px solid var(--border); }
+.sr-pcol li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 1.2rem;
+    width: 9px; height: 9px;
+    border-radius: 2px;
+    border: 1.5px solid var(--sr-teinte);
+}
+/* La colonne « ne fait pas » porte une barre pleine plutot qu'un contour :
+   la difference de forme suffit, sans recourir au rouge qui signalerait un
+   defaut la ou il s'agit d'une limite assumee. */
+.sr-pcol--pas li::before {
+    top: 1.42rem;
+    height: 2px;
+    border: none;
+    border-radius: 1px;
+    background: var(--sr-teinte);
+    opacity: 0.7;
+}
+
+/* ──────────────────────────── MOUVEMENT ────────────────────────────
+   Le systeme (.fx-entree, .fx-reveal, --i, prefers-reduced-motion) vit dans
+   le bloc .fx- : on ne fait qu'y raccrocher les enfants propres a cette page. */
+.fx-js .fx-reveal .sr-volet,
+.fx-js .fx-reveal .sr-frequence,
+.fx-js .fx-reveal .sr-jalon {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 85ms);
+}
+.fx-js .fx-reveal.is-visible .sr-volet,
+.fx-js .fx-reveal.is-visible .sr-frequence,
+.fx-js .fx-reveal.is-visible .sr-jalon { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-js .fx-reveal .sr-volet,
+    .fx-js .fx-reveal .sr-frequence,
+    .fx-js .fx-reveal .sr-jalon {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .sr-volet:hover { transform: none; }
+    .sr-jalon:hover { padding-left: 0; }
+    .sr-frequence { transition: none; }
+}
+
+/* ────────────────────────── PORTABLE ────────────────────────── */
+@media (max-width: 1199px) {
+    .sr-detail { gap: 3rem; }
+    .sr-specs > div { grid-template-columns: 10rem 1fr; gap: 1.25rem; }
+    .sr-rythme { padding: 2.5rem; }
+    .sr-perimetre-cols { gap: 2.5rem; }
+}
+
+/* ────────────────────────── TABLETTE ────────────────────────── */
+@media (max-width: 991px) {
+    .sr-hero { padding: 1.5rem 0 3.5rem; }
+    .sr-hero-bande { margin-top: 2.5rem; }
+
+    /* Les volets porteurs passent pleine largeur, les deux secondaires
+       restent cote a cote : la hierarchie survit au repli. */
+    .sr-volets { grid-template-columns: 1fr 1fr; }
+    .sr-volet--principal { grid-column: 1 / span 2; }
+
+    .sr-detail { grid-template-columns: 1fr; gap: 2.5rem; }
+    .sr-detail-visuel { max-width: 30rem; }
+
+    /* Quatre colonnes deviendraient illisibles : deux par rangee, avec le
+       filet qui suit la nouvelle grille. */
+    .sr-frequences { grid-template-columns: 1fr 1fr; }
+    .sr-frequence + .sr-frequence { border-left: none; }
+    .sr-frequence:nth-child(even) { border-left: 1px solid var(--border); }
+    .sr-frequence:nth-child(n + 3) { border-top: 1px solid var(--border); }
+
+    .sr-perimetre-cols { grid-template-columns: 1fr; gap: 2.5rem; }
+    .sr-pcol--pas { padding-top: 2rem; border-top: 1px solid var(--border-light); }
+}
+
+/* ────────────────────────── MOBILE ────────────────────────── */
+@media (max-width: 640px) {
+    .sr-hero { padding: 1rem 0 2.5rem; }
+    .sr-hero-actions { flex-direction: column; align-items: stretch; }
+    .sr-hero-actions .btn { width: 100%; }
+    .sr-hero-bande { border-radius: 18px; margin-top: 2rem; }
+    .sr-hero-bande img { height: 170px; }
+
+    .sr-volets { grid-template-columns: 1fr; }
+    .sr-volet--principal { grid-column: 1; padding: 1.6rem; }
+    .sr-volet { padding: 1.5rem; }
+
+    .sr-detail-visuel { max-width: none; }
+    /* La paire libelle/valeur s'empile : a cette largeur, deux colonnes
+       laisseraient trois mots par ligne. */
+    .sr-specs > div { grid-template-columns: 1fr; gap: 0.3rem; }
+
+    .sr-rythme { padding: 1.6rem; border-radius: 20px; }
+    .sr-frequences { grid-template-columns: 1fr; }
+    .sr-frequence:nth-child(even) { border-left: none; }
+    .sr-frequence + .sr-frequence { border-top: 1px solid var(--border); }
+
+    .sr-jalon { grid-template-columns: 1fr; gap: 0.6rem; padding: 1.4rem 0; }
+    .sr-jalon:hover { padding-left: 0; }
+}
+
+/* ==========================================================================
+   PAGE A PROPOS (about.html) - prefixe .ab-
+   Meme discipline que .fx-, .hm- et .sr- : un prefixe par page. Les composants
+   communs (.fx-section, .fx-tete, .fx-note, .hero-badge, .cta-box) et le
+   systeme de mouvement .fx- ne sont PAS redupliques.
+   ========================================================================== */
+
+/* ─────────────────────── HERO MANIFESTE ───────────────────────
+   Quatrieme paradigme de hero du site : aucune image, la typographie et le
+   vide portent seuls. Une page « a propos » le justifie, les trois autres
+   pages ont chacune leur composition avec visuel. */
+.ab-hero {
+    padding: 4rem 0 3.5rem;
+    max-width: 54rem;
+}
+.ab-hero .hero-badge { margin-bottom: 2.25rem; }
+.ab-hero h1 {
+    font-size: clamp(2.3rem, 1.4rem + 3.4vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.75rem;
+}
+.ab-hero-sous {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    line-height: 1.7;
+    max-width: 50ch;
+    margin-bottom: 2.5rem;
+}
+.ab-hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+/* Filet de cloture : marque la fin du manifeste sans ajouter de bloc. */
+.ab-filet {
+    display: block;
+    height: 1px;
+    margin-top: 4rem;
+    background: linear-gradient(90deg,
+        var(--accent), rgba(99, 102, 241, 0.4), transparent 70%);
+}
+
+/* ──────────────────────── LE CONSTAT ──────────────────────── */
+.ab-constat {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 4rem;
+    align-items: start;
+}
+.ab-constat h2 {
+    font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.3rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+.ab-constat p {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    line-height: 1.8;
+    margin: 0;
+}
+.ab-constat strong { color: var(--text); font-weight: 600; }
+
+/* ─────────────────── LES QUATRE PRINCIPES ───────────────────
+   Liste editoriale numerotee : ni cartes, ni icones. Le rang et le filet
+   suffisent, et le texte reste le sujet. */
+.ab-principes { list-style: none; margin: 0; padding: 0; }
+.ab-principe {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: 2.5rem;
+    align-items: baseline;
+    padding: 2.25rem 0;
+    transition: padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ab-principe + .ab-principe { border-top: 1px solid var(--border); }
+.ab-principe:hover { padding-left: 0.75rem; }
+.ab-principe-rang {
+    font-family: var(--font-buttons);
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+    color: transparent;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+.ab-principe-corps h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.7rem;
+}
+.ab-principe-corps p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.75;
+    margin: 0;
+    max-width: 62ch;
+}
+
+/* ──────────────── SECURITE ET ARCHITECTURE ──────────────── */
+.ab-secu {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    gap: 4rem;
+    align-items: center;
+}
+.ab-secu-cadre {
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.5);
+}
+.ab-secu-cadre img { width: 100%; height: auto; display: block; }
+.ab-secu-texte h2 {
+    font-size: clamp(1.7rem, 1.15rem + 1.9vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+}
+.ab-secu-texte > p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.75;
+    margin-bottom: 2rem;
+}
+.ab-secu-liste { list-style: none; margin: 0; padding: 0; }
+/* Icone reelle du jeu du site, la ou la page affichait un caractere « ✓ »
+   dans une pastille verte - il ne se voyait pas et laissait un ovale vide. */
+.ab-secu-liste li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+.ab-secu-liste li + li { border-top: 1px solid var(--border); }
+.ab-secu-icone {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+}
+
+/* ─────────────────────────── LA STACK ─────────────────────────── */
+.ab-stack {
+    border-top: 1px solid var(--border);
+    padding-top: 3rem;
+}
+.ab-stack-entete { max-width: 50ch; margin-bottom: 2.5rem; }
+.ab-stack-entete h2 {
+    font-size: clamp(1.4rem, 1.1rem + 1.1vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+}
+.ab-stack-entete p { color: var(--text-muted); font-size: 0.98rem; line-height: 1.7; margin: 0; }
+.ab-briques {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.ab-brique {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.018);
+    transition: background 0.3s ease;
+}
+.ab-brique + .ab-brique { border-left: 1px solid var(--border); }
+.ab-brique:hover { background: rgba(34, 211, 238, 0.05); }
+.ab-brique-nom {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+    line-height: 1.35;
+}
+.ab-brique-role {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.55;
+}
+
+/* ==========================================================================
+   PAGE CONTACT (contact.html) - prefixe .ct-
+   ========================================================================== */
+
+.ct-entete { padding: 3.5rem 0 2.5rem; max-width: 48rem; }
+.ct-entete .hero-badge { margin-bottom: 2rem; }
+.ct-entete h1 {
+    font-size: clamp(2.2rem, 1.4rem + 3vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+}
+.ct-entete-sous {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    max-width: 52ch;
+    margin: 0;
+}
+.ct-canaux-section { margin-top: 2.5rem; }
+
+/* ─────────────────────── CANAUX DIRECTS ───────────────────────
+   Les adresses viennent en premier : sur une page de contact, la voie la plus
+   rapide ne doit pas etre sous un formulaire. */
+.ct-canaux {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+}
+.ct-canal {
+    display: block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.65rem;
+    text-decoration: none;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s ease, background 0.35s ease;
+}
+a.ct-canal:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+}
+.ct-canal-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+    margin-bottom: 1.1rem;
+}
+.ct-canal-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-bottom: 0.4rem;
+}
+.ct-canal-valeur {
+    display: block;
+    color: var(--text);
+    font-size: 0.98rem;
+    font-weight: 700;
+    word-break: break-word;
+}
+a.ct-canal:hover .ct-canal-valeur { color: var(--accent); }
+/* La carte horaires n'est pas cliquable : elle ne doit pas se comporter
+   comme un lien au survol. */
+.ct-canal--statique { cursor: default; }
+
+/* ────────────────────── COMPOSEUR DE MESSAGE ────────────────────── */
+.ct-composeur {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 26px;
+    padding: 3rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-glow), 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+.ct-composeur::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--accent-gradient);
+    opacity: 0.65;
+}
+.ct-composeur-entete { max-width: 56ch; margin-bottom: 2.5rem; }
+.ct-composeur-entete h2 {
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.85rem;
+}
+.ct-composeur-entete p { color: var(--text-muted); font-size: 0.96rem; line-height: 1.7; margin: 0; }
+
+.ct-form { display: grid; gap: 1.35rem; }
+.ct-form-ligne { display: grid; grid-template-columns: 1fr 1fr; gap: 1.35rem; }
+.ct-champ { display: grid; gap: 0.5rem; }
+/* Libelle AU-DESSUS du champ, jamais un placeholder en guise de libelle :
+   le placeholder disparait des la saisie. */
+.ct-champ label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.ct-champ input,
+.ct-champ select,
+.ct-champ textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    font-family: var(--font-primary);
+    font-size: 0.94rem;
+    line-height: 1.5;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.ct-champ textarea { resize: vertical; min-height: 8rem; }
+.ct-champ select {
+    appearance: none;
+    /* Chevron dessine en CSS : pas d'image, pas de dependance. */
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+        linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+    background-position: right 1.15rem center, right 0.85rem center;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 2.5rem;
+}
+.ct-champ select option { background: #0f172a; color: var(--text); }
+.ct-champ input:focus,
+.ct-champ select:focus,
+.ct-champ textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.16);
+}
+
+.ct-form-pied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 0.4rem;
+}
+.ct-form-note {
+    margin: 0;
+    color: var(--text-muted-subtle);
+    font-size: 0.83rem;
+    line-height: 1.55;
+}
+.ct-form-erreur {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: #fca5a5;
+    font-size: 0.86rem;
+}
+
+/* ──────────────────────────── FAQ ────────────────────────────
+   Mecanique Bootstrap conservee (data-bs-toggle / .collapse), habillage
+   refait : l'accordeon par defaut etait le dernier element generique de la
+   page. */
+.ct-faq { display: grid; gap: 0.85rem; }
+.ct-faq-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+.ct-faq-item:hover { border-color: var(--border-light); }
+.ct-faq-titre { margin: 0; }
+.ct-faq-bouton {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.35rem 1.6rem;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: left;
+    line-height: 1.45;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+.ct-faq-bouton:hover { color: var(--accent); }
+.ct-faq-bouton:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 16px;
+}
+.ct-faq-chevron {
+    flex: none;
+    color: var(--text-muted);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s ease;
+}
+/* Bootstrap retire .collapsed quand le panneau est ouvert. */
+.ct-faq-bouton:not(.collapsed) .ct-faq-chevron { transform: rotate(180deg); color: var(--accent); }
+.ct-faq-corps {
+    padding: 0 1.6rem 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.75;
+}
+.ct-faq-corps strong { color: var(--text); font-weight: 600; }
+
+/* ==========================================================================
+   MOUVEMENT - raccordement au systeme .fx- (defini une seule fois)
+   ========================================================================== */
+.fx-js .fx-reveal .ab-principe,
+.fx-js .fx-reveal .ab-brique,
+.fx-js .fx-reveal .ct-canal,
+.fx-js .fx-reveal .ct-faq-item {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 85ms);
+}
+.fx-js .fx-reveal.is-visible .ab-principe,
+.fx-js .fx-reveal.is-visible .ab-brique,
+.fx-js .fx-reveal.is-visible .ct-canal,
+.fx-js .fx-reveal.is-visible .ct-faq-item { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-js .fx-reveal .ab-principe,
+    .fx-js .fx-reveal .ab-brique,
+    .fx-js .fx-reveal .ct-canal,
+    .fx-js .fx-reveal .ct-faq-item {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .ab-principe:hover { padding-left: 0; }
+    a.ct-canal:hover { transform: none; }
+    .ab-brique, .ct-faq-chevron { transition: none; }
+}
+
+/* ==========================================================================
+   PORTABLE
+   ========================================================================== */
+@media (max-width: 1199px) {
+    .ab-constat { gap: 3rem; }
+    .ab-secu { gap: 3rem; }
+    .ab-principe { grid-template-columns: 5rem 1fr; gap: 2rem; }
+    .ct-composeur { padding: 2.5rem; }
+}
+
+/* ==========================================================================
+   TABLETTE
+   ========================================================================== */
+@media (max-width: 991px) {
+    .ab-hero { padding: 2.5rem 0 2.5rem; }
+    .ab-filet { margin-top: 3rem; }
+    .ab-constat { grid-template-columns: 1fr; gap: 1.75rem; }
+
+    .ab-secu { grid-template-columns: 1fr; gap: 2.5rem; }
+    .ab-secu-visuel { max-width: 28rem; }
+
+    /* Quatre briques en rangee deviendraient illisibles : deux par rangee,
+       avec les filets qui suivent la nouvelle grille. */
+    .ab-briques { grid-template-columns: 1fr 1fr; }
+    .ab-brique + .ab-brique { border-left: none; }
+    .ab-brique:nth-child(even) { border-left: 1px solid var(--border); }
+    .ab-brique:nth-child(n + 3) { border-top: 1px solid var(--border); }
+
+    .ct-entete { padding: 2.5rem 0 2rem; }
+    /* Les deux adresses restent cote a cote, les horaires passent dessous :
+       ce sont les adresses qui portent l'action. */
+    .ct-canaux { grid-template-columns: 1fr 1fr; }
+    .ct-canal--statique { grid-column: 1 / span 2; }
+}
+
+/* ==========================================================================
+   MOBILE
+   ========================================================================== */
+@media (max-width: 640px) {
+    .ab-hero { padding: 1.5rem 0 1.5rem; }
+    .ab-hero-actions .btn { width: 100%; }
+    .ab-filet { margin-top: 2.25rem; }
+
+    /* Le rang passe au-dessus du titre : en colonne de 5rem il mangerait la
+       moitie de la largeur utile. */
+    .ab-principe { grid-template-columns: 1fr; gap: 0.75rem; padding: 1.75rem 0; }
+    .ab-principe:hover { padding-left: 0; }
+    .ab-principe-rang { font-size: 1.35rem; }
+    .ab-principe-corps h3 { font-size: 1.1rem; }
+
+    .ab-secu-visuel { max-width: none; }
+    .ab-briques { grid-template-columns: 1fr; }
+    .ab-brique:nth-child(even) { border-left: none; }
+    .ab-brique + .ab-brique { border-top: 1px solid var(--border); }
+
+    .ct-entete { padding: 1rem 0 1.5rem; }
+    .ct-canaux { grid-template-columns: 1fr; }
+    .ct-canal--statique { grid-column: 1; }
+
+    .ct-composeur { padding: 1.6rem; border-radius: 20px; }
+    .ct-form-ligne { grid-template-columns: 1fr; }
+    .ct-form-pied { flex-direction: column; align-items: stretch; }
+    .ct-form-pied .btn { width: 100%; }
+
+    .ct-faq-bouton { padding: 1.15rem 1.25rem; font-size: 0.94rem; gap: 1rem; }
+    .ct-faq-corps { padding: 0 1.25rem 1.25rem; }
+}
+
+/* ==========================================================================
+   PAGE STATISTIQUES ADMIN (admin_statistiques.html) - prefixe .stx-
+   Prefixe dedie, meme discipline que le reste du depot. Le socle du dashboard
+   (.sv-stat, .sv-panneau, .sv-colonnes, .sv-parts, .sv-graph, .dash-table,
+   .dash-rangee) n'est PAS redefini : cette page le consomme.
+   Aucun token de marque cree ici, et aucune couleur de criticite : elles
+   viennent de criticite.py via la route.
+   ========================================================================== */
+
+/* Rangee a proportions inversees : deux rangees de meme decoupe donneraient
+   une page qui se repete. */
+.sv-colonnes--inverse { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); }
+
+/* ──────────────────── ETAT DES CONFIGURATIONS ────────────────────
+   Quatre volumes de meme rang : un filet vertical les separe, pas quatre
+   cartes. L'elevation ne communiquerait aucune hierarchie entre eux. */
+.stx-etats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--bg-card);
+}
+.stx-etat {
+    padding: 1.15rem 1.25rem;
+    transition: background 0.3s ease;
+}
+.stx-etat + .stx-etat { border-left: 1px solid var(--border); }
+.stx-etat:hover { background: rgba(255, 255, 255, 0.022); }
+.stx-etat-valeur {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+}
+.stx-etat-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+.stx-etat-note {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-muted-subtle);
+}
+/* Seule la valeur qui SIGNALE prend une teinte, et elle vient de la palette
+   de criticite deja en service (« eleve »). */
+.stx-etat--signal .stx-etat-valeur { color: #fb923c; }
+
+/* ──────────────────────── NOTE DE PERIMETRE ──────────────────────── */
+.stx-note {
+    margin: 0.9rem 0 0;
+    font-size: 0.73rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+}
+
+/* ──────────────────── CLASSEMENT : OUTILS ET TABLE ──────────────────── */
+.stx-panneau-table { padding-bottom: 0.9rem; }
+
+.stx-barre-outils {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    margin-bottom: 0.9rem;
+}
+.stx-recherche {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    min-width: min(22rem, 100%);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.stx-recherche:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+.stx-recherche svg { flex: none; }
+.stx-recherche input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-primary);
+    font-size: 0.86rem;
+}
+.stx-recherche input::placeholder { color: var(--text-dim); }
+/* La croix native de <input type="search"> est invisible sur fond sombre. */
+.stx-recherche input::-webkit-search-cancel-button { filter: invert(1); opacity: 0.45; }
+
+.stx-compte {
+    font-size: 0.76rem;
+    color: var(--text-muted-subtle);
+    white-space: nowrap;
+}
+
+/* En-tetes cliquables : le bouton porte l'interaction, pas la cellule -
+   sans quoi le tri serait inaccessible au clavier. */
+.stx-tri {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.stx-tri:hover { color: var(--accent); }
+.stx-tri:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+/* Chevron dessine en CSS, aucune image ni glyphe. Neutre au repos pour dire
+   « triable », teinte quand le tri est actif. */
+.stx-tri::after {
+    content: '';
+    width: 0; height: 0;
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: 0.3;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.stx-tri:hover::after { opacity: 0.6; }
+.stx-tri.is-desc::after { opacity: 1; color: var(--accent); }
+.stx-tri.is-asc::after { opacity: 1; color: var(--accent); transform: rotate(180deg); }
+
+.stx-table .stx-nom { font-weight: 600; color: var(--text); }
+.stx-table tbody tr { transition: background 0.2s ease; }
+.stx-table tbody tr:hover { background: rgba(255, 255, 255, 0.022); }
+
+/* Pastille de volume : teintes reprises de criticite.py, aucune creee.
+   Un zero ne porte pas de pastille - il n'y a rien a signaler. */
+.stx-pastille {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+.stx-pastille--alerte {
+    color: #fb923c;
+    background: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.26);
+}
+.stx-pastille--erreur {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.26);
+}
+.stx-zero { color: var(--text-dim); }
+.stx-aucun { padding: 1.25rem 0 0.5rem; }
+
+/* ──────────────────────── FIL D'ACTIVITE ──────────────────────── */
+.stx-fil { list-style: none; margin: 0; padding: 0; }
+.stx-fil-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.7rem 0;
+}
+.stx-fil-item + .stx-fil-item { border-top: 1px solid var(--border); }
+.stx-fil-point {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.55;
+}
+.stx-fil-corps { min-width: 0; }
+.stx-fil-texte {
+    display: block;
+    font-size: 0.86rem;
+    color: var(--text);
+    line-height: 1.45;
+}
+.stx-fil-meta {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--text-muted-subtle);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-fil-periode {
+    font-size: 0.73rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+/* ──────────────────────────── MOUVEMENT ────────────────────────────
+   Entree sobre a l'ouverture de la page : opacite et translation seulement.
+   Pas d'observateur ici - la page est courte et tout est au-dessus de la
+   ligne de flottaison des le chargement sur un grand ecran. */
+@media (prefers-reduced-motion: no-preference) {
+    .stx-etat,
+    .stx-fil-item {
+        animation: stx-monte 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+    .stx-etat:nth-child(1) { animation-delay: 0.02s; }
+    .stx-etat:nth-child(2) { animation-delay: 0.07s; }
+    .stx-etat:nth-child(3) { animation-delay: 0.12s; }
+    .stx-etat:nth-child(4) { animation-delay: 0.17s; }
+    .stx-fil-item { animation-delay: calc(var(--i, 0) * 45ms); }
+}
+@keyframes stx-monte {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stx-etat,
+    .stx-fil-item,
+    .stx-table tbody tr,
+    .stx-tri::after { animation: none; transition: none; }
+    .stx-tri.is-asc::after { transform: rotate(180deg); }
+}
+
+/* ──────────────────────────── PORTABLE ──────────────────────────── */
+@media (max-width: 1199px) {
+    .stx-etats { grid-template-columns: 1fr 1fr; }
+    .stx-etat:nth-child(3) { border-left: none; }
+    .stx-etat:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+
+/* ──────────────────────────── TABLETTE ──────────────────────────── */
+@media (max-width: 991px) {
+    /* Le socle replie deja .sv-colonnes en une colonne ; la variante inversee
+       doit suivre, sinon elle garderait sa grille a deux colonnes. */
+    .sv-colonnes--inverse { grid-template-columns: minmax(0, 1fr); }
+    .stx-barre-outils { align-items: stretch; }
+    .stx-recherche { min-width: 100%; }
+}
+
+/* ──────────────────────────── MOBILE ──────────────────────────── */
+@media (max-width: 640px) {
+    .stx-etats { grid-template-columns: 1fr; }
+    .stx-etat + .stx-etat { border-left: none; border-top: 1px solid var(--border); }
+    .stx-etat-valeur { font-size: 1.5rem; }
+
+    /* Le fil passe en deux lignes : la periode sous le texte plutot qu'une
+       troisieme colonne qui ecraserait le libelle. */
+    .stx-fil-item { grid-template-columns: auto 1fr; row-gap: 0.2rem; }
+    .stx-fil-periode { grid-column: 2; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   CRITICITE DES EXECUTIONS - anneau + legende (admin_statistiques.html)
+   Motif repris de la reference « Deal Stages » : anneau epais a segments
+   espaces, total au centre, legende en lignes dessous.
+
+   ⚠️ Aucune couleur n'est definie ici. Les teintes des arcs et des pastilles
+   viennent de criticite.py, posees en attribut par le gabarit.
+
+   ⚠️ Mesure CIEDE2000 : « A surveiller » #f59e0b et « Eleve » #fb923c sont a
+   dE 9,4 en vision normale et 2,8 en deuteranopie, et ils sont ADJACENTS dans
+   l'anneau. Dans des barres le libelle est colle a la barre ; dans un anneau
+   la couleur est le seul lien avec la legende. D'ou les deux encodages
+   secondaires : ordre de gravite partage, et surlignage lie.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.stx-crit {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* ── Anneau ─────────────────────────────────────────────────────────────── */
+.stx-anneau {
+    position: relative;
+    width: 148px;
+    flex: none;
+}
+.stx-anneau-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* Depart a midi, sens horaire : l'ordre de parcours doit correspondre a
+       l'ordre de la legende, sinon l'encodage secondaire ne tient plus. */
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+.stx-anneau-piste {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 15;
+}
+.stx-arc {
+    fill: none;
+    stroke-width: 15;
+    stroke-linecap: butt;
+    transform-origin: 70px 70px;
+    transition: stroke-width 0.25s ease, opacity 0.25s ease;
+}
+/* Le segment vise s'epaissit : un second canal, independant de la teinte. */
+.stx-crit.is-cible .stx-arc { opacity: 0.32; }
+.stx-crit.is-cible .stx-arc.is-actif { opacity: 1; stroke-width: 19; }
+
+.stx-anneau-centre {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+}
+.stx-anneau-total {
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+}
+.stx-anneau-unite {
+    margin-top: 0.2rem;
+    font-size: 0.68rem;
+    color: var(--text-muted-subtle);
+}
+
+/* ── Legende ────────────────────────────────────────────────────────────── */
+.stx-legende { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.stx-legende-ligne {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.4rem;
+    border-radius: 8px;
+    cursor: default;
+    transition: background 0.2s ease;
+}
+.stx-legende-ligne + .stx-legende-ligne { margin-top: 0.1rem; }
+.stx-legende-ligne:hover,
+.stx-legende-ligne.is-actif { background: rgba(255, 255, 255, 0.04); }
+.stx-legende-ligne:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+/* Un niveau a zero reste affiche : son absence est une information. Il est
+   estompe, jamais masque. */
+.stx-legende-ligne.is-vide { opacity: 0.5; }
+
+.stx-legende-puce {
+    width: 9px; height: 9px;
+    border-radius: 3px;
+    flex: none;
+}
+.stx-legende-nom {
+    font-size: 0.83rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-legende-pct {
+    font-size: 0.75rem;
+    color: var(--text-muted-subtle);
+    font-variant-numeric: tabular-nums;
+}
+.stx-legende-nombre {
+    min-width: 2ch;
+    text-align: right;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Entree ─────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+    .stx-arc {
+        animation: stx-arc-entre 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation-delay: calc(var(--ordre, 0) * 90ms + 60ms);
+    }
+    .stx-anneau-centre {
+        animation: stx-centre-entre 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards;
+    }
+    .stx-legende-ligne {
+        animation: stx-legende-entre 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 70ms + 0.2s);
+    }
+}
+/* Fondu et mise a l'echelle plutot qu'un trace : le dasharray porte deja la
+   geometrie de chaque part, l'animer demanderait de dupliquer ces valeurs. */
+@keyframes stx-arc-entre {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+}
+@keyframes stx-centre-entre {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes stx-legende-entre {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stx-arc,
+    .stx-anneau-centre,
+    .stx-legende-ligne {
+        animation: none;
+        transition: none;
+    }
+    /* Le surlignage reste, il porte une information ; seul le mouvement part. */
+    .stx-crit.is-cible .stx-arc.is-actif { stroke-width: 19; }
+}
+
+/* ── Repli ──────────────────────────────────────────────────────────────── */
+/* La colonne de droite est etroite des 992px (voir .sv-colonnes) : l'anneau
+   passe alors au-dessus de la legende plutot que de comprimer les libelles. */
+@media (max-width: 1199px) {
+    .stx-crit {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        gap: 1.1rem;
+    }
+    .stx-legende { width: 100%; }
+}
+@media (max-width: 991px) {
+    /* En pleine largeur, les deux colonnes reviennent. */
+    .stx-crit {
+        grid-template-columns: auto minmax(0, 1fr);
+        justify-items: stretch;
+        gap: 1.5rem;
+    }
+}
+@media (max-width: 575px) {
+    .stx-crit { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+    .stx-anneau { width: 132px; }
+    .stx-legende { width: 100%; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BARRES CLASSEES (admin_statistiques.html) - prefixe .stx-rang-
+   Motif repris de la reference « Lead Sources » : libelle a gauche, barre
+   horizontale proportionnelle, valeur a droite, axe gradue en pied.
+
+   ⚠️ Aucune couleur n'est definie ici. La teinte de chaque barre est portee
+   par la donnee (--teinte), donc par criticite.py pour les niveaux et par
+   l'accent de marque pour les volumes neutres.
+
+   Le libelle est COLLE a sa barre : contrairement a l'anneau de la section
+   criticite, l'identite ne repose pas sur la couleur, et deux teintes
+   voisines ne peuvent pas se confondre.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.stx-rang-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+}
+.stx-rang-ligne {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+.stx-rang-nom {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.stx-rang-piste {
+    position: relative;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+}
+.stx-rang-barre {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--part, 0%);
+    border-radius: inherit;
+    background: var(--teinte, var(--accent));
+    /* La barre s'etire depuis son bord gauche : l'origine de l'echelle est a
+       gauche, la mise a l'echelle doit partir du meme point. */
+    transform-origin: left center;
+}
+.stx-rang-valeur {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.stx-rang-pct {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted-subtle);
+}
+
+/* ── Axe, seulement a partir de 3 categories ────────────────────────────── */
+.stx-rang-axe {
+    display: grid;
+    /* Aligne sur la piste : meme premiere colonne que .stx-rang-ligne. */
+    grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+/* La premiere cellule reste vide : elle reserve la gouttiere des libelles. */
+.stx-rang-axe::before { content: ''; }
+.stx-rang-axe span:first-of-type { grid-column: 2; justify-self: start; }
+.stx-rang-axe span:nth-of-type(2) { grid-column: 2; justify-self: center; }
+.stx-rang-axe span:last-of-type { grid-column: 2; justify-self: end; }
+
+/* Graduations de fond, dans la piste, uniquement quand l'axe est affiche. */
+.stx-rang--gradue .stx-rang-piste {
+    background-image: linear-gradient(90deg,
+        transparent calc(50% - 1px), rgba(255, 255, 255, 0.06) calc(50% - 1px),
+        rgba(255, 255, 255, 0.06) 50%, transparent 50%);
+}
+
+.stx-rang-echelle {
+    margin: 0.6rem 0 0;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+/* ── Entree : la barre pousse de 0 vers sa valeur ───────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+    .stx-rang-barre {
+        animation: stx-rang-pousse 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 80ms + 80ms);
+    }
+    .stx-rang-nom,
+    .stx-rang-valeur {
+        animation: stx-rang-parait 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 80ms + 0.14s);
+    }
+}
+/* scaleX plutot qu'une animation de `width` : seules les proprietes composees
+   sont animees, la largeur declencherait un recalcul de mise en page a chaque
+   image. */
+@keyframes stx-rang-pousse {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+}
+@keyframes stx-rang-parait {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stx-rang-barre,
+    .stx-rang-nom,
+    .stx-rang-valeur { animation: none; }
+    .stx-rang-barre { transform: none; }
+}
+
+/* ── Repli ──────────────────────────────────────────────────────────────── */
+/* Dans la colonne etroite de .sv-colonnes--inverse, une gouttiere de libelles
+   de 8rem ne laisse presque rien a la piste : le libelle passe au-dessus. */
+@media (max-width: 1199px) {
+    .stx-rang-ligne {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "nom valeur"
+            "piste piste";
+        row-gap: 0.3rem;
+        column-gap: 0.75rem;
+    }
+    .stx-rang-nom { grid-area: nom; text-align: left; }
+    .stx-rang-valeur { grid-area: valeur; }
+    .stx-rang-piste { grid-area: piste; height: 18px; }
+    .stx-rang-liste { gap: 0.85rem; }
+    .stx-rang-axe { grid-template-columns: minmax(0, 1fr); }
+    .stx-rang-axe::before { display: none; }
+    .stx-rang-axe span { grid-column: 1 !important; }
+}
+/* En pleine largeur, la disposition en trois colonnes revient. */
+@media (max-width: 991px) {
+    .stx-rang-ligne {
+        grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 1fr) auto;
+        grid-template-areas: none;
+        row-gap: 0;
+    }
+    .stx-rang-nom { text-align: right; }
+    .stx-rang-piste { height: 22px; }
+    .stx-rang-liste { gap: 0.55rem; }
+    .stx-rang-axe {
+        grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 1fr) auto;
+    }
+    .stx-rang-axe::before { display: block; }
+    .stx-rang-axe span:first-of-type { grid-column: 2 !important; justify-self: start; }
+    .stx-rang-axe span:nth-of-type(2) { grid-column: 2 !important; justify-self: center; }
+    .stx-rang-axe span:last-of-type { grid-column: 2 !important; justify-self: end; }
+}
+@media (max-width: 575px) {
+    .stx-rang-ligne {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "nom valeur"
+            "piste piste";
+        row-gap: 0.3rem;
+    }
+    .stx-rang-nom { text-align: left; }
+    .stx-rang-axe { grid-template-columns: minmax(0, 1fr); }
+    .stx-rang-axe::before { display: none; }
+    .stx-rang-axe span { grid-column: 1 !important; }
+}
+
+/* ── Anciennete des alertes ouvertes (admin_statistiques.html) ──────────────
+   Ne redefinit RIEN du motif de barres : la rangee reutilise .stx-rang-*.
+   Seul l'en-tete resume lui est propre. Aucune couleur creee : les teintes de
+   tranche sont portees par la donnee (--teinte), depuis la route. */
+.stx-age-tete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.75rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.stx-age-chiffre { display: flex; align-items: baseline; gap: 0.45rem; }
+.stx-age-valeur {
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+}
+.stx-age-label { font-size: 0.85rem; color: var(--text-muted); }
+.stx-age-resume { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+.stx-age-resume strong { color: var(--text); font-weight: 700; }
+
+/* Une tranche a zero reste lisible mais s'efface : son absence est une
+   information, la masquer ferait croire que la tranche n'existe pas. */
+.stx-rang-ligne.is-vide { opacity: 0.45; }
+
+/* ==========================================================================
+   THEME CLAIR - complement des deux dashboards
+   ==========================================================================
+   Ce bloc ne touche QUE `[data-theme="light"]` : le theme sombre est
+   inchange, aucune regle sans ce prefixe n'est definie ici.
+
+   Trois familles de defauts corrigees, toutes constatees a la mesure :
+
+   1. Composants recents SANS aucune regle claire (.stx-*, .res-crit*, .alr-*,
+      .sv-parts, .sv-rang) : ils heritaient de voiles blancs concus pour un
+      fond sombre, donc invisibles sur fond clair.
+   2. Teintes de severite et accent utilises comme COULEUR DE TEXTE : #22d3ee
+      tombe a 1,78:1, #f59e0b a 2,11:1, #fb923c a 2,23:1, #f87171 a 2,72:1.
+      Ils passent par les roles --ton-*-texte / --accent-texte.
+   3. Surfaces sans frontiere : cartes, panneaux et tableaux se fondaient dans
+      le fond. Ils recoivent une bordure franche et une ombre discrete.
+   ========================================================================== */
+
+/* ── 1. Surfaces : une frontiere nette, jamais du blanc sur du blanc ─────── */
+[data-theme="light"] .sv-panneau,
+[data-theme="light"] .stx-etats,
+[data-theme="light"] .stx-rang-piste,
+[data-theme="light"] .sv-part-piste {
+    border-color: rgba(15, 23, 42, 0.12);
+}
+[data-theme="light"] .sv-panneau,
+[data-theme="light"] .stx-etats {
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+}
+/* Les pistes de barre doivent se voir A VIDE : sur fond clair, un voile blanc
+   a 4 % ne produit rien. */
+[data-theme="light"] .stx-rang-piste,
+[data-theme="light"] .sv-part-piste,
+[data-theme="light"] .dash-bar-track {
+    background: rgba(15, 23, 42, 0.07);
+}
+
+/* ── 2. Textes secondaires et notes ──────────────────────────────────────── */
+[data-theme="light"] .stx-note,
+[data-theme="light"] .stx-rang-echelle,
+[data-theme="light"] .stx-fil-periode,
+[data-theme="light"] .stx-anneau-unite,
+[data-theme="light"] .stx-legende-pct,
+[data-theme="light"] .stx-compte {
+    color: var(--text-dim);
+}
+[data-theme="light"] .stx-etat-label,
+[data-theme="light"] .stx-rang-nom,
+[data-theme="light"] .stx-fil-meta,
+[data-theme="light"] .stx-age-label,
+[data-theme="light"] .stx-age-resume {
+    color: var(--text-muted);
+}
+
+/* ── 3. Accent comme texte ───────────────────────────────────────────────── */
+/* #22d3ee est illisible sur fond clair (1,78:1). Partout ou il sert de TEXTE,
+   le role --accent-texte prend le relais. Les aplats gardent --accent. */
+[data-theme="light"] .stx-recherche:focus-within,
+[data-theme="light"] .dash-rangee-lien:hover {
+    border-color: var(--accent-texte);
+}
+[data-theme="light"] .stx-tri:hover,
+[data-theme="light"] .stx-tri.is-desc::after,
+[data-theme="light"] .stx-tri.is-asc::after,
+[data-theme="light"] .dash-rangee-lien,
+[data-theme="light"] .sv-graph-btn.is-actif,
+[data-theme="light"] .fx-modele-cond {
+    color: var(--accent-texte);
+}
+[data-theme="light"] .stx-fil-point {
+    background: var(--accent-texte);
+    opacity: 0.75;
+}
+
+/* ── 4. Badges de statut et de severite ──────────────────────────────────── */
+/* Le fond teinte a 14 % vire au quasi-blanc en clair : le texte doit foncer
+   ET le fond se renforcer, sinon le badge disparait. */
+[data-theme="light"] .dash-status-pending,
+[data-theme="light"] .icon-amber,
+[data-theme="light"] .sv-icon-badge--warn,
+[data-theme="light"] .cfg-fiab--limitee {
+    background: var(--ton-attention-fond);
+    color: var(--ton-attention-texte);
+}
+[data-theme="light"] .stx-pastille--alerte,
+[data-theme="light"] .imp-recent-ext--json,
+[data-theme="light"] .imp-fmt-badge--json {
+    background: var(--ton-eleve-fond);
+    color: var(--ton-eleve-texte);
+    border-color: rgba(194, 65, 12, 0.28);
+}
+[data-theme="light"] .stx-etat--signal .stx-etat-valeur {
+    color: var(--ton-eleve-texte);
+}
+[data-theme="light"] .dash-status-ko,
+[data-theme="light"] .icon-red,
+[data-theme="light"] .sv-icon-badge--danger,
+[data-theme="light"] .stx-pastille--erreur,
+[data-theme="light"] .imp-result-icon--err,
+[data-theme="light"] .imp-recent-status--erreur,
+[data-theme="light"] .profil-dot--ko,
+[data-theme="light"] .dash-action-done--ko,
+[data-theme="light"] .wiz-columns-error {
+    background-color: var(--ton-critique-fond);
+    color: var(--ton-critique-texte);
+}
+/* Les liens de deconnexion et croix ne portent pas de fond : seul le texte. */
+[data-theme="light"] .dash-logout-link,
+[data-theme="light"] .imp-file-remove:hover {
+    color: var(--ton-critique-texte);
+    background: transparent;
+}
+[data-theme="light"] .stx-zero {
+    color: var(--text-dim);
+}
+[data-theme="light"] .imp-recent-ext--csv,
+[data-theme="light"] .imp-fmt-badge--csv,
+[data-theme="light"] .imh-icon--csv {
+    background: #cffafe;
+    color: var(--accent-texte);
+}
+
+/* ── 5. Criticite : badges des pages resultats et alertes ────────────────── */
+[data-theme="light"] .res-crit,
+[data-theme="light"] .alr-carte,
+[data-theme="light"] .alr-niveau {
+    border-color: rgba(15, 23, 42, 0.12);
+}
+/* Le point de criticite garde sa teinte (elle vient de criticite.py et sert
+   d'aplat), mais recoit un contour pour se detacher du blanc. */
+[data-theme="light"] .res-crit-point,
+[data-theme="light"] .fx-echelle li,
+[data-theme="light"] .stx-legende-puce {
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.16);
+}
+
+/* ── 6. Graphiques ───────────────────────────────────────────────────────── */
+/* Axes, graduations et libelles etaient dessines en blanc translucide. */
+[data-theme="light"] .sv-graph-zone text,
+[data-theme="light"] .sv-graph text {
+    fill: var(--text-muted);
+}
+[data-theme="light"] .sv-graph-zone line,
+[data-theme="light"] .sv-graph-zone .sv-graph-grille {
+    stroke: rgba(15, 23, 42, 0.12);
+}
+/* Arcs de l'anneau : un liseré clair les separe entre eux et du fond blanc,
+   sans toucher a leur teinte. */
+[data-theme="light"] .stx-arc {
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+[data-theme="light"] .stx-anneau-piste {
+    stroke: rgba(15, 23, 42, 0.08);
+}
+[data-theme="light"] .stx-rang--gradue .stx-rang-piste {
+    background-image: linear-gradient(90deg,
+        transparent calc(50% - 1px), rgba(15, 23, 42, 0.14) calc(50% - 1px),
+        rgba(15, 23, 42, 0.14) 50%, transparent 50%);
+}
+[data-theme="light"] .sv-graph-bulle {
+    color: var(--text);
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+/* ── 7. Etats interactifs : defaut, survol, actif ────────────────────────── */
+/* Un tableau de bord sans survol visible ne dit pas ce qui est cliquable. */
+[data-theme="light"] .stx-table tbody tr:hover,
+[data-theme="light"] .dash-table tbody tr:hover,
+[data-theme="light"] .stx-etat:hover,
+[data-theme="light"] .stx-legende-ligne:hover,
+[data-theme="light"] .stx-legende-ligne.is-actif {
+    background: rgba(15, 23, 42, 0.04);
+}
+[data-theme="light"] .sv-graph-btn {
+    color: var(--text-muted);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+[data-theme="light"] .sv-graph-btn:hover {
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--text);
+}
+[data-theme="light"] .sv-graph-btn.is-actif {
+    background: #cffafe;
+    border-color: rgba(14, 116, 144, 0.35);
+}
+/* Le focus clavier doit rester visible sur fond clair. */
+[data-theme="light"] .stx-tri:focus-visible,
+[data-theme="light"] .stx-legende-ligne:focus-visible,
+[data-theme="light"] .ct-faq-bouton:focus-visible {
+    outline-color: var(--accent-texte);
+}
+
+/* ── 8. Champs de saisie ─────────────────────────────────────────────────── */
+[data-theme="light"] .stx-recherche,
+[data-theme="light"] .dash-search {
+    border-color: rgba(15, 23, 42, 0.14);
+}
+[data-theme="light"] .stx-recherche input::placeholder,
+[data-theme="light"] .dash-search-input::placeholder {
+    color: var(--text-dim);
+}
+/* La croix native de <input type="search"> etait inversee pour un fond
+   sombre : sur fond clair elle devient invisible. */
+[data-theme="light"] .stx-recherche input::-webkit-search-cancel-button {
+    filter: none;
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   THEME CLAIR - hierarchie visuelle (audit des defauts A a F)
+   ==========================================================================
+   Suite du bloc precedent, qui reglait le CONTRASTE. Celui-ci regle la
+   HIERARCHIE : ce qui est actif, ce qui est un en-tete, ce qui est un statut,
+   ou s'arrete une surface. Toutes les regles sont prefixees light : le theme
+   sombre n'est pas atteint.
+   ========================================================================== */
+
+/* ── B · En-tetes de tableau ──────────────────────────────────────────────
+   Ils n'avaient AUCUNE surcharge claire : meme blanc que le corps, separes
+   par un filet a 10 % d'opacite. Une bande distincte les detache. */
+[data-theme="light"] .dash-table thead,
+[data-theme="light"] .stx-table thead,
+[data-theme="light"] .imh-apercu thead {
+    background: var(--surface-entete);
+}
+[data-theme="light"] .dash-table th,
+[data-theme="light"] .stx-table th {
+    color: var(--text-muted);
+    border-bottom-color: rgba(15, 23, 42, 0.16);
+}
+/* Les lignes du corps se separent aussi : sans filet, un tableau clair est un
+   bloc de texte. */
+[data-theme="light"] .dash-table td {
+    border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+/* ── C · Statuts succes et info ───────────────────────────────────────────
+   Ils manquaient a la premiere passe : #34d399 tombait a 1,9:1 et #38bdf8 a
+   2,0:1 sur leur fond teinte devenu quasi blanc. */
+[data-theme="light"] .dash-status-ok,
+[data-theme="light"] .profil-dot--ok,
+[data-theme="light"] .imp-result-icon--ok {
+    background-color: var(--ton-succes-fond);
+    color: var(--ton-succes-texte);
+}
+[data-theme="light"] .dash-status-info,
+[data-theme="light"] .icon-blue {
+    background-color: var(--ton-info-fond);
+    color: var(--ton-info-texte);
+}
+/* Tous les badges de statut recoivent un contour : sur fond clair, un aplat
+   pale sans bordure ne se lit pas comme un jeton. */
+[data-theme="light"] .dash-status {
+    border: 1px solid currentColor;
+    box-shadow: none;
+}
+
+/* ── D · Pastille de role ─────────────────────────────────────────────────
+   « Administrateur » / « Entreprise » etaient blancs sur carte blanche. */
+[data-theme="light"] .dash-pill {
+    background: var(--ton-normal-fond);
+    border-color: rgba(15, 23, 42, 0.16);
+    color: var(--ton-normal-texte);
+}
+
+/* ── E · Frontiere des surfaces ───────────────────────────────────────────
+   Une ombre a 8 % ne suffit pas a poser une limite sur un fond clair : il
+   faut un trait. */
+[data-theme="light"] .dash-table-wrap,
+[data-theme="light"] .sv-modal-card,
+[data-theme="light"] .dash-profile-dropdown,
+[data-theme="light"] .dash-alertes-panneau {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+}
+[data-theme="light"] .sv-modal-card,
+[data-theme="light"] .dash-profile-dropdown,
+[data-theme="light"] .dash-alertes-panneau {
+    box-shadow: 0 18px 45px -20px rgba(15, 23, 42, 0.35);
+}
+
+/* ── F · Hierarchie interne des modals ────────────────────────────────────
+   L'en-tete portait un voile blanc a 1,8 %, nul sur surface claire : rien ne
+   le distinguait du corps. */
+[data-theme="light"] .sv-modal-head {
+    background: var(--surface-entete);
+    border-bottom-color: rgba(15, 23, 42, 0.14);
+}
+[data-theme="light"] .sv-modal-foot,
+[data-theme="light"] .sv-modal-actions {
+    background: var(--surface-entete);
+    border-top-color: rgba(15, 23, 42, 0.14);
+}
+/* Les blocs de chiffres et les paires libelle/valeur se groupent visiblement. */
+[data-theme="light"] .sv-modal-tiles > *,
+[data-theme="light"] .sv-modal-pairs > * {
+    background: rgba(15, 23, 42, 0.03);
+    border-color: rgba(15, 23, 42, 0.10);
+}
+[data-theme="light"] .sv-modal-section + .sv-modal-section {
+    border-top-color: rgba(15, 23, 42, 0.10);
+}
+/* La croix de fermeture doit se detacher du contenu voisin. */
+[data-theme="light"] .sv-modal-close {
+    background: rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    color: var(--text-muted);
+}
+[data-theme="light"] .sv-modal-close:hover {
+    background: var(--ton-critique-fond);
+    border-color: rgba(185, 28, 28, 0.3);
+    color: var(--ton-critique-texte);
+}
+
+/* ==========================================================================
+   BARRE LATERALE - couleurs figees et infobulle de l'etat replie
+   ==========================================================================
+   ⚠️ CAUSE DU DEFAUT DE SURVOL : la barre latérale reste sombre dans les deux
+   thèmes, mais ses règles consommaient `--text`, `--text-muted` et
+   `--text-dim`, qui basculent vers des valeurs SOMBRES en thème clair. Le
+   libellé au repos virait au gris foncé et, au survol, `--text` valait
+   #0f172a : du quasi-noir sur fond noir.
+
+   Correctif à la racine plutôt que règle par règle : les trois rôles de texte
+   sont redéclarés SUR la barre latérale, avec exactement les valeurs du thème
+   sombre. Tout descendant les hérite, dans les deux thèmes, et le rendu en
+   sombre est donc identique au pixel près. */
+.dash-sidebar {
+    --text: #f8fafc;
+    --text-muted: #a8b5cc;
+    --text-muted-subtle: #7c8ba8;
+    --text-dim: #64748b;
+}
+
+/* Le survol éclaircit, il n'atténue jamais : #a8b5cc -> #f8fafc. L'état actif
+   (accent cyan) n'est pas touché, et le fond de survol reste un voile neutre
+   pour qu'il ne se confonde pas avec le cyan de l'actif. */
+
+/* ── Infobulle de l'état replié ───────────────────────────────────────────
+   Une div positionnée, pas l'attribut `title` natif. Elle n'existe que quand
+   la barre est repliée : déployée, le libellé est déjà lisible et une
+   infobulle ne ferait que répéter.
+
+   `position: fixed` : la barre latérale a `overflow-y: auto`, donc son
+   overflow horizontal est calculé à `auto` et rognerait toute infobulle
+   positionnée à l'intérieur. */
+.dash-tip {
+    position: fixed;
+    z-index: 120;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    background: #111a2b;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f8fafc;
+    font-family: var(--font-primary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.dash-tip.is-visible {
+    opacity: 1;
+    transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-tip { transition: none; transform: none; }
+}

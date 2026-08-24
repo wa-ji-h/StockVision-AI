@@ -1,196 +1,258 @@
 {% extends "pages/base.html" %}
-{% block title %}Contact — StockVision AI{% endblock %}
+{% block title %}Contact · StockVision AI{% endblock %}
 {% block content %}
-<!-- HERO HEADER -->
-<section class="page-hero text-center">
-    <div class="hero-badge">
+<script>
+    /* Posé avant le rendu : sans JavaScript, l'état masqué des reveals n'est
+       jamais appliqué et la page reste intégralement lisible. */
+    document.documentElement.classList.add('fx-js');
+</script>
+
+<!-- ═══════════════════════ EN-TÊTE ═══════════════════════ -->
+<section class="ct-entete">
+    <span class="hero-badge fx-entree" style="--i:0">
         <span class="badge-dot"></span>
-        <span class="badge-text">Assistance & Support Expert</span>
-    </div>
-    <h1 class="page-title mb-3">Contactez l'Équipe <span class="gradient-text">StockVision AI</span></h1>
-    <p class="page-subtitle mx-auto">
-        Une question sur l'inscription de votre entreprise, le fonctionnement de notre moteur d'IA ou nos tableaux de bord Power BI ? Nos spécialistes vous répondent rapidement.
+        <span class="badge-text">Nous écrire</span>
+    </span>
+
+    <h1 class="fx-entree" style="--i:1">
+        Une question avant<br>
+        <span class="gradient-text">d'ouvrir un compte</span>
+    </h1>
+
+    <p class="ct-entete-sous fx-entree" style="--i:2">
+        Sur le raccordement de vos sources, le fonctionnement du moteur ou l'exposition
+        vers Power BI. Écrivez-nous directement, ou composez votre message ci-dessous.
     </p>
 </section>
 
-<section class="contact-section my-5">
-    <div class="row g-5">
-        <!-- FORMULAIRE DE CONTACT -->
-        <div class="col-lg-7">
-            <div class="p-4 p-md-5 rounded-4 border border-secondary border-opacity-10 bg-card">
-                <h3 class="h4 fw-bold mb-4">Envoyez-nous un message</h3>
+<!-- ═══════════════════ CANAUX DIRECTS ═══════════════════ -->
+<section class="fx-section ct-canaux-section">
+    <div class="ct-canaux fx-reveal">
+        <a class="ct-canal" href="mailto:contact@stockvision.ai" style="--i:0">
+            <span class="ct-canal-icone">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <span class="ct-canal-label">Questions générales et commerciales</span>
+            <span class="ct-canal-valeur">contact@stockvision.ai</span>
+        </a>
 
-                <div id="contactSuccess" class="alert alert-success bg-opacity-10 border-success text-success rounded-3 small mb-4" hidden>
-                    Merci ! Votre message a bien été transmis. Notre équipe vous recontactera sous 24h.
+        <a class="ct-canal" href="mailto:support@stockvision.ai" style="--i:1">
+            <span class="ct-canal-icone">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </span>
+            <span class="ct-canal-label">Support technique, comptes existants</span>
+            <span class="ct-canal-valeur">support@stockvision.ai</span>
+        </a>
+
+        <div class="ct-canal ct-canal--statique" style="--i:2">
+            <span class="ct-canal-icone">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
+            <span class="ct-canal-label">Disponibilité de l'équipe</span>
+            <span class="ct-canal-valeur">Lun - Ven, 9h - 18h</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ COMPOSEUR DE MESSAGE ═══════════════════ -->
+<section class="fx-section">
+    <div class="ct-composeur fx-reveal">
+        <div class="ct-composeur-entete">
+            <h2>Composer votre message</h2>
+            <p>
+                Ce formulaire prépare le message et ouvre votre logiciel de messagerie, avec
+                tout déjà rempli. Rien n'est envoyé depuis cette page.
+            </p>
+        </div>
+
+        <form class="ct-form" id="ctForm" novalidate>
+            <div class="ct-form-ligne">
+                <div class="ct-champ">
+                    <label for="ctNom">Nom complet</label>
+                    <input type="text" id="ctNom" name="nom" autocomplete="name" required>
                 </div>
+                <div class="ct-champ">
+                    <label for="ctEntreprise">Nom de l'entreprise</label>
+                    <input type="text" id="ctEntreprise" name="entreprise" autocomplete="organization" required>
+                </div>
+            </div>
 
-                <form id="contactForm" class="auth-form" novalidate>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="auth-field">
-                                <label for="contactNom">Nom complet</label>
-                                <input type="text" id="contactNom" name="nom" placeholder="Ex. Marie Curie" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="auth-field">
-                                <label for="contactEntreprise">Nom de l'entreprise</label>
-                                <input type="text" id="contactEntreprise" name="entreprise" placeholder="Ex. TechCorp SARL" required>
-                            </div>
-                        </div>
-                    </div>
+            <div class="ct-champ">
+                <label for="ctEmail">Email professionnel</label>
+                <input type="email" id="ctEmail" name="email" autocomplete="email" required>
+            </div>
 
-                    <div class="auth-field my-3">
-                        <label for="contactEmail">Email professionnel</label>
-                        <input type="email" id="contactEmail" name="email" placeholder="contact@entreprise.com" required>
-                    </div>
+            <div class="ct-champ">
+                <label for="ctSujet">Objet de votre demande</label>
+                <select id="ctSujet" name="sujet">
+                    <option value="Ouverture d'un compte entreprise">Ouverture d'un compte entreprise</option>
+                    <option value="Raccordement d'une source de données">Raccordement d'une source de données</option>
+                    <option value="Fonctionnement du moteur d'analyse">Fonctionnement du moteur d'analyse</option>
+                    <option value="Exposition vers Power BI">Exposition vers Power BI</option>
+                    <option value="Autre demande">Autre demande</option>
+                </select>
+            </div>
 
-                    <div class="auth-field mb-3">
-                        <label for="contactSujet">Objet de votre demande</label>
-                        <select id="contactSujet" name="sujet" class="form-select bg-dark text-white border-secondary border-opacity-25 rounded-3 py-2 px-3">
-                            <option value="demo">Demande de Démonstration Power BI & IA</option>
-                            <option value="inscription">Renseignements sur l'inscription Entreprise</option>
-                            <option value="support">Support Technique & Ingestion de données</option>
-                            <option value="autre">Autre demande</option>
-                        </select>
-                    </div>
+            <div class="ct-champ">
+                <label for="ctMessage">Message</label>
+                <textarea id="ctMessage" name="message" rows="6" required></textarea>
+            </div>
 
-                    <div class="auth-field mb-4">
-                        <label for="contactMessage">Message</label>
-                        <textarea id="contactMessage" name="message" rows="5" class="form-control bg-dark text-white border-secondary border-opacity-25 rounded-3 p-3" placeholder="Décrivez votre besoin ou votre projet..." required></textarea>
-                    </div>
+            <div class="ct-form-pied">
+                <button type="submit" class="btn btn-gradient btn-lg">Ouvrir mon message</button>
+                <p class="ct-form-note" id="ctNote">
+                    Destinataire : contact@stockvision.ai
+                </p>
+            </div>
 
-                    <button type="submit" class="btn btn-gradient btn-lg w-100">
-                        <span>Envoyer le message</span>
-                    </button>
-                </form>
+            <p class="ct-form-erreur" id="ctErreur" role="alert" hidden></p>
+        </form>
+    </div>
+</section>
+
+<!-- ═══════════════════════ QUESTIONS ═══════════════════════ -->
+<section class="fx-section">
+    <div class="fx-tete fx-reveal">
+        <h2>Questions fréquentes</h2>
+        <p>Quatre points sur lesquels on nous interroge avant l'ouverture d'un compte.</p>
+    </div>
+
+    <div class="ct-faq fx-reveal" id="ctFaq">
+        <div class="ct-faq-item" style="--i:0">
+            <h3 class="ct-faq-titre">
+                <button class="ct-faq-bouton collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#ctQ1"
+                        aria-expanded="false" aria-controls="ctQ1">
+                    <span>Comment se déroule la validation du compte entreprise ?</span>
+                    <svg class="ct-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </h3>
+            <div id="ctQ1" class="collapse" data-bs-parent="#ctFaq">
+                <div class="ct-faq-corps">
+                    Votre demande part vers un administrateur, qui la valide manuellement.
+                    Aucun compte ne s'ouvre sans cette étape. Une fois la demande approuvée,
+                    un courriel vous transmet un mot de passe provisoire, que vous remplacez
+                    à la première connexion.
+                </div>
             </div>
         </div>
 
-        <!-- INFOS DIRECTES & SUPPORT -->
-        <div class="col-lg-5">
-            <div class="d-flex flex-column gap-4">
-                <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card">
-                    <h4 class="h5 fw-bold mb-3">Coordonnées Directes</h4>
-                    <ul class="list-unstyled mb-0 d-flex flex-direction-column gap-3 text-muted small">
-                        <li class="d-flex align-items-center gap-3">
-                            <div class="p-2 rounded-3 bg-white bg-opacity-10 text-cyan">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                            </div>
-                            <div>
-                                <span class="d-block text-white fw-bold">Email Général & Commercial</span>
-                                <a href="mailto:contact@stockvision.ai" class="text-cyan text-decoration-none">contact@stockvision.ai</a>
-                            </div>
-                        </li>
-                        <li class="d-flex align-items-center gap-3">
-                            <div class="p-2 rounded-3 bg-white bg-opacity-10 text-blue">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                            </div>
-                            <div>
-                                <span class="d-block text-white fw-bold">Support Technique</span>
-                                <a href="mailto:support@stockvision.ai" class="text-cyan text-decoration-none">support@stockvision.ai</a>
-                            </div>
-                        </li>
-                        <li class="d-flex align-items-center gap-3">
-                            <div class="p-2 rounded-3 bg-white bg-opacity-10 text-indigo">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            </div>
-                            <div>
-                                <span class="d-block text-white fw-bold">Horaires d'ouverture</span>
-                                <span>Du Lundi au Vendredi, de 9h à 18h</span>
-                            </div>
-                        </li>
-                    </ul>
+        <div class="ct-faq-item" style="--i:1">
+            <h3 class="ct-faq-titre">
+                <button class="ct-faq-bouton collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#ctQ2"
+                        aria-expanded="false" aria-controls="ctQ2">
+                    <span>Mes données sont-elles modifiées lors de la connexion ?</span>
+                    <svg class="ct-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </h3>
+            <div id="ctQ2" class="collapse" data-bs-parent="#ctFaq">
+                <div class="ct-faq-corps">
+                    Non. Une connexion à votre base n'ouvre qu'un accès en <strong>lecture
+                    seule</strong>, et la plateforme ne lit que les colonnes retenues dans
+                    votre configuration. Vos tables sources ne sont jamais modifiées.
                 </div>
+            </div>
+        </div>
 
-                <div class="p-4 rounded-4 border border-secondary border-opacity-10 bg-card">
-                    <h4 class="h5 fw-bold mb-3">Déjà inscrit ?</h4>
-                    <p class="text-muted small mb-3">
-                        Accédez directement à votre espace d'administration pour configurer vos analyses ou consulter vos derniers rapports.
-                    </p>
-                    <a href="/connexion" class="btn btn-outline-light w-100">Se connecter</a>
+        <div class="ct-faq-item" style="--i:2">
+            <h3 class="ct-faq-titre">
+                <button class="ct-faq-bouton collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#ctQ3"
+                        aria-expanded="false" aria-controls="ctQ3">
+                    <span>Quels formats et quelles bases sont pris en charge ?</span>
+                    <svg class="ct-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </h3>
+            <div id="ctQ3" class="collapse" data-bs-parent="#ctFaq">
+                <div class="ct-faq-corps">
+                    Les fichiers CSV et les scripts SQL, ainsi que les connexions directes à
+                    MySQL, PostgreSQL et SQL Server. À l'import, les tables et les colonnes
+                    sont détectées et typées, puis les premières lignes vous sont affichées
+                    pour contrôle avant toute analyse.
+                </div>
+            </div>
+        </div>
+
+        <div class="ct-faq-item" style="--i:3">
+            <h3 class="ct-faq-titre">
+                <button class="ct-faq-bouton collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#ctQ4"
+                        aria-expanded="false" aria-controls="ctQ4">
+                    <span>Comment fonctionne la connexion avec Power BI ?</span>
+                    <svg class="ct-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </h3>
+            <div id="ctQ4" class="collapse" data-bs-parent="#ctFaq">
+                <div class="ct-faq-corps">
+                    Les résultats d'analyse sont exposés par sept vues SQL à plat, lisibles
+                    par un compte dédié qui n'a aucun droit sur les tables de l'application.
+                    Vous connectez Power BI Desktop à ces vues et composez le rapport que
+                    vous voulez : la plateforme fournit les données, pas le rapport.
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- FAQ ACCORDION -->
-<section class="faq-section my-5 py-4">
-    <div class="section-header text-center mb-5">
-        <h2 class="fw-bold">Foire Aux Questions (FAQ)</h2>
-        <p class="text-muted">Tout ce qu'il faut savoir sur l'utilisation de StockVision AI</p>
-    </div>
-
-    <div class="accordion accordion-flush custom-accordion mx-auto" id="faqAccordion" style="max-width: 800px;">
-        <div class="accordion-item bg-card border border-secondary border-opacity-10 rounded-3 mb-3 overflow-hidden">
-            <h2 class="accordion-header" id="headingOne">
-                <button class="accordion-button collapsed bg-transparent text-white fw-bold py-3 px-4 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                    Comment se déroule la validation du compte Entreprise ?
-                </button>
-            </h2>
-            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
-                <div class="accordion-body text-muted small px-4 pb-4 pt-0">
-                    Lors de la soumission du formulaire d'inscription, votre demande est envoyée à un Administrateur. Dès validation de l'administrateur, un e-mail automatique contenant vos identifiants et un mot de passe provisoire vous est transmis. Vous serez invité à modifier votre mot de passe dès votre première connexion.
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion-item bg-card border border-secondary border-opacity-10 rounded-3 mb-3 overflow-hidden">
-            <h2 class="accordion-header" id="headingTwo">
-                <button class="accordion-button collapsed bg-transparent text-white fw-bold py-3 px-4 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    Mes données d'entreprise sont-elles modifiées lors de la connexion ?
-                </button>
-            </h2>
-            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
-                <div class="accordion-body text-muted small px-4 pb-4 pt-0">
-                    Non. Lors de la connexion à vos bases de données externes, StockVision AI utilise exclusivement des accès en <strong>lecture seule</strong>. Vos tables sources ne sont jamais modifiées ni altérées.
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion-item bg-card border border-secondary border-opacity-10 rounded-3 mb-3 overflow-hidden">
-            <h2 class="accordion-header" id="headingThree">
-                <button class="accordion-button collapsed bg-transparent text-white fw-bold py-3 px-4 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    Quels types de fichiers puis-je importer ?
-                </button>
-            </h2>
-            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
-                <div class="accordion-body text-muted small px-4 pb-4 pt-0">
-                    StockVision AI prend en charge les fichiers au format CSV ainsi que les sauvegardes SQL. Notre moteur de validation vérifie le format et nettoie les anomalies automatiquement avant l'intégration.
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion-item bg-card border border-secondary border-opacity-10 rounded-3 mb-3 overflow-hidden">
-            <h2 class="accordion-header" id="headingFour">
-                <button class="accordion-button collapsed bg-transparent text-white fw-bold py-3 px-4 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                    Comment fonctionne la connexion avec Power BI ?
-                </button>
-            </h2>
-            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#faqAccordion">
-                <div class="accordion-body text-muted small px-4 pb-4 pt-0">
-                    Les résultats issus du moteur d'analyse Python (indicateurs, tendances et prévisions) sont stockés de façon structurée dans MySQL puis connectés automatiquement aux modèles Power BI pour alimenter vos tableaux de bord interactifs.
-                </div>
-            </div>
-        </div>
+<!-- ═══════════════════════ CLÔTURE ═══════════════════════ -->
+<section class="cta-banner text-center py-5 my-4">
+    <div class="cta-box p-5 rounded-4 position-relative overflow-hidden fx-reveal">
+        <h2 class="fw-bold mb-3">Prêt à raccorder vos données</h2>
+        <p class="text-muted mx-auto mb-4" style="max-width: 560px;">
+            L'ouverture d'un compte se fait par une demande d'inscription, validée par un
+            administrateur.
+        </p>
+        <a href="/inscription" class="btn btn-gradient btn-lg">Demander un accès</a>
     </div>
 </section>
 
 <script>
+/* Composeur mailto : le formulaire n'envoie rien depuis la page, il prépare le
+   message et le remet au logiciel de messagerie. C'est volontaire - il n'existe
+   aucun point d'entrée serveur pour ce formulaire, et afficher « message
+   transmis » sans transmission serait un faux message de succès. */
 document.addEventListener('DOMContentLoaded', () => {
-    const contactForm = document.getElementById('contactForm');
-    const contactSuccess = document.getElementById('contactSuccess');
+    const form = document.getElementById('ctForm');
+    if (!form) return;
 
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (contactSuccess) {
-                contactSuccess.hidden = false;
-            }
-            contactForm.reset();
-        });
-    }
+    const erreur = document.getElementById('ctErreur');
+    const note = document.getElementById('ctNote');
+    const DESTINATAIRE = 'contact@stockvision.ai';
+
+    const champ = (id) => (document.getElementById(id)?.value || '').trim();
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const nom = champ('ctNom');
+        const entreprise = champ('ctEntreprise');
+        const email = champ('ctEmail');
+        const sujet = champ('ctSujet');
+        const message = champ('ctMessage');
+
+        if (!nom || !entreprise || !email || !message) {
+            erreur.textContent = 'Renseignez votre nom, votre entreprise, votre email et votre message.';
+            erreur.hidden = false;
+            return;
+        }
+        erreur.hidden = true;
+
+        const corps = [
+            `Nom : ${nom}`,
+            `Entreprise : ${entreprise}`,
+            `Email : ${email}`,
+            '',
+            message,
+        ].join('\n');
+
+        window.location.href = 'mailto:' + DESTINATAIRE
+            + '?subject=' + encodeURIComponent('StockVision AI · ' + sujet)
+            + '&body=' + encodeURIComponent(corps);
+
+        note.textContent = "Votre logiciel de messagerie devrait s'ouvrir. Sinon, écrivez à " + DESTINATAIRE + '.';
+    });
 });
 </script>
+<script src="/static/js/reveal.js?v={{ asset_version }}" defer></script>
 {% endblock %}
