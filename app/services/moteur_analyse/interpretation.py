@@ -403,6 +403,36 @@ def confiance_maximale(resultat: ResultatExecution) -> str:
 _RANG_CONFIANCE = {"faible": 0, "modere": 1, "eleve": 2}
 
 
+# Formulations impératives : sur un résultat qui ne tranche pas, le prompt demande
+# une langue prudente. On ne le VÉRIFIE pas par correspondance de chaînes — le
+# texte reste tel quel — on le SIGNALE, pour suivre la qualité du prompt dans le
+# temps. Bloquer ici reviendrait à juger un texte libre sur des mots-clés.
+_TOURNURES_FERMES = (
+    "vous devez", "il faut", "augmentez", "réduisez", "supprimez", "arrêtez",
+    "commandez", "lancez immédiatement", "sans attendre", "impérativement",
+)
+
+
+def _surveiller_ton_recommandation(
+    interpretation: InterpretationRedigee, resultat: ResultatExecution, cfg_id: int | None
+) -> None:
+    """Journalise une recommandation directive sur un résultat non concluant.
+
+    ⚠️ Non bloquant, et volontairement : c'est une mesure de qualité de prompt,
+    pas une validation. Le texte est conservé intact.
+    """
+    if resultat.indicateurs.get("conclusif") is not False:
+        return
+    texte = (interpretation.recommandation or "").lower()
+    reperees = [t for t in _TOURNURES_FERMES if t in texte]
+    if reperees:
+        _log.warning(
+            "[interpretation] cfg %s : recommandation directive sur un résultat NON "
+            "concluant (tournures : %s) — texte conservé, à surveiller côté prompt",
+            cfg_id, ", ".join(reperees),
+        )
+
+
 def _plafonner_confiance(
     interpretation: InterpretationRedigee, resultat: ResultatExecution
 ) -> list[str]:
@@ -479,6 +509,7 @@ def interpreter_resultat(
         )
 
     ajustements = reprises + _plafonner_confiance(interpretation, resultat)
+    _surveiller_ton_recommandation(interpretation, resultat, resultat.config_id)
     return ResultatInterpretation(
         disponible=True, interpretation=interpretation, ajustements=ajustements
     )

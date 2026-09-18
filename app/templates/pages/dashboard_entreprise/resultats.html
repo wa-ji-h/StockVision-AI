@@ -175,9 +175,23 @@
             {% endif %}
             <div class="res-interp-bas">
                 {% if c.interpretation.recommandation %}
-                <div class="res-encart res-encart--action">
+                {# ⚠️ Sur un résultat non concluant, l'encart quitte le vert de
+                   succès pour la teinte de prudence déjà utilisée par
+                   `.res-bandeau--incertain` : une piste verte sur une analyse qui
+                   ne conclut pas se lirait comme une directive ferme. La teinte
+                   est reprise, aucune n'est créée. #}
+                <div class="res-encart res-encart--action{{ ' res-encart--prudent' if not c.concluant }}">
                     <span class="res-encart-titre">Ce que vous pouvez faire</span>
                     <p>{{ c.interpretation.recommandation }}</p>
+                    {# Cadrage explicite : une piste à considérer, jamais une
+                       décision prise par la plateforme. #}
+                    <p class="res-encart-cadre">
+                        {% if not c.concluant %}
+                        Piste à considérer avec prudence : ce résultat ne permet pas de conclure.
+                        {% else %}
+                        Suggestion à examiner. La plateforme n'engage aucune action de son côté.
+                        {% endif %}
+                    </p>
                 </div>
                 {% endif %}
                 {% if c.interpretation.limite %}

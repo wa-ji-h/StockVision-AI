@@ -79,7 +79,7 @@
                 Modifier la connexion
             </a>
             {% else %}
-            <button type="button" class="imh-btn imh-btn-details" data-source-id="{{ s.id_source }}" data-detail='{{ {
+            <button type="button" class="imh-btn imh-btn--primary imh-btn-details" data-source-id="{{ s.id_source }}" data-detail='{{ {
                 "nom": s.nom_fichier | default("—", true),
                 "format": s.type_format | default("—", true),
                 "taille": s.taille_fmt | default("—", true),

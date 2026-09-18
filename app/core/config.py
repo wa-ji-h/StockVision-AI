@@ -25,6 +25,12 @@ class Settings:
     # OAuth (Google / GitHub)
     OAUTH_REDIRECT_BASE_URL = os.getenv("OAUTH_REDIRECT_BASE_URL", "http://127.0.0.1:8000")
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+    # Point d'intégration Power BI. Vide par défaut : aucun rapport n'est
+    # embarqué tant qu'un embarquement CLOISONNÉ PAR ENTREPRISE n'existe pas
+    # (voir docs/POWERBI.md §3.1). Une URL d'embed n'est pas un secret ; un
+    # jeton, si l'embarquement voit le jour, restera côté serveur.
+    POWERBI_EMBED_URL = os.getenv("POWERBI_EMBED_URL", "")
+
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")

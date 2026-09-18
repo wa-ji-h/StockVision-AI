@@ -3765,6 +3765,205 @@ async def entreprise_alerte_traiter(
     })
 
 
+def _cloisonner_entreprise(requete, id_entreprise: int):
+    """Chaîne d'appartenance Configuration → Import → Source → Entreprise.
+
+    Le filtre fait partie de la REQUÊTE : une ressource d'autrui est
+    introuvable, pas « trouvée puis refusée ». Même chaîne que la page
+    Résultats, seule source de vérité du cloisonnement côté entreprise.
+    """
+    return (requete
+            .join(ImportDonnee, ConfigurationAnalyse.id_import == ImportDonnee.id_import)
+            .join(SourceDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
+            .filter(SourceDonnee.idEntreprise == id_entreprise))
+
+
+@router.get("/dashboard/entreprise/powerbi")
+def entreprise_visualisation(
+    request: Request,
+    config: int | None = None,
+    db: Session = Depends(get_db),
+    user: Utilisateur = Depends(require_role(RoleEnum.entreprise)),
+):
+    """Visualisation — vue analytique native, cloisonnée à l'entreprise connectée.
+
+    ⚠️ Cette page n'embarque AUCUN rapport Power BI et ne touche pas au compte
+    `powerbi` ni à ses vues SQL. `docs/POWERBI.md` le dit : ce compte est un
+    canal d'exploitation interne, non cloisonné par entreprise, et ses
+    identifiants ne sont jamais distribués. Tout ce qui suit est reconstruit
+    depuis les données déjà accessibles à cette entreprise.
+
+    ⚠️ Déclarée AVANT `/dashboard/entreprise/{section}` : le catch-all
+    l'absorberait sinon, et la page retomberait sur le placeholder.
+
+    Cloisonnement : chaque lecture remonte à `SourceDonnee.idEntreprise`, le
+    même filtre que les pages Résultats et Alertes. Aucun décompte du parc.
+    """
+    from app.services.graphiques import alertes_ouvertes_par_jour, repartition_objectifs, series_entreprise
+    from app.services.supervision import activite_par_entreprise
+    from app.services.moteur_analyse.criticite import COULEUR_PAR_NIVEAU, LIBELLE_PAR_NIVEAU, NIVEAUX_CRITICITE
+
+    ident = user.idUtilisateur
+    title, guide = _ENTREPRISE_SECTIONS["powerbi"]
+
+    debut_mois = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    volumes = activite_par_entreprise(db, debut_mois, id_entreprise=ident).get(ident, {})
+
+    series = series_entreprise(db, ident)
+    series["encours"] = alertes_ouvertes_par_jour(db, id_entreprise=ident)
+
+    # Configurations actives de CETTE entreprise, via la chaîne source → import.
+    configs_actives = (
+        _cloisonner_entreprise(db.query(ConfigurationAnalyse), ident)
+        .filter(ConfigurationAnalyse.statut == "actif").count()
+    )
+
+    # Dernier résultat de chaque configuration, pour le sélecteur de série.
+    lignes = (
+        _cloisonner_entreprise(
+            db.query(ResultatAnalyse, ConfigurationAnalyse).join(
+                ConfigurationAnalyse,
+                ResultatAnalyse.id_configuration == ConfigurationAnalyse.id_configuration),
+            ident)
+        .order_by(ResultatAnalyse.date_execution.asc())
+        .all()
+    )
+
+    dernier_par_config: dict[int, dict] = {}
+    comptes_crit: dict[str, int] = {}
+    for res, cfg in lignes:
+        if res.criticite:
+            comptes_crit[res.criticite] = comptes_crit.get(res.criticite, 0) + 1
+        try:
+            resume = json.loads(res.resultat_json) if res.resultat_json else {}
+        except Exception:
+            resume = {}
+        vis = resume.get("visualisation") or {}
+        hist = vis.get("serie_historique") or []
+        prev = vis.get("serie_prevue") or []
+        if not hist and not prev:
+            continue
+        vue = _presenter_objectif(cfg)
+        dernier_par_config[cfg.id_configuration] = {
+            "id": cfg.id_configuration,
+            "label": vue["label"],
+            "couleur": vue["color"],
+            "modele": resume.get("modele_libelle") or "",
+            "unite": resume.get("unite") or "",
+            "historique": hist,
+            "prevu": prev,
+            "date": _fmt_date(res.date_execution),
+        }
+
+    # ── Catalogue de rapports ────────────────────────────────────────────
+    # Les familles sont celles du moteur (`TYPE_PAR_OBJECTIF`), pas des
+    # catégories inventées : chaque entrée est une vue réelle sur les analyses
+    # de cette entreprise, avec son volume et sa dernière exécution.
+    _RAPPORTS = (
+        ("prevision",  "Prévisions",           "Valeurs à venir et intervalle de confiance.",   "chart-line"),
+        ("tendance",   "Évolution",            "Direction générale de vos séries dans le temps.", "trending-up"),
+        ("anomalie",   "Anomalies",            "Observations qui s'écartent du comportement habituel.", "alert-triangle"),
+        ("classement", "Analyse comparative",  "Ce qui performe le mieux parmi vos produits ou clients.", "arrows-sort"),
+    )
+    par_famille: dict[str, dict] = {
+        code: {"code": code, "libelle": lib, "resume": res, "icone": ic,
+               "nombre": 0, "derniere": None, "config": None, "resultat": None}
+        for code, lib, res, ic in _RAPPORTS
+    }
+    for res, cfg_obj in lignes:
+        fam = (res.type_analyse or "").strip()
+        entree = par_famille.get(fam)
+        if entree is None:
+            continue
+        entree["nombre"] += 1
+        # `lignes` est trié par date croissante : le dernier vu est le plus récent.
+        entree["derniere"] = _fmt_date(res.date_execution, avec_heure=True)
+        entree["config"] = cfg_obj
+        entree["resultat"] = res
+
+    catalogue = []
+    for entree in par_famille.values():
+        res, cfg_obj = entree["resultat"], entree["config"]
+        fiche = {k: entree[k] for k in ("code", "libelle", "resume", "icone", "nombre", "derniere")}
+        fiche["disponible"] = bool(entree["nombre"])
+        # ⚠️ Uniquement des champs qui EXISTENT. Rien n'est inventé : un champ
+        # absent est simplement omis du panneau d'information.
+        details = []
+        if cfg_obj is not None:
+            src = (db.query(SourceDonnee)
+                     .join(ImportDonnee, ImportDonnee.id_source == SourceDonnee.id_source)
+                     .filter(ImportDonnee.id_import == cfg_obj.id_import,
+                             SourceDonnee.idEntreprise == ident).first())
+            if src and src.nom:
+                details.append(("Source", src.nom))
+            if cfg_obj.frequence:
+                details.append(("Fréquence", dict(_FREQUENCES).get(cfg_obj.frequence, cfg_obj.frequence)))
+        if res is not None:
+            if res.modele_applique:
+                details.append(("Modèle", LIBELLE_MODELE.get(res.modele_applique, res.modele_applique)))
+            if res.fiabilite:
+                details.append(("Fiabilité", {c: l for _, c, l, _ in NIVEAUX_FIABILITE}.get(res.fiabilite, res.fiabilite)))
+            if res.criticite:
+                details.append(("Criticité", LIBELLE_PAR_NIVEAU.get(res.criticite, res.criticite)))
+        if entree["derniere"]:
+            details.append(("Dernière exécution", entree["derniere"]))
+        fiche["details"] = details
+        fiche["id_config"] = cfg_obj.id_configuration if cfg_obj is not None else None
+        catalogue.append(fiche)
+    catalogue.sort(key=lambda f: (not f["disponible"], -f["nombre"]))
+
+    sujets = list(dernier_par_config.values())
+    # Une seule série tracée à la fois : le sélecteur reprend la mécanique déjà
+    # en service ailleurs, aucun second moteur de graphique n'est écrit.
+    series_analyses = {
+        str(s["id"]): [
+            {"jour": str(p.get("date") or p.get("x") or i), "valeur": p.get("valeur", p.get("y", 0))}
+            for i, p in enumerate((s["historique"] or []) + (s["prevu"] or []))
+        ]
+        for s in sujets
+    }
+    sujet_defaut = str(config) if config and str(config) in series_analyses else (
+        str(sujets[0]["id"]) if sujets else "")
+
+    total_crit = sum(comptes_crit.values()) or 1
+    repartition_criticite = [
+        {
+            "label": LIBELLE_PAR_NIVEAU[code],
+            "color": COULEUR_PAR_NIVEAU[code],
+            "nombre": comptes_crit.get(code, 0),
+            "pct": round(comptes_crit.get(code, 0) * 100 / total_crit),
+        }
+        for code, _rang, _lib in NIVEAUX_CRITICITE
+    ]
+
+    response = templates.TemplateResponse(
+        request,
+        "pages/dashboard_entreprise/visualisation.html",
+        {
+            "user": user,
+            "active_page": "powerbi",
+            "notifications_count": 0,
+            "title": title,
+            "guide": guide,
+            "volumes": volumes,
+            "configs_actives": configs_actives,
+            "series": series,
+            "series_courbe": {c: series[c] for c in ("analyses", "imports", "alertes")},
+            "sujets": sujets,
+            "series_analyses": series_analyses,
+            "sujet_defaut": sujet_defaut,
+            "repartition_objectifs": repartition_objectifs(db, ident, _presenter_objectif),
+            "repartition_criticite": repartition_criticite,
+            "total_resultats": len(lignes),
+            "catalogue": catalogue,
+            # Vide tant qu'aucun embarquement cloisonné n'existe : le gabarit
+            # affiche alors un état « non configuré », jamais un faux rapport.
+            "powerbi_embed_url": settings.POWERBI_EMBED_URL,
+        },
+    )
+    return _no_store(response)
+
+
 @router.get("/dashboard/entreprise/{section}")
 def entreprise_section(
     section: str,

@@ -1,0 +1,323 @@
+{% extends "pages/dashboard/base.html" %}
+{% from "components/composition.html" import entete, section %}
+{% from "components/indicateurs.html" import carte, carte_serie %}
+{% from "components/objectifs.html" import obj_icon %}
+{% block title %}Vos tableaux de bord · StockVision AI{% endblock %}
+
+{% block dash_content %}
+
+{{ entete("Espace entreprise", "Vos tableaux de bord",
+          "Explorez vos données sous forme de graphiques et rapports interactifs.") }}
+
+{# ── A · Indicateurs de contexte ─────────────────────────────────────────────
+   Repères de lecture au-dessus des rapports, pas un substitut au rapport.
+   Chaque valeur remonte à vos sources par la chaîne source → import →
+   configuration : aucun chiffre du parc n'apparaît sur cette page. #}
+<section class="dash-rangee">
+    <div class="sv-stats">
+        {{ carte_serie("Analyses lancées", volumes.analyses or 0, "depuis l'ouverture de votre compte",
+                       series.analyses, icone="graph-up") }}
+        {{ carte_serie("Analyses ce mois", volumes.analyses_mois or 0, "exécutions du mois en cours",
+                       series.analyses, icone="calendar-check") }}
+        {{ carte_serie("Alertes ouvertes", volumes.alertes or 0,
+                       "en attente de votre traitement" if volumes.alertes else "rien en attente",
+                       series.encours, icone="bell-fill",
+                       ton="eleve" if volumes.alertes else "") }}
+        {{ carte("Configurations actives", configs_actives, "prêtes à être relancées",
+                 icone="sliders") }}
+    </div>
+</section>
+
+{% set disponibles = catalogue | selectattr('disponible') | list %}
+
+{% if not disponibles %}
+{# ── État vide qualifié ────────────────────────────────────────────────────
+   « Aucune analyse exécutée » n'est pas « zéro » : la distinction se dit. #}
+<section class="dash-rangee">
+    <div class="sv-panneau bi-vide">
+        <span class="bi-vide-icone">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </span>
+        <h2>Aucun rapport disponible</h2>
+        <p>
+            Exécutez au moins une analyse pour générer les données nécessaires à
+            votre visualisation.
+        </p>
+        <a href="/dashboard/entreprise/configurations" class="btn btn-gradient">
+            Configurer une analyse
+        </a>
+    </div>
+</section>
+
+{% else %}
+
+{# ── B · Catalogue de rapports ───────────────────────────────────────────────
+   Les familles sont celles du moteur, pas des catégories inventées. Une carte
+   sans exécution reste affichée mais désactivée : son absence est une
+   information, la masquer laisserait croire que le rapport n'existe pas. #}
+<section class="dash-rangee">
+    {{ section("Rapports disponibles", "Construits sur vos propres analyses") }}
+    <div class="bi-catalogue">
+        {% for r in catalogue %}
+        <article class="bi-carte{{ ' is-inactif' if not r.disponible }}"
+                 data-rapport="{{ r.code }}" style="--i: {{ loop.index0 }}">
+            <span class="bi-carte-icone">{{ obj_icon(r.icone, 20) }}</span>
+            <h3 class="bi-carte-titre">{{ r.libelle }}</h3>
+            <p class="bi-carte-resume">{{ r.resume }}</p>
+
+            <div class="bi-carte-pied">
+                {% if r.disponible %}
+                <span class="bi-carte-compte">{{ r.nombre }} exécution{{ 's' if r.nombre > 1 }}</span>
+                <button type="button" class="bi-carte-action" data-ouvrir="{{ r.code }}">
+                    Consulter
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                {% else %}
+                <span class="bi-carte-compte bi-carte-compte--vide">Aucune exécution</span>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+{# ── C · Poste de travail ────────────────────────────────────────────────────
+   Sélecteur, panneau d'information et emplacement du rapport. Le sélecteur ne
+   liste que les rapports réellement disponibles : un onglet qui n'ouvre rien
+   n'est pas un onglet. #}
+<section class="dash-rangee">
+    {{ section("Rapport sélectionné", "Vos données uniquement") }}
+
+    <div class="bi-poste">
+        <div class="bi-onglets" role="tablist" aria-label="Choix du rapport">
+            {% for r in disponibles %}
+            <button type="button" role="tab" class="bi-onglet{{ ' is-actif' if loop.first }}"
+                    data-onglet="{{ r.code }}"
+                    aria-selected="{{ 'true' if loop.first else 'false' }}">
+                {{ r.libelle }}
+                <span class="bi-onglet-compte">{{ r.nombre }}</span>
+            </button>
+            {% endfor %}
+        </div>
+
+        {% for r in disponibles %}
+        <div class="bi-vue{{ ' is-actif' if loop.first }}" data-vue="{{ r.code }}"
+             role="tabpanel" {{ '' if loop.first else 'hidden' }}>
+
+            <div class="bi-vue-tete">
+                <div>
+                    <h3 class="bi-vue-titre">{{ r.libelle }}</h3>
+                    <p class="bi-vue-resume">{{ r.resume }}</p>
+                </div>
+                {% if r.id_config %}
+                <a class="bi-vue-lien" href="/dashboard/entreprise/resultats?config={{ r.id_config }}">
+                    Ouvrir dans Résultats
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="bi-vue-corps">
+                {# Panneau d'information : uniquement des champs qui existent en
+                   base. Un champ absent est omis, jamais comblé. #}
+                {% if r.details %}
+                <aside class="bi-infos">
+                    <h4 class="bi-infos-titre">Analyse sélectionnée</h4>
+                    <dl class="bi-infos-liste">
+                        {% for libelle, valeur in r.details %}
+                        <div>
+                            <dt>{{ libelle }}</dt>
+                            <dd>{{ valeur }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                </aside>
+                {% endif %}
+
+                {# ── Emplacement du rapport Power BI ──────────────────────────
+                   ⚠️ Aucun rapport n'est embarqué tant qu'un embarquement
+                   CLOISONNÉ PAR ENTREPRISE n'existe pas. Le compte `powerbi`
+                   décrit dans docs/POWERBI.md §3 voit les données de TOUTES les
+                   entreprises : l'embarquer ici exposerait vos concurrents.
+                   L'emplacement est prêt, l'URL vient du serveur. #}
+                <div class="bi-rapport">
+                    {% if powerbi_embed_url %}
+                    <iframe class="bi-rapport-cadre"
+                            src="{{ powerbi_embed_url }}"
+                            title="Rapport Power BI · {{ r.libelle }}"
+                            loading="lazy" referrerpolicy="no-referrer"
+                            sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+                    {% else %}
+                    <div class="bi-rapport-absent">
+                        <span class="bi-rapport-icone">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6"/></svg>
+                        </span>
+                        <h4>Rapport interactif non activé</h4>
+                        <p>
+                            L'affichage d'un rapport dans cette page nécessite un accès
+                            cloisonné à votre seule entreprise. Tant qu'il n'est pas en
+                            place, vos analyses restent consultables ci-dessous et sur la
+                            page Résultats.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{# ── D · Vos séries d'analyse ────────────────────────────────────────────────
+   La sortie réelle du moteur : historique prolongé par la projection, lu depuis
+   le résultat stocké. Aucun calcul n'est refait ici. #}
+<section class="dash-rangee">
+    {{ section("Vos séries d'analyse", "Une configuration à la fois · dernier résultat de chacune") }}
+    <div class="sv-panneau">
+        {% if not sujets %}
+        <p class="sv-liste-vide">
+            Aucune série exploitable pour le moment. Les analyses de type classement et
+            détection d'anomalie ne produisent pas de courbe : lancez une prévision ou
+            une tendance pour en voir apparaître ici.
+        </p>
+        {% else %}
+        <div class="sv-graph-choix">
+            {% for s in sujets %}
+            <button type="button"
+                    class="sv-graph-btn {{ 'is-actif' if s.id | string == sujet_defaut }}"
+                    data-serie="{{ s.id }}"
+                    data-unite="{{ s.unite or 'valeur(s)' }}">{{ s.label }}</button>
+            {% endfor %}
+        </div>
+        <div class="sv-graph" data-graph="courbe" data-defaut="{{ sujet_defaut }}"
+             data-libelle="Vos séries d'analyse"
+             data-series='{{ series_analyses | tojson }}'>
+            <span class="sv-graph-bulle"></span>
+            <div class="sv-graph-zone"></div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{# ── E · Objectifs et criticité ───────────────────────────────────────────── #}
+<section class="dash-rangee">
+    <div class="sv-colonnes">
+
+        <div>
+            {{ section("Vos analyses par objectif", "Répartition par volume") }}
+            <div class="sv-panneau">
+                {% if not repartition_objectifs %}
+                <p class="sv-liste-vide">Aucune configuration enregistrée pour le moment.</p>
+                {% else %}
+                {% set maxi = (repartition_objectifs | map(attribute='nombre') | max) or 1 %}
+                <div class="stx-rang">
+                    <ol class="stx-rang-liste">
+                        {% for o in repartition_objectifs %}
+                        <li class="stx-rang-ligne"
+                            style="--part: {{ (o.nombre * 100 / maxi) | round(1) }}%; --teinte: {{ o.color }}; --i: {{ loop.index0 }}">
+                            <span class="stx-rang-nom" title="{{ o.label }}">{{ o.label }}</span>
+                            <span class="stx-rang-piste"><span class="stx-rang-barre"></span></span>
+                            <span class="stx-rang-valeur">{{ o.nombre }}<span class="stx-rang-pct">{{ o.pct }} %</span></span>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                    <p class="stx-rang-echelle">Échelle commune : 0 à {{ maxi }} configuration(s).</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            {{ section("Criticité de vos résultats", "Toutes exécutions confondues") }}
+            <div class="sv-panneau">
+                {% set total_crit = repartition_criticite | sum(attribute='nombre') %}
+                {% if not total_crit %}
+                <p class="sv-liste-vide">Aucune exécution évaluée pour le moment.</p>
+                {% else %}
+                <div class="stx-crit">
+                    <div class="stx-anneau">
+                        <svg viewBox="0 0 140 140" class="stx-anneau-svg" role="img"
+                             aria-label="Répartition de vos {{ total_crit }} exécutions par niveau de criticité : {% for p in repartition_criticite %}{{ p.label }} {{ p.nombre }}{{ ', ' if not loop.last }}{% endfor %}.">
+                            <circle class="stx-anneau-piste" cx="70" cy="70" r="54" pathLength="100"></circle>
+                            {% set ns = namespace(cumul=0) %}
+                            {% for p in repartition_criticite %}
+                            {% if p.nombre %}
+                            {% set part = p.nombre * 100 / total_crit %}
+                            {% set arc = part if part >= 99.5 else (part - 1) %}
+                            <circle class="stx-arc" cx="70" cy="70" r="54" pathLength="100"
+                                    stroke="{{ p.color }}"
+                                    stroke-dasharray="{{ arc if arc > 0 else 0.5 }} {{ 100 - (arc if arc > 0 else 0.5) }}"
+                                    stroke-dashoffset="{{ -ns.cumul }}"
+                                    style="--ordre: {{ loop.index0 }}">
+                                <title>{{ p.label }} : {{ p.nombre }} ({{ p.pct }} %)</title>
+                            </circle>
+                            {% set ns.cumul = ns.cumul + part %}
+                            {% endif %}
+                            {% endfor %}
+                        </svg>
+                        <div class="stx-anneau-centre">
+                            <span class="stx-anneau-total">{{ total_crit }}</span>
+                            <span class="stx-anneau-unite">exécution{{ 's' if total_crit > 1 }}</span>
+                        </div>
+                    </div>
+                    <ul class="stx-legende">
+                        {% for p in repartition_criticite %}
+                        <li class="stx-legende-ligne{{ ' is-vide' if not p.nombre }}" style="--i: {{ loop.index0 }}">
+                            <span class="stx-legende-puce" style="background: {{ p.color }}"></span>
+                            <span class="stx-legende-nom">{{ p.label }}</span>
+                            <span class="stx-legende-pct">{{ p.pct }} %</span>
+                            <span class="stx-legende-nombre">{{ p.nombre }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<script>
+/* Sélection de rapport - purement locale : tout est déjà rendu côté serveur,
+   il n'y a rien à redemander. Aucun état de chargement factice, aucune requête
+   qui n'aboutit pas. Le catalogue et les onglets pilotent la même sélection. */
+document.addEventListener('DOMContentLoaded', () => {
+    const poste = document.querySelector('.bi-poste');
+    if (!poste) return;
+
+    const onglets = poste.querySelectorAll('[data-onglet]');
+    const vues = poste.querySelectorAll('[data-vue]');
+    const cartes = document.querySelectorAll('[data-rapport]');
+
+    function selectionner(code, defiler) {
+        let trouve = false;
+        vues.forEach(v => {
+            const actif = v.dataset.vue === code;
+            v.classList.toggle('is-actif', actif);
+            v.hidden = !actif;
+            if (actif) trouve = true;
+        });
+        if (!trouve) return;                    // rapport sans vue : on ne fait rien
+
+        onglets.forEach(o => {
+            const actif = o.dataset.onglet === code;
+            o.classList.toggle('is-actif', actif);
+            o.setAttribute('aria-selected', actif ? 'true' : 'false');
+        });
+        cartes.forEach(c => c.classList.toggle('is-selectionne', c.dataset.rapport === code));
+
+        if (defiler) poste.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    onglets.forEach(o => o.addEventListener('click', () => selectionner(o.dataset.onglet, false)));
+    document.querySelectorAll('[data-ouvrir]').forEach(b =>
+        b.addEventListener('click', () => selectionner(b.dataset.ouvrir, true)));
+
+    // Marque la carte correspondant à l'onglet ouvert au chargement.
+    const initial = poste.querySelector('.bi-onglet.is-actif');
+    if (initial) selectionner(initial.dataset.onglet, false);
+});
+</script>
+{% endblock %}

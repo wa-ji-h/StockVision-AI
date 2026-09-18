@@ -28,7 +28,11 @@
     --text: #f8fafc;
     --text-muted: #a8b5cc;         /* labels secondaires importants (ex: "MYSQL · 11 tables") — WCAG AA sur --bg-dark */
     --text-muted-subtle: #7c8ba8;  /* méta très secondaire (ex: "Table détectée") */
-    --text-dim: #64748b;
+    /* Mesuré : #64748b tombait à 3,36:1 sur --bg-card-hover, 3,90 sur --bg-card
+       et 4,14 sur le fond — sous le seuil AA de 4,5, et ce token est consommé
+       86 fois. #7a89a1 passe sur les quatre surfaces sombres (min 4,51) tout
+       en restant la teinte la plus discrète de l'échelle. */
+    --text-dim: #7a89a1;
 
     /* Borders & Glows */
     --border: rgba(255, 255, 255, 0.08);
@@ -9895,7 +9899,7 @@ a.ct-canal:hover .ct-canal-valeur { color: var(--accent); }
     --text: #f8fafc;
     --text-muted: #a8b5cc;
     --text-muted-subtle: #7c8ba8;
-    --text-dim: #64748b;
+    --text-dim: #7a89a1;
 }
 
 /* Le survol éclaircit, il n'atténue jamais : #a8b5cc -> #f8fafc. L'état actif
@@ -9936,3 +9940,451 @@ a.ct-canal:hover .ct-canal-valeur { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
     .dash-tip { transition: none; transform: none; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POSTE DE TRAVAIL BI (dashboard_entreprise / visualisation) - prefixe .bi-
+   ══════════════════════════════════════════════════════════════════════════
+   La page consomme le socle existant : .sv-stats, .sv-panneau, .sv-graph
+   (moteur graphiques.js), .stx-rang-* et .stx-anneau. Seuls le catalogue, les
+   onglets et l'emplacement du rapport lui sont propres.
+
+   ⚠️ Aucune couleur creee : accent de marque et teintes de criticite
+   uniquement, toutes issues des tokens existants. */
+
+/* ── Etat vide qualifie ──────────────────────────────────────────────────── */
+.bi-vide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+    padding: 3rem 1.5rem;
+}
+.bi-vide-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px; height: 52px;
+    border-radius: 15px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+}
+.bi-vide h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+.bi-vide p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; margin: 0; max-width: 46ch; }
+.bi-vide .btn { margin-top: 0.6rem; }
+
+/* ── Catalogue ───────────────────────────────────────────────────────────── */
+.bi-catalogue {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--pas-bloc);
+}
+.bi-carte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1.35rem;
+    border-radius: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+.bi-carte:not(.is-inactif):hover {
+    transform: translateY(-3px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-glow);
+}
+/* Le rapport ouvert se distingue du simple survol : filet d'accent a gauche. */
+.bi-carte.is-selectionne {
+    border-color: var(--border-glow);
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+/* Une famille sans execution reste visible mais inerte : son absence est une
+   information, la masquer laisserait croire que le rapport n'existe pas. */
+.bi-carte.is-inactif { opacity: 0.55; }
+.bi-carte-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.18);
+    color: var(--accent);
+}
+.bi-carte-titre { font-size: 0.98rem; font-weight: 700; margin: 0; }
+.bi-carte-resume {
+    flex: 1;
+    color: var(--text-muted);
+    font-size: 0.83rem;
+    line-height: 1.6;
+    margin: 0;
+}
+.bi-carte-pied {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    margin-top: 0.2rem;
+    border-top: 1px solid var(--border);
+}
+.bi-carte-compte { font-size: 0.75rem; color: var(--text-muted-subtle); }
+.bi-carte-compte--vide { font-style: italic; }
+.bi-carte-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--accent);
+    font-family: var(--font-primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease, gap 0.25s ease;
+}
+.bi-carte-action:hover { background: rgba(34, 211, 238, 0.1); border-color: var(--border-glow); gap: 0.5rem; }
+.bi-carte-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Poste de travail ────────────────────────────────────────────────────── */
+.bi-poste {
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    overflow: hidden;
+}
+.bi-onglets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--border);
+}
+.bi-onglet {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 9px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-family: var(--font-primary);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.bi-onglet:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.bi-onglet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bi-onglet.is-actif {
+    color: var(--accent);
+    background: rgba(34, 211, 238, 0.1);
+    border-color: rgba(34, 211, 238, 0.28);
+}
+.bi-onglet-compte {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.06rem 0.36rem;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-muted-subtle);
+}
+.bi-onglet.is-actif .bi-onglet-compte { background: rgba(34, 211, 238, 0.16); color: var(--accent); }
+
+.bi-vue { padding: 1.35rem; }
+.bi-vue-tete {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.1rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+.bi-vue-titre { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.3rem; }
+.bi-vue-resume { color: var(--text-muted); font-size: 0.86rem; line-height: 1.6; margin: 0; max-width: 58ch; }
+.bi-vue-lien {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: gap 0.25s ease;
+}
+.bi-vue-lien:hover { gap: 0.6rem; }
+
+/* Information a gauche, rapport a droite : le contexte se lit avant le visuel. */
+.bi-vue-corps {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    gap: 1.35rem;
+    align-items: start;
+}
+.bi-infos {
+    padding: 1.1rem;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.022);
+    border: 1px solid var(--border);
+}
+.bi-infos-titre {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted-subtle);
+    margin: 0 0 0.9rem;
+}
+.bi-infos-liste { margin: 0; }
+.bi-infos-liste > div { padding: 0.55rem 0; }
+.bi-infos-liste > div + div { border-top: 1px solid var(--border); }
+.bi-infos-liste dt { font-size: 0.72rem; color: var(--text-muted-subtle); margin-bottom: 0.15rem; }
+.bi-infos-liste dd { margin: 0; font-size: 0.87rem; font-weight: 600; color: var(--text); word-break: break-word; }
+
+/* ── Emplacement du rapport ──────────────────────────────────────────────── */
+/* Pas de hauteur fixe : `aspect-ratio` avec un plancher, pour qu'un rapport
+   reste utilisable sans etre coupe. */
+.bi-rapport {
+    border-radius: 13px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.015);
+    overflow: hidden;
+    min-height: 320px;
+    display: flex;
+}
+.bi-rapport-cadre { width: 100%; border: 0; aspect-ratio: 16 / 10; min-height: 320px; }
+.bi-rapport-absent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6rem;
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+}
+.bi-rapport-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+}
+.bi-rapport-absent h4 { font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text); }
+.bi-rapport-absent p { color: var(--text-muted); font-size: 0.84rem; line-height: 1.65; margin: 0; max-width: 52ch; }
+
+/* ── Mouvement ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+    .bi-carte {
+        animation: bi-parait 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation-delay: calc(var(--i, 0) * 70ms + 0.06s);
+    }
+    .bi-vue.is-actif { animation: bi-parait 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+}
+@keyframes bi-parait {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bi-carte, .bi-vue.is-actif { animation: none; }
+    .bi-carte:not(.is-inactif):hover { transform: none; }
+}
+
+/* ── Repli ───────────────────────────────────────────────────────────────── */
+@media (max-width: 991px) {
+    /* Le panneau d'information passe au-dessus : en colonne de 260px a cote
+       d'un rapport, les deux deviennent illisibles. */
+    .bi-vue-corps { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 575px) {
+    .bi-vue { padding: 1rem; }
+    .bi-onglets { padding: 0.45rem; }
+    .bi-onglet { flex: 1; justify-content: center; }
+    .bi-rapport, .bi-rapport-cadre { min-height: 240px; }
+}
+
+/* ── Theme clair ─────────────────────────────────────────────────────────── */
+[data-theme="light"] .bi-poste,
+[data-theme="light"] .bi-carte { background: #ffffff; border-color: rgba(15, 23, 42, 0.12); }
+[data-theme="light"] .bi-infos,
+[data-theme="light"] .bi-rapport { background: rgba(15, 23, 42, 0.03); border-color: rgba(15, 23, 42, 0.12); }
+[data-theme="light"] .bi-onglet:hover { background: rgba(15, 23, 42, 0.05); color: var(--text); }
+[data-theme="light"] .bi-onglet.is-actif { color: var(--accent-texte); background: #cffafe; border-color: rgba(14, 116, 144, 0.3); }
+[data-theme="light"] .bi-onglet.is-actif .bi-onglet-compte { background: rgba(14, 116, 144, 0.14); color: var(--accent-texte); }
+[data-theme="light"] .bi-onglet-compte { background: rgba(15, 23, 42, 0.06); }
+[data-theme="light"] .bi-carte-action,
+[data-theme="light"] .bi-vue-lien { color: var(--accent-texte); }
+[data-theme="light"] .bi-carte.is-selectionne { box-shadow: inset 3px 0 0 var(--accent-texte); }
+[data-theme="light"] .bi-rapport-icone { background: rgba(15, 23, 42, 0.04); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CARTES DE SOURCE (dashboard_entreprise / imports) - finition
+   ══════════════════════════════════════════════════════════════════════════
+   Complète le bloc .imh-* existant, sans le remplacer : seules les propriétés
+   qui posaient problème sont redéfinies.
+
+   ⚠️ CAUSE DU VIDE ENTRE CONTENU ET BOUTONS : `.imh-grid` est une grille, donc
+   ses items sont étirés à la hauteur de la rangée (`align-items: stretch` par
+   défaut). Les actions étant déjà ancrées par `margin-top: auto`, une carte à
+   deux lignes de méta se retrouvait avec un vide brut au milieu. La hauteur
+   était donc DÉJÀ homogène — c'est le vide qui n'était structuré par rien.
+
+   Correctif : le bloc de méta devient l'élément extensible et ses lignes sont
+   séparées par un filet. L'espace résiduel se répartit alors DANS une liste
+   lisible au lieu de flotter au-dessus des boutons.
+
+   ⚠️ Aucune couleur créée : accent, teintes de statut et tokens existants. */
+
+/* ── Carte ───────────────────────────────────────────────────────────────── */
+.imh-card {
+    /* Aligné sur .bi-carte et les autres cartes du dashboard. */
+    gap: 1rem;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.28s ease, background 0.28s ease, box-shadow 0.28s ease;
+}
+/* Le survol portait sur la seule bordure : la carte ne réagissait presque pas. */
+.imh-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-glow);
+}
+/* Une source en erreur garde sa teinte au survol : le signalement prime. */
+.imh-card--ko:hover { border-color: rgba(239, 68, 68, 0.55); box-shadow: none; }
+
+/* ── En-tête : icône, identité, statut ───────────────────────────────────── */
+.imh-card-top {
+    align-items: center;
+    gap: 0.8rem;
+}
+/* Anneau discret : l'icône se lit comme un jeton de type, pas comme un aplat. */
+.imh-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.imh-card-name {
+    font-size: 0.97rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+/* Le badge de type prend la hauteur de .dash-status (24px) : les deux jetons
+   de l'en-tête s'alignent au lieu de flotter à des tailles différentes. */
+.imh-card-sub {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    margin-top: 0.4rem;
+    padding: 0 0.55rem;
+    border-radius: 7px;
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Le statut s'aligne sur la première ligne, pas au centre d'un bloc à deux
+   lignes : il qualifie la source, il n'est pas au même rang que son nom. */
+.imh-card-top > .dash-status { align-self: flex-start; margin-top: 0.1rem; }
+
+/* ── Méta : la liste absorbe l'espace de la rangée ───────────────────────── */
+.imh-card-meta {
+    flex: 1;                       /* c'est ici que va le vide, pas au-dessus */
+    gap: 0;
+    justify-content: flex-start;
+}
+.imh-card-meta-row {
+    padding: 0.5rem 0;
+    line-height: 1.35;
+}
+/* Un seul filet entre deux lignes, jamais au-dessus et en dessous de chacune. */
+.imh-card-meta-row + .imh-card-meta-row { border-top: 1px solid var(--border); }
+.imh-card-meta-row span:first-child { color: var(--text-muted-subtle); }
+.imh-card-meta-row span:last-child {
+    font-variant-numeric: tabular-nums;   /* les valeurs s'alignent en colonne */
+    text-align: right;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+.imh-card-actions {
+    padding-top: 0.85rem;
+    gap: 0.45rem;
+}
+/* L'action principale occupe la ligne entière quand elle est seule avec la
+   suppression : la hiérarchie se voit à la surface, pas seulement à la teinte. */
+.imh-btn--primary { flex: 1 1 auto; justify-content: center; }
+.imh-btn--danger { flex: 0 0 auto; }
+.imh-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Mouvement ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .imh-card, .imh-card:hover { transform: none; transition: none; }
+}
+
+/* ── Repli ───────────────────────────────────────────────────────────────── */
+@media (max-width: 575px) {
+    /* Sur une colonne étroite, trois boutons côte à côte deviennent illisibles. */
+    .imh-card-actions { flex-direction: column; align-items: stretch; }
+    .imh-btn { justify-content: center; }
+}
+
+/* ── Thème clair ─────────────────────────────────────────────────────────── */
+[data-theme="light"] .imh-card { background: #ffffff; border-color: rgba(15, 23, 42, 0.12); }
+[data-theme="light"] .imh-card:hover { background: #ffffff; border-color: var(--border-glow); }
+[data-theme="light"] .imh-icon { box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08); }
+[data-theme="light"] .imh-card-sub {
+    background: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.12);
+    color: var(--text-muted);
+}
+[data-theme="light"] .imh-card-meta-row + .imh-card-meta-row { border-top-color: rgba(15, 23, 42, 0.09); }
+[data-theme="light"] .imh-card-actions { border-top-color: rgba(15, 23, 42, 0.12); }
+[data-theme="light"] .imh-btn { background: #ffffff; border-color: rgba(15, 23, 42, 0.14); }
+[data-theme="light"] .imh-btn:hover { background: rgba(15, 23, 42, 0.04); border-color: var(--accent-texte); }
+[data-theme="light"] .imh-btn--primary { background: var(--accent-texte); border-color: transparent; color: #ffffff; }
+[data-theme="light"] .imh-btn--primary:hover { background: #155e75; color: #ffffff; }
+[data-theme="light"] .imh-btn--danger {
+    color: var(--ton-critique-texte);
+    background: var(--ton-critique-fond);
+    border-color: rgba(185, 28, 28, 0.28);
+}
+[data-theme="light"] .imh-btn--danger:hover { background: #b91c1c; color: #ffffff; border-color: #b91c1c; }
+
+/* Recommandation sur un résultat NON CONCLUANT — teinte de prudence reprise de
+   `.res-bandeau--incertain`, aucune couleur créée. Le vert de succès y
+   affirmerait une piste que le calcul ne soutient pas. */
+.res-encart--prudent {
+    background: rgba(245, 158, 11, 0.09);
+    border-color: rgba(245, 158, 11, 0.22);
+}
+.res-encart--prudent .res-encart-titre { color: #f6c667; }
+
+/* Cadrage : la recommandation est une suggestion, pas une action de la plateforme. */
+.res-encart-cadre {
+    margin: 0.5rem 0 0;
+    font-size: 0.73rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+[data-theme="light"] .res-encart--prudent {
+    background: var(--ton-attention-fond);
+    border-color: rgba(180, 83, 9, 0.28);
+}
+[data-theme="light"] .res-encart--prudent .res-encart-titre { color: var(--ton-attention-texte); }
